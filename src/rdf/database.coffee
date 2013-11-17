@@ -6,7 +6,6 @@ class Database
         # @name = options.name 
         @graphURI = options.graphURI
 
-
     registerClasses: (classes) =>
         for classname, model of classes
             @validate(model)
@@ -17,8 +16,6 @@ class Database
 
     validate: (model) =>
         # ...
-
-    
 
     sparql: (query) =>
         # ...

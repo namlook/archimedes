@@ -179,8 +179,17 @@ class Class
     #       * lang: the lang used in value
     #       * validate: (default true) if false, do not validate the value
     push: (fieldName, value, options) =>
-        @model[fieldName] = [] unless @model[fieldName]
-        @model[fieldName].push value
+        if @structure[fieldName].multi
+            if @structure[fieldName].i18n
+                @model[fieldName] = {} unless @model[fieldName]?
+                lang = options and options.lang or @defaultLang
+                @model[fieldName][lang] = [] unless @model[fieldName][lang]?
+                @model[fieldName][lang].push value
+            else
+                @model[fieldName] = [] unless @model[fieldName]
+                @model[fieldName].push value
+        else
+            throw "#{@constructor.name}.#{fieldName} is not a multi field"
 
     # Remove the value of a multi-field
     # The value can be of any valid type (included instance)
@@ -189,8 +198,16 @@ class Class
     # options:
     #       * lang: the lang used in value
     pull: (fieldName, value, options) =>
-        if @model[fieldName]
-            @model[fieldName] = _.without @model[fieldName], value
+        if @structure[fieldName].multi
+            if @structure[fieldName].i18n
+                lang = options and options.lang or @defaultLang
+                if @model[fieldName]?[lang]?
+                    @model[fieldName][lang] = _.without @model[fieldName][lang], value
+            else
+                if @model[fieldName]
+                    @model[fieldName] = _.without @model[fieldName], value
+        else
+            throw "#{@constructor.name}.#{fieldName} is not a multi field"
 
     # Remove the value of a field.
     # The value can be of any valid type (included instance)
@@ -227,7 +244,7 @@ class Class
 
     # Delete all the field values of the object
     clear: =>
-        # ...
+        @model = {}
 
 
     # true if the object has changed before its last synchronisation
