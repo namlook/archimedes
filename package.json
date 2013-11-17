@@ -1,0 +1,21 @@
+{
+  "name": "archimedes",
+  "version": "0.0.0",
+  "description": "An RDF ORM",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "keywords": [
+    "orm",
+    "rdf",
+    "triplestore"
+  ],
+  "author": "Namlook",
+  "license": "BSD-2-Clause",
+  "dependencies": {
+    "chai": "~1.8.1",
+    "mocha": "~1.14.0",
+    "underscore": "~1.5.2"
+  }
+}
