@@ -2,6 +2,7 @@
 chai = require('chai')
 expect = chai.expect
 should = chai.should()
+
 rdf = require('../rdf')
 
 
@@ -23,7 +24,7 @@ describe 'Class', ()->
 
     class classes.Blog extends ExampleClass
         structure:
-            title: 
+            title:
                 type: 'string'
             i18ntags:
                 type: 'string'
@@ -55,7 +56,7 @@ describe 'Class', ()->
 
     describe '#constructor()', () ->
         it 'should throw an exception if Model.meta has no name or uri specified', ()->
-            
+
             class BadClass extends rdf.Class
                 meta: {
 
@@ -67,7 +68,7 @@ describe 'Class', ()->
                 new BadClass
             catch e
                 err = e
-            err.should.equal 'BadClass.meta.uri not specified'
+            err.should.equal "BadClass's namespaces are missing"
 
 
         it 'should have a meta name or a meta uri', ()->
@@ -113,7 +114,7 @@ describe 'Class', ()->
 
 
 
-    describe '#set()', ()-> 
+    describe '#set()', ()->
         it 'should set the value of a field', ()->
             author = new db.Author
             author.set 'login', 'namlook'
@@ -311,7 +312,7 @@ describe 'Class', ()->
         it "shouldn't fire a store request if there is no value changes"
         it 'should take a callback with an error if the nugget is not saved'
         it 'should take a callback with the saved nugget'
-        
+
 
 
 
