@@ -3,26 +3,25 @@ chai = require('chai')
 expect = chai.expect
 should = chai.should()
 
-rdf = require('../rdf')
-
+RdfClass = require('../rdf').Class
+RdfDatabase = require('../rdf').Database
 
 describe 'Class', ()->
 
 
-    class ExampleClass extends rdf.Class
-        defaultLang: 'en'
-        classesBaseURI: 'http://onto.elkorado.com/classes'
-        propertiesBaseURI: 'http://onto.elkorado.com/properties'
-
     classes = {}
 
-    class classes.Author extends ExampleClass
+    class classes.Author extends RdfClass
+        meta: {}
+
         structure:
             login:
                 type: 'string'
                 required: true
 
-    class classes.Blog extends ExampleClass
+    class classes.Blog extends RdfClass
+        meta: {}
+
         structure:
             title:
                 type: 'string'
@@ -32,7 +31,9 @@ describe 'Class', ()->
                 i18n: true
 
 
-    class classes.BlogPost extends ExampleClass
+    class classes.BlogPost extends RdfClass
+        meta: {}
+
         structure:
             title:
                 i18n: true
@@ -47,53 +48,85 @@ describe 'Class', ()->
                 type: 'string'
                 multi: true
 
-    db = new rdf.Database {
+    db = new RdfDatabase {
         endpoint: 'http://localhost:8889/sparql'
+        namespace: 'http://onto.example.org'
+        defaultInstancesNamespace: 'http://data.example.org'
         graphURI: 'http://example.org/blogengine'
+        defaultLang: 'en'
     }
 
     db.registerClasses classes
 
     describe '#constructor()', () ->
-        it 'should throw an exception if Model.meta has no name or uri specified', ()->
+        it 'should throw an exception if Model.meta is not specified', ()->
 
-            class BadClass extends rdf.Class
-                meta: {
-
-                }
-
+            class BadClass extends RdfClass
 
             err = ''
             try
-                new BadClass
+                db.registerClasses {BadClass: BadClass}
             catch e
                 err = e
-            err.should.equal "BadClass's namespaces are missing"
+            err.should.equal "BadClass has not meta"
 
 
-        it 'should have a meta name or a meta uri', ()->
+        it 'should take customs namespace', ()->
 
-            class GoodClass extends rdf.Class
-                classesBaseURI: 'http://onto.elkorado.com/classes'
-                propertiesBaseURI: 'http://onto.elkorado.com/properties'
-
-            class GoodClass1 extends GoodClass
+            class GoodClass extends RdfClass
                 meta:
-                    name: 'GoodClass'
+                    propertiesNamespace: 'http://props.example.org/properties'
 
-            class GoodClass2 extends GoodClass
+            class GoodClass2 extends RdfClass
                 meta:
-                    uri: 'http://onto.elkorado.com/classes/GoodClass2'
+                    typeURI: 'http://example.org/type/GoodClass2'
 
             class GoodClass3 extends GoodClass
+                meta:
+                    instancesNamespace: 'http://example.org/data'
 
-            db.registerClasses {GoodClass1: GoodClass1, GoodClass2: GoodClass2, GoodClass3: GoodClass3}
+            db.registerClasses {GoodClass: GoodClass, GoodClass2: GoodClass2, GoodClass3: GoodClass3}
+
+            propertiesNS = 'http://props.example.org/properties'
+            new GoodClass().meta.propertiesNamespace.should.equal propertiesNS
+
+            typeURI = 'http://example.org/type/GoodClass2'
+            new GoodClass2().meta.typeURI.should.equal typeURI
+
+            instancesNS = 'http://example.org/data'
+            new GoodClass3().meta.instancesNamespace.should.equal instancesNS
 
 
         it 'should be created without values', () ->
             author = new db.Author
             blog = new db.Blog
             blogPost = new db.BlogPost
+
+
+        it 'should have @meta.graphURI', () ->
+            graphURI = 'http://example.org/blogengine'
+            new db.Author().meta.graphURI.should.equal graphURI
+
+
+        it 'should have @meta.typeURI', () ->
+            typeURI = 'http://onto.example.org/classes/Author'
+            new db.Author().meta.typeURI.should.equal typeURI
+
+
+        it 'should have @meta.propertiesNamespace', () ->
+            propertiesNS = 'http://onto.example.org/properties'
+            new db.Author().meta.propertiesNamespace.should.equal propertiesNS
+
+
+        it 'should have @meta.instancesNamespace', () ->
+            instancesNS = 'http://data.example.org/author'
+            new db.Author().meta.instancesNamespace.should.equal instancesNS
+
+
+        it 'should have @meta.defaultLang if specified in database', () ->
+            author = new db.Author()
+            author.meta.defaultLang.should.equal 'en'
+
 
         # it 'should add properties to new instance of model', ()->
         #     author = new db.Author {login: 'namlook'}

@@ -7,14 +7,27 @@ class RdfDatabase extends Database
 
     constructor: (options) ->
 
-        # example 'http://onto.elkorado.com/classes'
+        # example 'http://onto.example.org'
+        @namespace = options.namespace
+
+        # example 'http://onto.example.org/classes'
         @defaultClassesNamespace = options.defaultClassesNamespace
 
-        # example 'http://onto.elkorado.com/properties'
+        # example 'http://onto.example.org/properties'
         @defaultPropertiesNamespace = options.defaultPropertiesNamespace
 
-        # example 'http://data.elkorado.com/user/namlook'
+        # example 'http://data.example.org/user/namlook'
         @defaultInstancesNamespace = options.defaultInstancesNamespace
+
+
+        unless @defaultClassesNamespace
+            @defaultClassesNamespace = "#{@namespace}/classes"
+
+        unless @defaultPropertiesNamespace
+            @defaultPropertiesNamespace = "#{@namespace}/properties"
+
+        unless @defaultInstancesNamespace
+            @defaultInstancesNamespace = "#{@namespace}/instances"
 
         # example 'en'
         @defaultLang = options.defaultLang
@@ -36,7 +49,7 @@ class RdfDatabase extends Database
         for modelName, model of models
             @_fillDefaultValues(modelName, model)
             @_inheritStructure(model)
-            @validate(modelName, model)
+            @validateModel(modelName, model)
             @[modelName] = model
 
 
@@ -45,7 +58,11 @@ class RdfDatabase extends Database
         @registerModels(classes)
 
     # Check the model structure for any errors
-    validate: (modelName, model) =>
+    validateModel: (modelName, model) =>
+        requiredNS = ['typeURI','graphURI','instancesNamespace','propertiesNamespace']
+        for ns in requiredNS
+            unless model::meta[ns]
+                throw "#{modelName}.meta.#{ns} not found"
         # ...
 
 
@@ -57,10 +74,15 @@ class RdfDatabase extends Database
 
     # Fill the model's info which haven't been specified by default ones
     _fillDefaultValues: (modelName, model) =>
-
+        unless model::meta
+            throw "#{modelName} has not meta"
         # if the model doesn't specify uri, we build it
-        if not model::meta.uri
-            model::meta.uri =  "#{@defaultClassesNamespace}/#{modelName}"
+        if not model::meta.typeURI
+            model::meta.typeURI =  "#{@defaultClassesNamespace}/#{modelName}"
+
+        # if the model doesn't specify graphURI, we set it
+        if not model::meta.graphURI
+            model::meta.graphURI = @graphURI
 
         # if the model doesn't specify @propertiesNamespace, we set it
         if not model::meta.propertiesNamespace
@@ -74,9 +96,8 @@ class RdfDatabase extends Database
                 "#{@defaultInstancesNamespace}/#{loweredModelName}"
 
         # if the model doesn't specify default language, we set it
-        if not model::meta.defaultLang
+        unless model::meta.defaultLang
             model::meta.defaultLang = @defaultLang
-
 
 module.exports = RdfDatabase
 

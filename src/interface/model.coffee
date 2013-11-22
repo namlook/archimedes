@@ -3,10 +3,10 @@
 class Model
 	
 	# All informations about the model goes here
-	meta: {}
+	meta: null
 
 	# The structure of the model
-	structure: {}
+	structure: null
 
 	constructor: () ->
         # where the values are stored

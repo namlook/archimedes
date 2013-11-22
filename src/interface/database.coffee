@@ -15,7 +15,7 @@ class Database
 
 
     # Check the model structure for any errors
-	validate: (modelName, model)=>
+	validateModel: (modelName, model)=>
 		# ...
 
 module.exports = Database

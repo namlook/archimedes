@@ -9,39 +9,38 @@ class RdfClass extends Model
     # This is use to fetch and store the model
     db: null
 
-    meta:
-
-        # The type URI.
-        # If unset, the type is automatically built against
-        # db.defaultClassesNamespace and the class name (@constructor.name)
-        uri: null
-
-
-        # The namespace URI which will prefix all instances id.
-        # If unset, it is automatically built against db.defaultInstancesNamespace
-        # and the lowered class name (@constructor.name)
-        instancesNamespace: null
-
-
-        # The default namespace URI used if no uri are specified in fields.
-        # If unset, it is automatically filled with db.defaultPropertiesNamespace
-        propertiesNamespace: null
-
-        # If true, then fields which are not in structure will not be loaded and
-        # an error will be raised (unknown field) if a value is set.
-        schema: true
-
-
-        # The name of the model to present to the user
-        # An i18n representation can be set by specifying an object which
-        # takes a lang code as key and the label as value.
-        # If unset, the lowered class name will be used (@constructor.name)
-        label: null
-
-        # Fallback to this lang for i18n fields
-        # if not set, it is automatically filled with db.defaultLang
-        defaultLang: null
-
+    # @meta is keep all information about the model database
+    #   * typeURI: The type URI.
+    #       If unset, the type is automatically built against
+    #       db.defaultClassesNamespace and the class name (@constructor.name)
+    #
+    #   * instancesNamespace:
+    #       The namespace URI which will prefix all instances id.
+    #       If unset, it is automatically built against db.defaultInstancesNamespace
+    #       and the lowered class name (@constructor.name)
+    #
+    #   * propertiesNamespace:
+    #       The default namespace URI used if no uri are specified in fields.
+    #       If unset, it is automatically filled with db.defaultPropertiesNamespace
+    #
+    #   * graphURI:
+    #       The graph URI where the data will be stored.
+    #       If unset, it is automatically set via db.graphURI
+    #
+    #   * schema:
+    #       If true, then fields which are not in structure will not be loaded and
+    #       an error will be raised (unknown field) if a value is set.
+    #
+    #   * label:
+    #       The name of the model to present to the user
+    #       An i18n representation can be set by specifying an object which
+    #       takes a lang code as key and the label as value.
+    #       If unset, the lowered class name will be used (@constructor.name)
+    #
+    #   * defaultLang:
+    #       Fallback to this lang for i18n fields
+    #       if not set, it is automatically filled with db.defaultLang
+    meta: null
 
     # The structure of the model
     #
@@ -65,12 +64,12 @@ class RdfClass extends Model
     #       validate: take a function(value, @) to validate the value
     #       transform: take a function(value, @) which will transform the value
     #             and return it (usefull for hashing passwords by example)
-    structure: {}
+    structure: null
 
 
     constructor: () ->
         super
-        unless (@meta.uri \
+        unless (@meta.typeURI \
              or @meta.propertiesNamespace \
              or @meta.instancesNamespace)
             throw "#{@constructor.name}'s namespaces are missing"
@@ -142,7 +141,7 @@ class RdfClass extends Model
 
 
     # like `find` but returns only the object ids (uri)
-    @findUris: (URIsOrQuery, options, callback)=>
+    @findURIs: (URIsOrQuery, options, callback)=>
         options.instance = false
         @find URIsOrQuery, options, callback
 
@@ -152,7 +151,7 @@ class RdfClass extends Model
         @find URIsOrQuery, options, callback
 
     # like `first` but returns only the first object uri
-    @firstUri: (URIsOrQuery, options, callback)=>
+    @firstURI: (URIsOrQuery, options, callback)=>
         options.limit = 1
         options.instance = false
         @find URIsOrQuery, options, callback
@@ -179,16 +178,19 @@ class RdfClass extends Model
     # @populate (err, {fieldname1: instance1, fieldname2: instance2}) ->
     #   # ...
     # if field values are already populated, do nothing.
-    populate: (fields, callback) ->
+    populate: (fields, callback) =>
         unless callback
             fields = callback
         # ..
 
 
-    # return the language if specified in options, fallback to @defaultLang
+    # return the language if specified in options, fallback to @meta.defaultLang
     # otherwise and throw an error if no language are found
+    # options:
+    #   * lang: the lang used
+    # If options is a string, it is taken as a lang code
     __getLang: (fieldName, options) =>
-        lang = options and options.lang or @defaultLang
+        lang = options?.lang or options or @meta.defaultLang
         unless lang
             throw "#{fieldName} is i18n and need a language"
         return lang
@@ -209,6 +211,7 @@ class RdfClass extends Model
     #
     #  options:
     #     * lang: the lang used for i18n fields
+    # If options is a string, it is taken as a lang code
     get: (fieldName, options) =>
         if @structure[fieldName].i18n
             @_properties[fieldName] = {} unless @_properties[fieldName]?
@@ -224,6 +227,16 @@ class RdfClass extends Model
         # ...
 
 
+    # Return the label of the field.
+    # If the label is 18n then the lang should be specified in options.
+    # If fieldName is null, return the label of model
+    #
+    # options:
+    #   lang: the specified language of the wanted label
+    # If options is a string, it is taken as a lang code
+    getLabel: (fieldName, options) =>
+        # ...
+
     # Set the value of a field.
     # The value can be of any valid type (included instance)
     # If the field is multi, the value should be an array of object/uris
@@ -233,6 +246,7 @@ class RdfClass extends Model
     # options:
     #       * lang: the lang used in value (for i18n fields)
     #       * validate: (default true) if false, do not validate the value
+    # If options is a string, it is taken as a lang code
     set: (fieldName, value, options) =>
         if @structure[fieldName].i18n
             unless @_properties[fieldName]?
@@ -252,6 +266,7 @@ class RdfClass extends Model
     # options:
     #       * lang: the lang used in value
     #       * validate: (default true) if false, do not validate the value
+    # If options is a string, it is taken as a lang code
     push: (fieldName, value, options) =>
         unless @structure[fieldName].multi
             throw "#{@constructor.name}.#{fieldName} is not a multi field"
@@ -273,6 +288,7 @@ class RdfClass extends Model
     #
     # options:
     #       * lang: the lang used in value
+    # If options is a string, it is taken as a lang code
     pull: (fieldName, value, options) =>
         unless @structure[fieldName].multi
             throw "#{@constructor.name}.#{fieldName} is not a multi field"
@@ -295,6 +311,7 @@ class RdfClass extends Model
     #
     # options:
     #       * lang: the lang used
+    # If options is a string, it is taken as a lang code
     unset: (fieldName, options)=>
         if @structure[fieldName].i18n
             lang = @__getLang(fieldName, options)
@@ -309,6 +326,7 @@ class RdfClass extends Model
     #
     # options:
     #       * lang: the lang used in value
+    # If options is a string, it is taken as a lang code
     has: (fieldName, options) =>
         if @structure[fieldName].i18n
             lang = @__getLang(fieldName, options)
