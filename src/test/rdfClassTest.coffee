@@ -3,7 +3,7 @@ chai = require('chai')
 expect = chai.expect
 should = chai.should()
 
-RdfClass = require('../rdf').Class
+RdfsClass = require('../rdf').Class
 RdfDatabase = require('../rdf').Database
 
 describe 'Class', ()->
@@ -11,7 +11,7 @@ describe 'Class', ()->
 
     classes = {}
 
-    class classes.Author extends RdfClass
+    class classes.Author extends RdfsClass
         meta: {}
 
         properties:
@@ -19,7 +19,7 @@ describe 'Class', ()->
                 type: 'string'
                 required: true
 
-    class classes.Blog extends RdfClass
+    class classes.Blog extends RdfsClass
         meta: {}
 
         properties:
@@ -31,7 +31,7 @@ describe 'Class', ()->
                 i18n: true
 
 
-    class classes.BlogPost extends RdfClass
+    class classes.BlogPost extends RdfsClass
         meta: {}
 
         properties:
@@ -61,7 +61,7 @@ describe 'Class', ()->
     describe '#constructor()', () ->
         it 'should throw an exception if Model.meta is not specified', ()->
 
-            class BadClass extends RdfClass
+            class BadClass extends RdfsClass
 
             err = ''
             try
@@ -73,11 +73,11 @@ describe 'Class', ()->
 
         it 'should take customs namespace', ()->
 
-            class GoodClass extends RdfClass
+            class GoodClass extends RdfsClass
                 meta:
                     propertiesNamespace: 'http://props.example.org/properties'
 
-            class GoodClass2 extends RdfClass
+            class GoodClass2 extends RdfsClass
                 meta:
                     uri: 'http://example.org/type/GoodClass2'
 

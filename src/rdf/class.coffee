@@ -3,7 +3,7 @@
 _ = require 'underscore'
 Model = require '../interface/model'
 
-class RdfClass extends Model
+class RdfsClass extends Model
 
     # The `db` attribute will be added when the model will be registered to the
     # database. It is used to fetch and store the model
@@ -114,11 +114,16 @@ class RdfClass extends Model
     @find: (URIsOrQuery, options, callback)=>
         unless URIsOrQuery
             throw new Error('URIsOrQuery are required')
+
         if typeof options is 'function' and not callback
             callback = options
-        # if not options and not callback
-            # return query as promise
-        # ...
+
+        if _.isArray URIsOrQuery
+            return @_findViaURIs URIsOrQuery, options, callback
+        else if _.isString URIsOrQuery
+            return @_findViaSparqlite URIsOrQuery, options, callback
+        else
+            return @_findViaMongo URIsOrQuery, options, callback
 
 
     # #### Query
@@ -131,7 +136,7 @@ class RdfClass extends Model
     # we can reach relations with the doted notation
     #
     #     {'blogPost.comment.author.name': 'Nico'}
-    @_findMongo: (mongoQuery, options, callback) =>
+    @_findViaMongo: (mongoQuery, options, callback) =>
 
 
     # ##### Sparql-like query (aka Sparqlite)
@@ -147,16 +152,13 @@ class RdfClass extends Model
     #     ?this <[BlogPost.blog]>  <#{nicoblog.id}>  .
     #
     # `?this` should be type of the object we are calling the `find` method.
-    @_findSparqlite: (SparqliteQuery, options, callback) =>
+    @_findViaSparqlite: (SparqliteQuery, options, callback) =>
         # ...
 
 
-    @_findByURI: (URIs, options, callback) =>
+    @_findViaURIs: (URIs, options, callback) =>
         # ...
 
-
-    @_findSparql: (sparqlQuery, options, callback) =>
-        # ... ?
 
 
     # ## findURIs
@@ -205,6 +207,7 @@ class RdfClass extends Model
         if typeof options is 'function' and not callback
             callback = options
         # ...
+
 
     # ## populate
     # Asyncronously populate the instance with all related object values.
@@ -434,16 +437,19 @@ class RdfClass extends Model
     isPopulated: (fieldName) =>
         # ...
 
+
     # ## clear
     # Delete all the field values of the object
     clear: =>
         @_properties = {}
         @_instances = {}
 
+
     # ## hasChanged
     # Returns true if the object has changed before its last synchronisation
     hasChanged: ()->
         # ...
+
 
     # ## save
     # Sync the changed field into the database
@@ -455,8 +461,10 @@ class RdfClass extends Model
     save: (callback) =>
         # ...
 
+
     onBeforeSave: (next) =>
         # ...
+
 
     onAfterSave:  =>
         # ...
@@ -466,11 +474,14 @@ class RdfClass extends Model
     delete: (callback) =>
         # ...
 
+
     onBeforeDelete: (next) =>
         # ...
 
+
     onAfterDelete: =>
         # ...
+
 
     # # validate all field against the schema declaration
     # validate: (callback) =>
@@ -492,10 +503,12 @@ class RdfClass extends Model
     isNew: =>
         # ...
 
+
     # Convert the model into a plain old javascript object (usefull for
     # templating)
     toJSONObject: ()->
         # ...
+
 
     # Convert the model into a JSON string
     toJSON: ()->
@@ -520,5 +533,5 @@ class RdfClass extends Model
         return lang
 
 
-module.exports = RdfClass
+module.exports = RdfsClass
 
