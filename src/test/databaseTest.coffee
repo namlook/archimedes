@@ -2,18 +2,16 @@
 chai = require('chai')
 expect = chai.expect
 chai.should()
-rdf = require('../rdf')
+RdfDatabase = require('../rdf').Database
 
 describe 'Database', ()->
 
-    # db = new rdf.Database {
-    #     endpoint: 'http://localhost:8889/sparql'
-    #     graphURI: 'http://example.org/graph'
-    #     defaultClassesNamespace: 'http://onto.example.org/classes'
-    #     defaultPropertiesNamespace: 'http://onto.example.org/properties'
-    #     defaultInstancesNamespace: 'http://data.example.org'
-    #     defaultLang: 'en'
-    # }
+    db = new RdfDatabase {
+        endpoint: 'http://localhost:8890/sparql'
+        graphURI: 'http://graph.example.org'
+        namespace: 'http://onto.example.org' # optional
+        defaultLang: 'en'
+    }
 
     describe '#validate()', ()->
 

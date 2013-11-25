@@ -13,9 +13,11 @@
   ],
   "author": "Namlook",
   "license": "BSD-2-Clause",
-  "dependencies": {
+  "devDependencies": {
     "chai": "~1.8.1",
-    "mocha": "~1.14.0",
+    "mocha": "~1.14.0"
+    },
+  "dependencies": {
     "underscore": "~1.5.2"
   }
 }

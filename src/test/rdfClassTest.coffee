@@ -14,7 +14,7 @@ describe 'Class', ()->
     class classes.Author extends RdfClass
         meta: {}
 
-        structure:
+        properties:
             login:
                 type: 'string'
                 required: true
@@ -22,7 +22,7 @@ describe 'Class', ()->
     class classes.Blog extends RdfClass
         meta: {}
 
-        structure:
+        properties:
             title:
                 type: 'string'
             i18ntags:
@@ -34,7 +34,7 @@ describe 'Class', ()->
     class classes.BlogPost extends RdfClass
         meta: {}
 
-        structure:
+        properties:
             title:
                 i18n: true
                 type: 'string'
@@ -79,7 +79,7 @@ describe 'Class', ()->
 
             class GoodClass2 extends RdfClass
                 meta:
-                    typeURI: 'http://example.org/type/GoodClass2'
+                    uri: 'http://example.org/type/GoodClass2'
 
             class GoodClass3 extends GoodClass
                 meta:
@@ -90,8 +90,8 @@ describe 'Class', ()->
             propertiesNS = 'http://props.example.org/properties'
             new GoodClass().meta.propertiesNamespace.should.equal propertiesNS
 
-            typeURI = 'http://example.org/type/GoodClass2'
-            new GoodClass2().meta.typeURI.should.equal typeURI
+            uri = 'http://example.org/type/GoodClass2'
+            new GoodClass2().meta.uri.should.equal uri
 
             instancesNS = 'http://example.org/data'
             new GoodClass3().meta.instancesNamespace.should.equal instancesNS
@@ -108,9 +108,9 @@ describe 'Class', ()->
             new db.Author().meta.graphURI.should.equal graphURI
 
 
-        it 'should have @meta.typeURI', () ->
-            typeURI = 'http://onto.example.org/classes/Author'
-            new db.Author().meta.typeURI.should.equal typeURI
+        it 'should have @meta.uri', () ->
+            uri = 'http://onto.example.org/classes/Author'
+            new db.Author().meta.uri.should.equal uri
 
 
         it 'should have @meta.propertiesNamespace', () ->

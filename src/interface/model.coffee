@@ -6,7 +6,7 @@ class Model
 	meta: null
 
 	# The structure of the model
-	structure: null
+	schema: null
 
 	constructor: () ->
         # where the values are stored
