@@ -63,12 +63,8 @@ describe 'Class', ()->
 
             class BadClass extends RdfsClass
 
-            err = ''
-            try
-                db.registerClasses {BadClass: BadClass}
-            catch e
-                err = e
-            err.should.equal "BadClass has not meta"
+            expect(-> db.registerClasses {BadClass: BadClass}).to.throw(
+                "BadClass has not meta")
 
 
         it 'should take customs namespace', ()->
@@ -178,7 +174,11 @@ describe 'Class', ()->
 
         it 'should set the value of a relation field'
         it 'should set the values of a relation field'
-        it 'should throw an error if the value is an array and the field non-multi'
+
+        it 'should throw an error if the value is an array and the field non-multi', () ->
+            blogPost = new db.BlogPost
+            expect(-> blogPost.set('title', ['foo', 'bar'])).to.throw(
+                /'title' doesn't accept array/)
 
 
 
@@ -218,8 +218,13 @@ describe 'Class', ()->
             should.not.exist blog.get 'i18ntags', {lang: 'fr'}
 
         it 'should unset a relation field'
-        it 'should unset a multi relation field'
-
+        it 'should unset a multi relation field', () ->
+            blogPost = new db.BlogPost
+            blogPost.push 'keyword', 'foo'
+            blogPost.push 'keyword', 'bar'
+            blogPost.get('keyword').should.include 'foo', 'bar'
+            blogPost.unset 'keyword'
+            expect(blogPost.get 'keyword' ).to.be.undefined
 
 
     describe '#push()', ()->
@@ -246,12 +251,8 @@ describe 'Class', ()->
 
         it 'should throw an error if used on a non-multi field', () ->
             blogPost = new db.BlogPost
-            err = ''
-            try
-                blogPost.push 'title', 'arf'
-            catch e
-                err = e
-            err.should.equal 'BlogPost.title is not a multi field'
+            expect(-> blogPost.push 'title', 'arf').to.throw(
+                'BlogPost.title is not a multi field')
 
 
     describe '#pull()', ()->
@@ -275,12 +276,8 @@ describe 'Class', ()->
 
         it 'should throw an error if used on a non-multi field', () ->
             blogPost = new db.BlogPost
-            err = ''
-            try
-                blogPost.pull 'title', 'arf'
-            catch e
-                err = e
-            err.should.equal 'BlogPost.title is not a multi field'
+            expect(-> blogPost.pull 'title', 'arf').to.throw(
+                'BlogPost.title is not a multi field')
 
 
         it 'should remove a value from a multi field', ()->

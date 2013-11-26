@@ -3,6 +3,9 @@
 _ = require 'underscore'
 Model = require '../interface/model'
 
+class ValueError extends Error
+class ModelError extends Error
+
 class RdfsClass extends Model
 
     # The `db` attribute will be added when the model will be registered to the
@@ -74,7 +77,7 @@ class RdfsClass extends Model
         unless (@meta.uri \
              or @meta.propertiesNamespace \
              or @meta.instancesNamespace)
-            throw "#{@constructor.name}'s namespaces are missing"
+            throw new ModelError("#{@constructor.name}'s namespaces are missing")
 
 
     # # Static methods
@@ -113,7 +116,7 @@ class RdfsClass extends Model
     #    the full URL.
     @find: (URIsOrQuery, options, callback)=>
         unless URIsOrQuery
-            throw new Error('URIsOrQuery are required')
+            throw new ModelError('URIsOrQuery are required')
 
         if typeof options is 'function' and not callback
             callback = options
@@ -321,6 +324,8 @@ class RdfsClass extends Model
     #
     # If `options` is a string, it is taken as a lang code
     set: (fieldName, value, options) =>
+        if _.isArray(value) and not @schema[fieldName].multi
+            throw new ValueError("'#{fieldName}' doesn't accept array")
         if @schema[fieldName].i18n
             unless @_properties[fieldName]?
                 @_properties[fieldName] = {}
@@ -347,7 +352,7 @@ class RdfsClass extends Model
     # If `options` is a string, it is taken as a lang code
     push: (fieldName, value, options) =>
         unless @schema[fieldName].multi
-            throw "#{@constructor.name}.#{fieldName} is not a multi field"
+            throw new Error("#{@constructor.name}.#{fieldName} is not a multi field")
 
         if @schema[fieldName].i18n
             @_properties[fieldName] = {} unless @_properties[fieldName]?
@@ -375,7 +380,7 @@ class RdfsClass extends Model
     # If `options` is a string, it is taken as a lang code
     pull: (fieldName, value, options) =>
         unless @schema[fieldName].multi
-            throw "#{@constructor.name}.#{fieldName} is not a multi field"
+            throw new Error("#{@constructor.name}.#{fieldName} is not a multi field")
 
         if @schema[fieldName].i18n
             lang = @__getLang(fieldName, options)
