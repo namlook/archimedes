@@ -321,7 +321,41 @@ describe 'RdfsClass', ()->
             blogPost.has('keyword').should.be.false
 
     describe '#clone()', ()->
-        it 'should copy all the values of an instance but not its id'
+        it 'should copy all the values of an instance but not its id', () ->
+            blogPost = new db.BlogPost
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'keyword', ['foo', 'bar']
+            expect(blogPost.id).to.be.undefined
+            blogPost.save()
+            newBlogPost = blogPost.clone()
+            expect(blogPost.id).to.not.be.undefined
+            newBlogPost.get('title', 'en').should.equal 'hello world'
+            newBlogPost.get('keyword').should.include 'foo', 'bar'
+
+
+    describe '#isNew()', ()->
+        it 'should return true when the model is not saved', () ->
+            blogPost = new db.BlogPost
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'keyword', ['foo', 'bar']
+            blogPost.isNew().should.be.true
+
+        it 'should return false when the model is already saved (ie: has an ID)', () ->
+            blogPost = new db.BlogPost
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'keyword', ['foo', 'bar']
+            blogPost.save()
+            blogPost.isNew().should.be.false
+
+        it 'should return true on a cloned model', () ->
+            blogPost = new db.BlogPost
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'keyword', ['foo', 'bar']
+            blogPost.save()
+            blogPost.isNew().should.be.false
+            newBlogPost = blogPost.clone()
+            newBlogPost.isNew().should.be.true
+
 
     describe: '#populate': ()->
         it 'should populate all fields which values are URIs'

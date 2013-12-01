@@ -72,12 +72,15 @@ class Model extends ModelInterface
     properties: null
 
 
-    constructor: () ->
+    constructor: (properties) ->
         super
         unless (@meta.uri \
              or @meta.propertiesNamespace \
              or @meta.instancesNamespace)
             throw new ModelError("#{@constructor.name}'s namespaces are missing")
+
+        for key, value of properties
+            @_properties[key] = _.clone(value)
 
 
     # # Static methods
@@ -464,7 +467,8 @@ class Model extends ModelInterface
     # Only the field marked as change will be updated. If fields has been unset,
     # their related property uri will be delete.
     save: (callback) =>
-        # ...
+        if @isNew()
+            @id = @__buildId()
 
 
     onBeforeSave: (next) =>
@@ -498,25 +502,28 @@ class Model extends ModelInterface
     # onAfterValidate: =>
     #   # ...
 
-    # Returns a new instance of the model with identical attributes. If `id` is
-    # specified, use it for the new instance id, else a new id will be generated
-    clone: (id)=>
-        # ...
+
+
+    # ## clone
+    #
+    # Returns a new instance of the model with identical attributes.
+    clone: ()=>
+        return new @constructor(@_properties)
 
 
     # Returns true if the object has not been saved yet.
-    isNew: =>
-        # ...
+    isNew: () =>
+        return not @id
 
 
     # Convert the model into a plain old javascript object (usefull for
     # templating)
-    toJSONObject: ()->
+    toJSONObject: () =>
         # ...
 
 
     # Convert the model into a JSON string
-    toJSON: ()->
+    toJSON: () =>
         # ...
 
 
@@ -538,6 +545,13 @@ class Model extends ModelInterface
         return lang
 
 
+    # ## __buildId
+    #
+    # Generate a unique ID for the model
+    __buildId: () ->
+        now = new Date()
+        rand = Math.floor(Math.random() * 10)
+        return rand + parseInt(now.getTime()).toString(36)
 
 
 module.exports = Model
