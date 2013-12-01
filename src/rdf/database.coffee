@@ -1,10 +1,10 @@
 # # RDF Database
 
 Sparql = require './sparql'
-Database = require '../interface/database'
+DatabaseInterface = require '../interface/database'
 
 
-class RdfDatabase extends Database
+class Database extends DatabaseInterface
 
     constructor: (options) ->
 
@@ -110,5 +110,5 @@ class RdfDatabase extends Database
         if model::properties
             model::schema = model::properties
 
-module.exports = RdfDatabase
+module.exports = Database
 

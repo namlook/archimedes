@@ -1,12 +1,12 @@
 # # RDF Model
 
 _ = require 'underscore'
-Model = require '../interface/model'
+ModelInterface = require '../interface/model'
 
 class ValueError extends Error
 class ModelError extends Error
 
-class RdfsClass extends Model
+class Model extends ModelInterface
 
     # The `db` attribute will be added when the model will be registered to the
     # database. It is used to fetch and store the model
@@ -538,5 +538,7 @@ class RdfsClass extends Model
         return lang
 
 
-module.exports = RdfsClass
+
+
+module.exports = Model
 

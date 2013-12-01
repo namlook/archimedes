@@ -3,10 +3,10 @@ chai = require('chai')
 expect = chai.expect
 should = chai.should()
 
-RdfsClass = require('../rdf').Class
+RdfsClass = require('../rdf').Model
 RdfDatabase = require('../rdf').Database
 
-describe 'Class', ()->
+describe 'RdfsClass', ()->
 
 
     classes = {}
