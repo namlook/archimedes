@@ -210,7 +210,7 @@ class Model extends ModelInterface
     # * fields: faceting only on the specified fields. If no fields are
     #     set, then the faceting is done for all fields
     @facets: (query, options, callback)=>
-        if typeof options is 'function' and not callback
+        if typeof(options) is 'function' and not callback
             callback = options
         # ...
 
@@ -236,7 +236,9 @@ class Model extends ModelInterface
     # If field values are already populated, do nothing.
     populate: (fields, callback) =>
         unless callback
-            fields = callback
+            if typeof(fields) isnt 'function'
+                throw 'a callback is required'
+            callback = fields
         # ...
 
 
@@ -296,7 +298,13 @@ class Model extends ModelInterface
     #
     # If `options` is a string, it is taken as a lang code
     getLabel: (fieldName, options) =>
-        # ...
+        lang = @__getLang(fieldName, options)
+        label = @schema[fieldName].label
+        if _.isObject label
+            label = label[lang]
+        if not label
+            label = fieldName.toLowerCase();
+        return label
 
 
     # ## describe
@@ -519,12 +527,17 @@ class Model extends ModelInterface
     # Convert the model into a plain old javascript object (usefull for
     # templating)
     toJSONObject: () =>
-        # ...
+        jsonObject = {}
+        for key, value of @_properties
+            jsonObject[key] = _.clone(value)
+        if @id
+            jsonObject.id = @id
+        return jsonObject
 
 
     # Convert the model into a JSON string
     toJSON: () =>
-        # ...
+        return JSON.stringify @toJSONObject()
 
 
     # # Private methods

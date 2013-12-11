@@ -8,7 +8,6 @@ RdfDatabase = require('../rdf').Database
 
 describe 'RdfsClass', ()->
 
-
     classes = {}
 
     class classes.Author extends RdfsClass
@@ -29,6 +28,7 @@ describe 'RdfsClass', ()->
                 type: 'string'
                 multi: true
                 i18n: true
+                label: 'tags'
 
 
     class classes.BlogPost extends RdfsClass
@@ -38,6 +38,9 @@ describe 'RdfsClass', ()->
             title:
                 i18n: true
                 type: 'string'
+                label:
+                    'en': 'title'
+                    'fr': 'titre'
             blog:
                 type: 'Blog'
             author:
@@ -378,6 +381,59 @@ describe 'RdfsClass', ()->
         it 'should take a callback with the saved nugget'
 
 
+    describe '#getLabel', () ->
+        it 'should return the label of a field', () ->
+            blog = new db.Blog
+            blog.getLabel('i18ntags').should.be.equal 'tags'
 
+        it 'should return the field name if no label is set', () ->
+            blog = new db.Blog
+            blog.getLabel('title').should.be.equal 'title'
 
+        it 'should return the label in the wanted language', () ->
+            blogpost = new db.BlogPost
+            blogpost.getLabel('title', 'fr').should.be.equal 'titre'
+
+    describe '#getJSONObject', () ->
+        it 'should return a jsonable object', () ->
+            blogPost = new db.BlogPost
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'keyword', ['foo', 'bar']
+            jsonBlogPost = blogPost.toJSONObject()
+            jsonBlogPost.title.en.should.be.equal 'hello world'
+            jsonBlogPost.keyword.should.include 'foo', 'bar'
+            json = '{"title":{"en":"hello world"},"keyword":["foo","bar"]}'
+            JSON.stringify(jsonBlogPost).should.be.equal json
+
+        it 'should include the id', () ->
+            blogPost = new db.BlogPost
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'keyword', ['foo', 'bar']
+            blogPost.save()
+            jsonBlogPost = blogPost.toJSONObject()
+            expect(jsonBlogPost.id).to.not.be.undefined
+
+        it 'should not be modified if the model changes', () ->
+            blogPost = new db.BlogPost
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'keyword', ['foo', 'bar']
+            jsonBlogPost = blogPost.toJSONObject()
+            blogPost.set 'title', 'salut monde', 'fr'
+            expect(jsonBlogPost.title.fr).to.be.undefined
+
+    describe '#getJSON', () ->
+        it 'should return a json string of the model', () ->
+            blogPost = new db.BlogPost
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'keyword', ['foo', 'bar']
+            json = '{"title":{"en":"hello world"},"keyword":["foo","bar"]}'
+            blogPost.toJSON().should.be.equal json
+
+        it 'should include the id', () ->
+            blogPost = new db.BlogPost
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'keyword', ['foo', 'bar']
+            blogPost.save()
+            jsonBlogPost = JSON.parse blogPost.toJSON()
+            expect(jsonBlogPost.id).to.not.be.undefined
 
