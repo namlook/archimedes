@@ -159,13 +159,19 @@ describe 'RdfsClass', ()->
             blogPost.get('keyword').should.include 'foo', 'bar'
 
 
-        it 'should set the value of an i18n field', () ->
+        it 'should set the value of an i18n field (options is object)', () ->
             blogPost = new db.BlogPost
             blogPost.set 'title', 'hello world', {lang: 'en'}
             blogPost.set 'title', 'bonjour monde', {lang: 'fr'}
             blogPost.get('title', {lang: 'en'}).should.equal 'hello world'
             blogPost.get('title', {lang: 'fr'}).should.equal 'bonjour monde'
 
+        it 'should set the value of an i18n field (options is string)', () ->
+            blogPost = new db.BlogPost
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'title', 'bonjour monde', 'fr'
+            blogPost.get('title', 'en').should.equal 'hello world'
+            blogPost.get('title', 'fr').should.equal 'bonjour monde'
 
         it 'should set the values of an i18n multi-field', ()->
             blog = new db.Blog
@@ -200,7 +206,7 @@ describe 'RdfsClass', ()->
             should.not.exist blogPost.get 'keyword'
 
 
-        it 'should unset an i18n value', ()->
+        it 'should unset an i18n value (options is object)', ()->
             blogPost = new db.BlogPost
             blogPost.set 'title', 'hello world', {lang: 'en'}
             blogPost.set 'title', 'bonjour monde', {lang: 'fr'}
@@ -209,6 +215,16 @@ describe 'RdfsClass', ()->
             blogPost.get('title', {lang: 'fr'}).should.equal 'bonjour monde'
             blogPost.unset 'title', {lang: 'fr'}
             should.not.exist blogPost.get('title', {lang: 'fr'})
+
+        it 'should unset an i18n value (options is string)', ()->
+            blogPost = new db.BlogPost
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'title', 'bonjour monde', 'fr'
+            blogPost.unset 'title', 'en'
+            should.not.exist blogPost.get('title', 'en')
+            blogPost.get('title', 'fr').should.equal 'bonjour monde'
+            blogPost.unset 'title', 'fr'
+            should.not.exist blogPost.get('title', 'fr')
 
         it 'should unset an i18n multi field value', ()->
             blog = new db.Blog
