@@ -68,6 +68,36 @@ class Model extends ModelInterface
     #      value and return it (usefull for hashing passwords by example)
     schema: null
 
+
+    # ### queryRelations
+    #
+    # This allow to fetch reversed relations via mongo-like queries.
+    # For instance, let take two models: Blog and Post. A post refers to a blog,
+    # so to fetch all Blog which have posts written by 'bob', we do :
+    #
+    #     db.Post.find {'author.login': 'bob'}, {populate: true}, (err, posts) ->
+    #          blogs = []
+    #          for post in posts
+    #               blogs.push post.getInstance('blog')
+    #          console.log blogs
+    #
+    # It would be easier to fetch directly blogs with a query:
+    #
+    #     db.Blog.find {'posts.author.login': 'bob'}, (err, blogs) ->
+    #         console.log blogs
+    #
+    # This is possible by specify `queryRelations`. It takes the name of the
+    # relation as a key. If the relation is described as `many` or `one`. The
+    # value of the relation is the fully qualify property name.
+    #
+    # In our example, `queryRelations` would look like:
+    #
+    #      queryRelations:
+    #          posts:
+    #              many: 'Post.blog'
+    #
+    queryRelations: null
+
     # `properties` is an aliases more "RDFized" for `schema`
     properties: null
 
