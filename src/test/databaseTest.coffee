@@ -13,7 +13,7 @@ describe 'Database', ()->
         defaultLang: 'en'
     }
 
-    describe '#validate()', ()->
+    describe 'validate()', ()->
 
         it 'should throw an exception if no <fieldName>.type is specified'
         it 'should throw an exception if no <fieldName>.uri is specified'
