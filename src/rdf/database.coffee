@@ -1,24 +1,33 @@
 # # RDF Database
 
-Sparql = require './sparql'
 _ = require 'underscore'
 DatabaseInterface = require '../interface/database'
+triplestores = require 'triplestores'
 
 
 class Database extends DatabaseInterface
 
+    # options:
+    #
+    #   * store: the triple store name (default: stardog)
+    #   * endpoint: the sparql endpoint
+    #   * credentials.login: the user login to use
+    #   * credentials.password: the password
     constructor: (options) ->
         super
+
+        # the sparql endpoint URL
+        @endpoint = options.endpoint
+        unless @graphURI
+            throw "endpoint is required"
 
         # the URI where the data will be stored
         @graphURI = options.graphURI
         unless @graphURI
             throw "graphURI is required"
 
-        # the sparql endpoint URL
-        @endpoint = options.endpoint
-        unless @graphURI
-            throw "endpoint is required"
+        @store = new triplestores[options.store](options)
+
 
         # if namespace is not specified, graphURI is used
         # example 'http://onto.example.org'
@@ -41,7 +50,6 @@ class Database extends DatabaseInterface
         unless @defaultInstancesNamespace
             @defaultInstancesNamespace = "#{@namespace}/instances"
 
-        @sparql = new Sparql
 
 
     # Alias to registerModels
