@@ -2,17 +2,11 @@
 chai = require('chai')
 expect = chai.expect
 chai.should()
-RdfDatabase = require('../rdf').Database
+Database = require('../interface').Database
 
 describe 'Database', ()->
 
-    db = new RdfDatabase {
-        store: 'stardog'
-        endpoint: 'http://localhost:8890/sparql'
-        graphURI: 'http://graph.example.org'
-        namespace: 'http://onto.example.org' # optional
-        defaultLang: 'en'
-    }
+    db = new Database
 
     describe 'validate()', ()->
 

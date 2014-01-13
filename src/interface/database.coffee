@@ -15,12 +15,14 @@ class Database
             @beforeRegister(modelName, model)
             @_inheritSchema(model)
             @validateModel(modelName, model)
+            model::db = @
             @[modelName] = model
-
 
     beforeRegister: (modelName, model) ->
         unless model::meta?
             model::meta = {}
+
+        model::meta.name = modelName
 
         unless model::schema?
             throw "#{modelName} has not schema"
@@ -32,7 +34,10 @@ class Database
 
     # Check the model structure for any errors
     validateModel: (modelName, model) =>
-        # should be overwritten
+        # throw "not implemented"
+
+    sync: (modelName, model, callback) =>
+        # throw "not implemented"
 
     # Update the schema of model which inherits of its parent's
     _inheritSchema: (model) ->

@@ -67,6 +67,13 @@ describe 'Model', ()->
         #     author = new db.Author()
         #     author.meta.defaultLang.should.equal 'en'
 
+        it 'should have @meta.name set to the model name', () ->
+            author = new db.Author()
+            expect(author.meta.name).to.be.equal 'Author'
+
+        it 'should have the database attached to model.db', () ->
+            author = new db.Author()
+            expect(author.db).to.be.equal db
 
         it 'should add properties to new instance of model', ()->
             author = new db.Author {login: 'namlook'}
