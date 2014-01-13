@@ -45,9 +45,7 @@ describe 'Model', ()->
                 type: 'string'
                 multi: true
 
-    db = new Database {
-        defaultLang: 'en'
-    }
+    db = new Database
 
     db.registerModels models
 
@@ -64,9 +62,9 @@ describe 'Model', ()->
             blog = new db.Blog
             blogPost = new db.BlogPost
 
-        it 'should have @meta.defaultLang if specified in database', () ->
-            author = new db.Author()
-            author.meta.defaultLang.should.equal 'en'
+        # it 'should have @meta.defaultLang if specified in database', () ->
+        #     author = new db.Author()
+        #     author.meta.defaultLang.should.equal 'en'
 
 
         it 'should add properties to new instance of model', ()->
@@ -82,10 +80,10 @@ describe 'Model', ()->
         it 'should return the related instance id of a relation field'
         it 'should return the related instances ids of multi relation field'
 
+
     describe '.getInstance()', () ->
         it 'should return the related populated instance'
         it 'should return the related populated instances on a multi-field'
-
 
 
     describe '.set()', ()->
@@ -258,27 +256,38 @@ describe 'Model', ()->
         it 'should return true if the value of a field exists', ()->
             blogPost = new db.BlogPost
             blogPost.set 'keyword', ['foo', 'bar']
-            blogPost.set 'title', 'hello world'
+            blogPost.set 'title', 'hello world', 'en'
             blogPost.has('keyword').should.be.true
             blogPost.has('author').should.be.false
 
         it 'should return true if the value of a i18n field exists', () ->
             blogPost = new db.BlogPost
-            blogPost.set 'title', 'hello world', {lang: 'en'}
+            blogPost.set 'title', 'hello world', 'en'
             blogPost.set 'title', 'bonjour monde', {lang: 'fr'}
+
             blogPost.has('title', {lang: 'en'}).should.be.true
             blogPost.has('title', {lang: 'fr'}).should.be.true
             blogPost.has('title', {lang: 'es'}).should.be.false
 
+            blogPost.has('title', 'en').should.be.true
+            blogPost.has('title', 'fr').should.be.true
+            blogPost.has('title', 'es').should.be.false
+
+        it 'should throw an error if no language is specified for an i18n field', () ->
+            blogPost = new db.BlogPost
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'title', 'bonjour monde', {lang: 'fr'}
+            expect(-> blogPost.has 'title').to.throw(/'title' is i18n and need a language/)
+
     describe '.clear()', ()->
         it 'should remove all the values of and instance but not its id', ()->
             blogPost = new db.BlogPost
-            blogPost.set 'title', 'hello world'
+            blogPost.set 'title', 'hello world', 'en'
             blogPost.set 'keyword', ['foo', 'bar']
-            blogPost.has('title').should.be.true
+            blogPost.has('title', 'en').should.be.true
             blogPost.has('keyword').should.be.true
             blogPost.clear()
-            blogPost.has('title').should.be.false
+            blogPost.has('title', 'en').should.be.false
             blogPost.has('keyword').should.be.false
 
     describe '.clone()', ()->
@@ -373,14 +382,15 @@ describe 'Model', ()->
     describe '.getLabel()', () ->
         it 'should return the label of a field', () ->
             blog = new db.Blog
-            blog.getLabel('i18ntags').should.be.equal 'tags'
+            blog.getLabel('i18ntags', 'en').should.be.equal 'tags'
 
         it 'should return the field name if no label is set', () ->
             blog = new db.Blog
-            blog.getLabel('title').should.be.equal 'title'
+            blog.getLabel('title', 'en').should.be.equal 'title'
 
         it 'should return the label in the wanted language', () ->
             blogpost = new db.BlogPost
+            blogpost.getLabel('title', 'en').should.be.equal 'title'
             blogpost.getLabel('title', 'fr').should.be.equal 'titre'
 
     describe '.getJSONObject()', () ->

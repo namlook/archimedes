@@ -3,6 +3,7 @@ class Database
 
     constructor: (options) ->
         # example 'en'
+        options = options || {}
         @defaultLang = options.defaultLang
 
     # Register the models

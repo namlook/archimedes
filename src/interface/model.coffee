@@ -567,7 +567,7 @@ class Model
     __getLang: (fieldName, options) =>
         lang = options?.lang or options or @meta.defaultLang
         unless lang
-            throw "#{fieldName} is i18n and need a language"
+            throw "'#{fieldName}' is i18n and need a language"
         return lang
 
 
