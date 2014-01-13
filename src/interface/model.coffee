@@ -504,9 +504,17 @@ class Model
         # ...
 
 
-    # # validate all field against the schema declaration
-    # validate: (callback) =>
-    #   # ...
+    # If the field as a validate field in schema, apply the validator against
+    # the value. Example:
+    #
+    #    value:
+    #       type: 'integer'
+    #       require: true
+    #       validation: (value, obj) ->
+    #           value > 0 && model.get('othervalue') is value
+    #
+    validate: () =>
+      # ...
 
     # onBeforeValidate: (next) =>
     #   # ...
@@ -519,6 +527,7 @@ class Model
     # ## clone
     #
     # Returns a new instance of the model with identical attributes.
+    # Note that the new cloned instance is a new object thus it has no id.
     clone: ()=>
         return new @constructor(@_properties)
 
