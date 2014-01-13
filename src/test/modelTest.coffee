@@ -308,6 +308,14 @@ describe 'Model', ()->
             blogPost.save()
             blogPost.isNew().should.be.false
 
+        it 'should return false if the model is saved and has 0 as id', () ->
+            blogPost = new db.BlogPost
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'keyword', ['foo', 'bar']
+            blogPost.id = 0
+            blogPost.save()
+            blogPost.isNew().should.be.false
+
         it 'should return true on a cloned model', () ->
             blogPost = new db.BlogPost
             blogPost.set 'title', 'hello world', 'en'
@@ -331,7 +339,30 @@ describe 'Model', ()->
         it 'should throw an error if a field marked as required is missing'
 
     describe '.save()', ()->
-        it 'should generate a generic id if no id is set'
+        it 'should generate a generic id if no id is set', () ->
+            blogPost = new db.BlogPost
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'keyword', ['foo', 'bar']
+            expect(blogPost.id).to.be.undefined
+            blogPost.save()
+            expect(blogPost.id).to.be.string
+
+        it "shouldn't generate an id if the id is set", () ->
+            blogPost = new db.BlogPost
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'keyword', ['foo', 'bar']
+            blogPost.id = 'blogPost'
+            blogPost.save()
+            expect(blogPost.id).to.be.equal 'blogPost'
+
+            blogPost2 = new db.BlogPost
+            blogPost2.set 'title', 'hello world', 'en'
+            blogPost2.set 'keyword', ['foo', 'bar']
+            blogPost2.id = 0
+            blogPost2.save()
+            expect(blogPost2.id).to.be.equal 0
+
+
         it 'should generate an id from a specified field if no id is set'
         it 'should store the values of an instance into the database'
         it "shouldn't fire a store request if there is no value changes"

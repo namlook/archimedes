@@ -534,7 +534,7 @@ class Model
 
     # Returns true if the object has not been saved yet.
     isNew: () =>
-        return not @id
+        return not @id?
 
 
     # Convert the model into a plain old javascript object (usefull for
