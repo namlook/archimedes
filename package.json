@@ -20,6 +20,7 @@
   "dependencies": {
     "underscore": "~1.5.2",
     "stardog": "~0.1.0",
-    "underscore.string": "~2.3.3"
+    "underscore.string": "~2.3.3",
+    "objectdiff": "~1.1.0"
   }
 }

@@ -1,5 +1,6 @@
 
 chai = require('chai')
+chai.Assertion.includeStack = true;
 expect = chai.expect
 should = chai.should()
 
@@ -346,6 +347,124 @@ describe 'Model', ()->
 
     describe '.validate()', ()->
         it 'should throw an error if a field marked as required is missing'
+
+    describe '.changes()', () ->
+        it "should return null if the model hasn't changed", () ->
+            blogPost = new db.BlogPost
+            expect(blogPost.changes()).to.be.null
+
+        it 'should return null if the model was bringed back to it original state', () ->
+            blogPost = new db.BlogPost {'content': 'hello'}
+            blogPost.set 'content', 'hi'
+            blogPost.set 'content', 'hello'
+            expect(blogPost.changes()).to.be.null
+
+        it 'should return the added properties', () ->
+            blogPost = new db.BlogPost
+            blogPost.set 'content', 'hello'
+            expect(blogPost.changes().added.content).to.be.equal 'hello'
+
+        it 'should return the removed properties', () ->
+            blogPost = new db.BlogPost {'content': 'hello'}
+            blogPost.unset 'content'
+            changes = blogPost.changes()
+            expect(changes.added.content).to.be.undefined
+            expect(changes.removed.content).to.be.equal 'hello'
+
+        it 'should return the modified properties', () ->
+            blogPost = new db.BlogPost {'content': 'hello'}
+            blogPost.set 'content', 'hi'
+            changes = blogPost.changes()
+            expect(changes.removed.content).to.be.equal 'hello'
+            expect(changes.added.content).to.be.equal 'hi'
+
+        it 'should return added i18n properties', () ->
+            blogPost = new db.BlogPost
+            blogPost.set 'title', 'salut', 'fr'
+            expect(blogPost.changes().added.title.fr).to.be.equal 'salut'
+            blogPost.push 'keyword', 'foo'
+            blogPost.push 'keyword', 'bar'
+            expect(blogPost.changes().added.keyword).to.include 'foo', 'bar'
+
+        it 'should return removed i18n properties', () ->
+            blogPost = new db.BlogPost {
+                'title': {'en': 'hello', }
+                'content': 'hello world'
+                'keyword': ['foo', 'bar']
+            }
+            blogPost.unset 'title', 'en'
+            blogPost.unset 'content'
+            blogPost.pull 'keyword', 'bar'
+
+            changes = blogPost.changes()
+            expect(changes.removed.title.en).to.be.equal 'hello'
+            expect(changes.removed.content).to.be.equal 'hello world'
+            expect(changes.removed.keyword).to.include 'bar'
+
+        it 'should return modified i18n properties', () ->
+            blogPost = new db.BlogPost {
+                'title': {'en': 'hello'}
+                'content': 'hello world'
+                'keyword': ['foo', 'bar']
+            }
+
+            blogPost.set 'title', 'hi', 'en'
+            blogPost.set 'content', 'hi world'
+            blogPost.set 'keyword', ['toto', 'tata']
+
+            changes = blogPost.changes()
+
+            expect(changes.removed.title.en).to.be.equal 'hello'
+            expect(changes.added.title.en).to.be.equal 'hi'
+            expect(changes.removed.content).to.be.equal 'hello world'
+            expect(changes.added.content).to.be.equal 'hi world'
+
+            expect(changes.removed.keyword).to.include 'foo', 'bar'
+            expect(changes.added.keyword).to.include 'toto', 'tata'
+
+        it 'should return the added multi-i18n properties', () ->
+            blog = new db.Blog
+            blog.push 'i18ntags', 'hello', 'en'
+            blog.push 'i18ntags', 'world', 'en'
+            blog.push 'i18ntags', 'salut', 'fr'
+            blog.push 'i18ntags', 'monde', 'fr'
+
+            changes = blog.changes()
+            expect(changes.added.i18ntags.en).to.include 'hello', 'world'
+            expect(changes.added.i18ntags.fr).to.include 'salut', 'monde'
+
+        it 'should return the removed multi-i18n properties', () ->
+            blog = new db.Blog {
+                i18ntags: {
+                    'en': ['hello', 'world', 'foo']
+                    'fr': ['salut', 'monde', 'toto']
+                }
+            }
+            blog.pull 'i18ntags', 'hello', 'en'
+            blog.pull 'i18ntags', 'world', 'en'
+            blog.pull 'i18ntags', 'salut', 'fr'
+            blog.pull 'i18ntags', 'monde', 'fr'
+
+            changes = blog.changes()
+            expect(changes.removed.i18ntags.en).to.include 'hello', 'world'
+            expect(changes.removed.i18ntags.fr).to.include 'salut', 'monde'
+
+        it 'should return the modified multi-i18n properties', () ->
+            blog = new db.Blog {
+                i18ntags: {
+                    'en': ['hello', 'world', 'foo']
+                    'fr': ['salut', 'monde', 'toto']
+                }
+            }
+            blog.set 'i18ntags', ['foo', 'bar'], 'en'
+            blog.set 'i18ntags', ['toto', 'tata'], 'fr'
+
+            changes = blog.changes()
+            expect(changes.removed.i18ntags.en).to.include 'hello', 'world'
+            expect(changes.added.i18ntags.en).to.include 'bar'
+            expect(changes.removed.i18ntags.fr).to.include 'salut', 'monde'
+            expect(changes.added.i18ntags.fr).to.include 'tata'
+
 
     describe '.save()', ()->
         it 'should generate a generic id if no id is set', () ->

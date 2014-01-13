@@ -2,6 +2,7 @@
 # # Model
 
 _ = require 'underscore'
+objectdiff = require 'objectdiff'
 
 class ValueError extends Error
 class ModelError extends Error
@@ -83,8 +84,12 @@ class Model
     	# where the related instances (fetched via uris) are stored
         @_instances = {}
 
+        # store initial properties so we can track changes later
+        @_initProperties = {}
+
         for key, value of properties
             @_properties[key] = _.clone(value)
+            @_initProperties[key] = _.clone(value)
 
 
     # # Static methods
@@ -469,6 +474,67 @@ class Model
     # Returns true if the object has changed before its last synchronisation
     hasChanged: ()->
         # ...
+
+    # ## changes
+    # Returns the changed properties before the last synchronisation of the model.
+    # Returns null if nothing has changed
+    changes: () ->
+        setValue = (target, fieldName, value, options) ->
+            options = options or {}
+            i18n = options.i18n or false
+            multi = options.multi or false
+            lang = options.lang
+            if i18n
+                target[fieldName] = {} unless target[fieldName]?
+                if multi
+                    target[fieldName][lang] = [] unless target[fieldName][lang]?
+                    target[fieldName][lang].push value
+                else
+                    target[fieldName][lang] = value
+            else if multi
+                target[fieldName] = [] unless target[fieldName]?
+                target[fieldName].push value
+            else
+                target[fieldName] = value
+
+        setDiff = (fieldName, infos, options) ->
+            if infos.changed is 'added'
+                setValue(added, fieldName, infos.value, options)
+            else if infos.changed is 'removed'
+                setValue(removed, fieldName, infos.value, options)
+            else if infos.changed is 'primitive change'
+                setValue(removed, fieldName, infos.removed, options)
+                setValue(added, fieldName, infos.added, options)
+
+        added = {}
+        removed = {}
+        diff = objectdiff.diff(@_initProperties, @_properties)
+
+        if diff.changed is 'object change'
+            for fieldName, infos of diff.value
+                if infos.changed is 'object change'
+                    if @schema[fieldName].i18n
+                        for lang, linfos of infos.value
+                            if linfos.changed is 'object change'
+                                for index, mlinfos of linfos.value
+                                    setDiff(fieldName, mlinfos, {
+                                        i18n: true, lang: lang, multi: true
+                                    })
+                            else
+                                setDiff(fieldName, linfos, {
+                                    i18n: true, lang: lang
+                                })
+                    else if @schema[fieldName].multi
+                        for index, minfos of infos.value
+                            setDiff(fieldName, minfos, {multi: true})
+                else
+                    setDiff(fieldName, infos)
+
+            return {
+                added: added
+                removed: removed
+            }
+        return null
 
 
     # ## save
