@@ -45,9 +45,35 @@ module.exports = class StardogStore
         options.database or= @databaseName
 
         @_connection.query options, (data) ->
+            if options.mimetype is 'text/boolean'
+                return callback null, data
             if _.isString data
                 return callback data
             return callback null, data.results.bindings
+
+
+    # # insert, update and delete data
+    #
+    # options:
+    #
+    #   * database: the database to use
+    update: (sparqlQuery, options, callback) =>
+        unless callback?
+            if typeof(options) is 'function'
+                callback = options
+                options = {}
+            else
+                throw "callback required"
+
+        options.mimetype = 'text/boolean'
+        options.query = sparqlQuery
+        options.database or= @databaseName
+
+        @_connection.query options, (data) ->
+            unless _.isBoolean data
+                return callback data
+            return callback null, data
+
 
     # options:
     #
