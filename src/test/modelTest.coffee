@@ -335,16 +335,16 @@ describe 'Model', ()->
             newBlogPost.isNew().should.be.true
 
 
-    describe: '.populate()': ()->
+    describe '.populate()', ()->
         it 'should populate all fields which values are URIs'
         it 'should populate a specified field'
         it 'should populate all specified field passed as an array'
         it 'should return an error if a field was not able to be populated'
 
-    describe: '.isPopulated()': ()->
+    describe '.isPopulated()', ()->
         it 'should return true if the field is already populated'
 
-    describe: '.validate()': ()->
+    describe '.validate()', ()->
         it 'should throw an error if a field marked as required is missing'
 
     describe '.save()', ()->
