@@ -4,7 +4,7 @@ _.str = require 'underscore.string'
 stardog = require 'stardog'
 
 
-class StardogStore
+module.exports = class StardogStore
 
     # options:
     #
@@ -14,12 +14,12 @@ class StardogStore
     #   * database: the database name (or graph URI ?)
     constructor: (options) ->
         @endpoint = options.endpoint or 'http://localhost:5820'
-        @credentials = options.credentials
+        @credentials = options.credentials || {}
         @databaseName = options.database
         unless @databaseName and options.graphURI?
             @databaseName = _.str.classify options.graphURI
             @databaseName = _.str.underscored @databaseName
-            @databaseName = _.strRight @databaseName
+            @databaseName = _.str.strRight @databaseName
 
         @_connection = new stardog.Connection()
         @_connection.setEndpoint(@endpoint);

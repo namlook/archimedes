@@ -2,8 +2,10 @@
 
 _ = require 'underscore'
 DatabaseInterface = require '../interface/database'
-triplestores = require 'triplestores'
 
+triplestores = {
+    'stardog': require './triplestores/stardog'
+}
 
 class Database extends DatabaseInterface
 
@@ -18,13 +20,17 @@ class Database extends DatabaseInterface
 
         # the sparql endpoint URL
         @endpoint = options.endpoint
-        unless @graphURI
+        unless @endpoint
             throw "endpoint is required"
 
         # the URI where the data will be stored
         @graphURI = options.graphURI
         unless @graphURI
             throw "graphURI is required"
+
+        # what store do we have to use ?
+        unless options.store
+            throw "store is required"
 
         @store = new triplestores[options.store](options)
 

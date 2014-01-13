@@ -52,6 +52,7 @@ describe 'RdfModel', ()->
                 multi: true
 
     db = new RdfDatabase {
+        store: 'stardog'
         endpoint: 'http://localhost:8889/sparql'
         namespace: 'http://onto.example.org'
         defaultInstancesNamespace: 'http://data.example.org'
