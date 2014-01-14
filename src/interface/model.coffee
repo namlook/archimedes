@@ -475,7 +475,7 @@ class Model
     # ## hasChanged
     # Returns true if the object has changed before its last synchronisation
     hasChanged: ()->
-        # ...
+        @changes() isnt null
 
     # ## changes
     # Returns the changed properties before the last synchronisation of the model.

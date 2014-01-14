@@ -1,6 +1,7 @@
 
 chai = require('chai')
 expect = chai.expect
+sinon = require 'sinon'
 should = chai.should()
 
 RdfsClass = require('../rdf').Model
@@ -208,10 +209,51 @@ describe 'RdfModel', ()->
                 expect(newBlogPost.id).to.be.equal 'HelloWorld'
                 done()
 
-        it 'should store the values of an instance into the database'
-        it "shouldn't fire a store request if there is no value changes"
-        it 'should take a callback with an error if the nugget is not saved'
-        it 'should take a callback with the saved nugget'
+        it 'should store the values of an instance into the database', (done) ->
+            blogPost = new db.BlogPost()
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'keyword', ['hello', 'world']
+            blogPost.set 'content', 'article'
+            blogPost.save (err) ->
+                expect(err).to.be.null
+                db.store.query "select * {?s ?p ?o .}", (err, data) ->
+                    expect(err).to.be.null
+                    results = (
+                        "#{i.s.value}::#{i.p.value}::#{i.o.value}" for i in data)
+                    nsprop = 'http://onto.example.org/properties'
+                    bpId = "http://data.example.org/blogpost/#{blogPost.id}"
+                    expect(results).to.include(
+                        "#{bpId}::#{nsprop}/title::hello world",
+                        "#{bpId}::#{nsprop}/keyword::hello",
+                        "#{bpId}::#{nsprop}/keyword::world",
+                        "#{bpId}::#{nsprop}/content::article")
+                    done()
+
+        it 'should fire a store request only once if there is changes', (done) ->
+            store = db.store
+            spy = sinon.spy(store, 'update')
+            blogPost = new db.BlogPost()
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'keyword', ['hello', 'world']
+            blogPost.set 'content', 'article'
+            blogPost.save (err) ->
+                expect(spy.calledOnce).to.be.true
+                done()
+
+        it.only "shouldn't fire a store request if there is no value changes", (done) ->
+            store = db.store
+            spy = sinon.spy(store, 'update')
+            blogPost = new db.BlogPost()
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'keyword', ['hello', 'world']
+            blogPost.set 'content', 'article'
+            blogPost.save (err) ->
+                blogPost.set 'title', 'salut monde', 'fr'
+                blogPost.rollback()
+                expect(blogPost.hasChanged()).to.be.false
+                blogPost.save (err) ->
+                    expect(spy.calledOnce).to.be.true
+                    done()
 
 
     describe 'getJSONObject()', () ->

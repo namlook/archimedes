@@ -114,11 +114,17 @@ class Database extends DatabaseInterface
     #       @sync model, (err, modelId) ->
     sync: (model, callback) =>
 
+        changes = model.changes()
+
+        # if there is no changes, we don't need to make a server call
+        unless changes
+            return callback null, model.id
+
         unless model.id?
             model.id = @__buildId()
 
-        changes = model.changes()
-
+        addedTriples = []
+        removedTriples = []
         if changes
             addedTriples = @_fieldsToTriples(model, changes.added)
             removedTriples = @_fieldsToTriples(model, changes.removed)
@@ -131,7 +137,7 @@ class Database extends DatabaseInterface
         if removedTriples.length
             sparqlQuery += "DELETE DATA { #{removedTriples.join(' .\n')} } "
 
-        if addedTriples
+        if addedTriples.length
             sparqlQuery += "INSERT DATA { #{addedTriples.join(' .\n')} }"
 
         @store.update sparqlQuery, (err, ok) =>
