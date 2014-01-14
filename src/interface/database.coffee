@@ -2,9 +2,7 @@
 class Database
 
     constructor: (options) ->
-        # example 'en'
         options = options || {}
-        @defaultLang = options.defaultLang
 
     # Register the models
     # The registration make some fill the models with default values and sanitize
@@ -22,6 +20,8 @@ class Database
             model::db = @
             @[modelName] = model
 
+
+    # ## beforeRegister
     beforeRegister: (modelName, model) ->
         unless model::meta?
             model::meta = {}
@@ -36,15 +36,20 @@ class Database
             model::meta.defaultLang = @defaultLang
 
 
+    # ## validateModel
     # Check the model structure for any errors
     validateModel: (modelName, model) =>
         # throw "not implemented"
+
 
     # ## length
     # return the number of data into the whole db
     length: (callback) ->
         throw 'not implemented'
 
+
+    # ## sync
+    # synchronize the model instance with the database
     sync: (model, callback) =>
         if model.id?
             id = model.id
@@ -53,6 +58,8 @@ class Database
         return callback null, id;
 
 
+    # ## clear
+    # remove all data from the database
     clear: (callback) =>
         throw 'not implemented'
 

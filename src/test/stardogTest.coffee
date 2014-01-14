@@ -88,9 +88,8 @@ describe 'StardogDatabase', ()->
                 expect(ok).to.be.true
                 db.length (err, total) ->
                     expect(total).to.be.equal 2
-                    db.clear (err, ok) ->
+                    db.clear (err) ->
                         expect(err).to.be.null
-                        expect(ok).to.be.ok
                         db.length (err, total) ->
                             expect(total).to.be.equal 0
                             done()

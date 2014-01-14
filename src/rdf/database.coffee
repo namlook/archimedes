@@ -52,11 +52,13 @@ class Database extends DatabaseInterface
             @defaultInstancesNamespace = "#{@namespace}/instances"
 
 
-
+    # ## registerClasses
     # Alias to registerModels
     registerClasses: (classes) =>
         @registerModels(classes)
 
+
+    # ## validateModel
     # Check the model schema for any errors
     validateModel: (modelName, model) =>
         requiredNS = ['uri','graphURI','instancesNamespace','propertiesNamespace']
@@ -65,6 +67,8 @@ class Database extends DatabaseInterface
                 throw "#{modelName}.meta.#{ns} not found"
         # ...
 
+
+    # ## beforeRegister
     # Fill the model's info which haven't been specified by default ones
     beforeRegister: (modelName, model) =>
         # if the model has a `properties` attribute, we aliases it with schema
@@ -122,6 +126,7 @@ class Database extends DatabaseInterface
                 return callback "error while deleting the data"
             return callback null
 
+
     # ## sync
     # synchronize a model data with the database
     #
@@ -166,10 +171,15 @@ class Database extends DatabaseInterface
             return callback null, model.id
 
 
+    # ## getModelURI
+    # returns the model URI based on its id and the instancesNamespace
     getModelURI: (model) =>
         return "#{model.meta.instancesNamespace}/#{model.id}"
 
-    toRdf: (model) =>
+
+    # ## modelToTriples
+    # returns a list of triples related to the model values
+    modelToTriples: (model) =>
         triples = @_fieldsToTriples(model, model._properties)
         if model.id?
             triple.push "#{instancesNamespace}/#{@__buildId()}"

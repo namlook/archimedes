@@ -477,6 +477,7 @@ class Model
     hasChanged: ()->
         @changes() isnt null
 
+
     # ## changes
     # Returns the changed properties before the last synchronisation of the model.
     # Returns null if nothing has changed
@@ -571,15 +572,11 @@ class Model
             @_properties[key] = _.clone(value)
 
 
-    onBeforeSave: (next) =>
-        # ...
-
-
-    onAfterSave:  =>
-        # ...
-
-
-    # Delete the object and all its related property uris.
+    # ## delete
+    # delete the model instance and all its related property uris.
+    #
+    # example:
+    #       @delete (err) ->
     delete: (callback) =>
         @db.deleteModel @, (err) =>
             if err
@@ -593,14 +590,7 @@ class Model
                 return callback null
 
 
-    onBeforeDelete: (next) =>
-        # ...
-
-
-    onAfterDelete: =>
-        # ...
-
-
+    # ## validate
     # If the field as a validate field in schema, apply the validator against
     # the value. Example:
     #
@@ -613,27 +603,21 @@ class Model
     validate: () =>
       # ...
 
-    # onBeforeValidate: (next) =>
-    #   # ...
-
-    # onAfterValidate: =>
-    #   # ...
-
-
 
     # ## clone
-    #
     # Returns a new instance of the model with identical attributes.
     # Note that the new cloned instance is a new object thus it has no id.
     clone: ()=>
         return new @constructor(@_properties)
 
 
+    # ## isNew
     # Returns true if the object has not been saved yet.
     isNew: () =>
         return @_isNew
 
 
+    # ## toJSONObject
     # Convert the model into a plain old javascript object (usefull for
     # templating)
     toJSONObject: () =>
@@ -645,6 +629,7 @@ class Model
         return jsonObject
 
 
+    # ## toJSON
     # Convert the model into a JSON string
     toJSON: () =>
         return JSON.stringify @toJSONObject()

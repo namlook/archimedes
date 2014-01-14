@@ -6,6 +6,7 @@ stardog = require 'stardog'
 
 module.exports = class StardogStore
 
+    # ## constructor
     # options:
     #
     #   * endpoint: the sparql endpoint (default 'http://localhost:5820')
@@ -33,6 +34,9 @@ module.exports = class StardogStore
     setDatabase: (databaseName) =>
         @databaseName = databaseName
 
+    # ## query
+    # performs a database query via a sparql query
+    #
     # options:
     #
     #  * database: the database to use
@@ -57,7 +61,8 @@ module.exports = class StardogStore
             return callback null, data.results.bindings
 
 
-    # # insert, update and delete data
+    # ## update
+    # insert, update and delete data from the database
     #
     # options:
     #
@@ -79,7 +84,9 @@ module.exports = class StardogStore
                 return callback data
             return callback null, data
 
-
+    # ## describe
+    # get all related data from an URI
+    #
     # options:
     #
     #  * database: the database to use
@@ -103,7 +110,10 @@ module.exports = class StardogStore
 
 
     # ## clear
-    # remove all data of the database
+    # remove all data of the database. The callback is optional
+    #
+    # example:
+    #       @clear (err) ->
     clear: (callback) =>
         @_connection.begin {database: @databaseName}, (transactionId) =>
             options = {database: @databaseName, txId: transactionId}
@@ -117,11 +127,17 @@ module.exports = class StardogStore
                         if callback
                             return callback data
                         return
+                    unless ok
+                        if callback
+                            return callback 'something wrong happened while clearing the db'
                     if callback
-                        return callback null, ok
+                        return callback null
 
     # ## length
     # returns the number of data present into the db
+    #
+    # example:
+    #       @length (err, total) ->
     length: (callback) =>
         @query "select (count(*) as ?total) where {?s ?p ?o.}", (err, data) =>
             if err
