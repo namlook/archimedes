@@ -14,6 +14,9 @@ module.exports = class StardogStore
     #   * database: the database name (or graph URI ?)
     constructor: (options) ->
         @endpoint = options.endpoint or 'http://localhost:5820'
+        unless @endpoint
+            throw "endpoint is required"
+
         @credentials = options.credentials || {}
         @databaseName = options.database
         unless @databaseName and options.graphURI?

@@ -18,11 +18,6 @@ class Database extends DatabaseInterface
     constructor: (options) ->
         super
 
-        # the sparql endpoint URL
-        @endpoint = options.endpoint
-        unless @endpoint
-            throw "endpoint is required"
-
         # the URI where the data will be stored
         @graphURI = options.graphURI
         unless @graphURI
@@ -100,7 +95,7 @@ class Database extends DatabaseInterface
 
     sync: (model, callback) =>
 
-        if model.isNew()
+        unless model.id?
             instancesNamespace = model.meta.instancesNamespace
             model.id = "#{instancesNamespace}/#{@__buildId()}"
 
