@@ -560,7 +560,8 @@ class Model
             if callback
                 return callback null, @
 
-
+    # ## rollback
+    # returns the model to the state it was the last time it was saved (or created)
     rollback: () =>
         @_properties = {}
         for key, value of @_initProperties

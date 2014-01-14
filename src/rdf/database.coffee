@@ -100,11 +100,18 @@ class Database extends DatabaseInterface
 
     sync: (model, callback) =>
 
+        if model.isNew()
+            instancesNamespace = model.meta.instancesNamespace
+            model.id = "#{instancesNamespace}/#{@__buildId()}"
+
         changes = model.changes()
 
         if changes
             addedTriples = @_fieldsToTriples(model, changes.added)
             removedTriples = @_fieldsToTriples(model, changes.removed)
+
+        if model.isNew()
+            addedTriples.push "<#{model.id}> a  <#{model.meta.uri}>"
 
         sparqlQuery = ''
         if removedTriples.length
@@ -113,21 +120,16 @@ class Database extends DatabaseInterface
         if addedTriples
             sparqlQuery += "INSERT DATA { #{addedTriples.join(' .\n')} }"
 
-        console.log(sparqlQuery)
-
         @store.update sparqlQuery, (err, ok) =>
             if err
                 return callback err
             unless ok
                 return callback "error while syncing the data"
 
-        return callback null, new @[model.meta.name](model._properties)
+        return callback null, model.id #new @[model.meta.name](model._properties)
 
 
     toRdf: (model) =>
-        if model.isNew()
-            instancesNamespace = model.meta.instancesNamespace
-            model.id = "#{instancesNamespace}/#{@__buildId()}"
         return @_fieldsToTriples(model, model._properties)
 
 
