@@ -117,6 +117,8 @@ class Database extends DatabaseInterface
     # example:
     #       @removeModel model, (err) ->
     deleteModel: (model, callback) =>
+        unless model.id?
+            return callback "can't delete a non-saved model"
         modelURI = @getModelURI(model)
         deleteQuery = "delete {<#{modelURI}> ?p ?o .} where {<#{modelURI}> ?p ?o .}"
         @store.update deleteQuery, (err, ok) =>

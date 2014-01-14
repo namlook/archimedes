@@ -115,6 +115,9 @@ describe 'RdfModel', ()->
             new db.Author().meta.instancesNamespace.should.equal instancesNS
 
 
+    describe 'find()', () ->
+        it 'should fetch a model instance by its id'
+
     describe 'get()', ()->
         it 'should return the related instance id of a relation field'
         it 'should return the related instances ids of multi relation field'
@@ -278,6 +281,16 @@ describe 'RdfModel', ()->
                         blogPost.db.length (err, total) ->
                             expect(total).to.be.equal 0
                             done()
+
+        it 'should throw an error if we try to delete a non-saved model', (done) ->
+            blogPost = new db.BlogPost()
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'keyword', ['hello', 'world']
+            blogPost.set 'content', 'article'
+            blogPost.delete (err) ->
+                expect(err).to.be.equal "can't delete a non-saved model"
+                done()
+
 
     describe 'getJSONObject()', () ->
         it 'should return a jsonable object with related instance ids'
