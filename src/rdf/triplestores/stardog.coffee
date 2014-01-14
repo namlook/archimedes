@@ -109,11 +109,16 @@ module.exports = class StardogStore
             options = {database: @databaseName, txId: transactionId}
             @_connection.clearDB options, (ok) =>
                 if _.isString ok
-                    return callback ok
+                    if callback
+                        return callback ok
+                    return
                 @_connection.commit options, (data) =>
                     if _.isString data
-                        return callback data
-                    return callback null, ok
+                        if callback
+                            return callback data
+                        return
+                    if callback
+                        return callback null, ok
 
     # ## length
     # returns the number of data present into the db
@@ -129,8 +134,22 @@ if require.main is module
         credentials: {login: 'admin', password: 'admin'}
     }
 
-    tripleStore.query "insejdksjs mkljf sdkjfs m", (err, data) ->
-        console.log err, data
+    insertQuery = """
+        insert data {
+            <http://ex.org/book1> <http://ex.org/price> 43 .
+            <http://ex.org/book1> <http://ex.org/title> \"bla\" .
+        }
+    """
+    tripleStore.update insertQuery, (err, data) ->
+        tripleStore.update """
+            delete {<http://ex.org/book1> ?p ?o .} 
+            where {
+                <http://ex.org/book1> ?p ?o .
+            }
+        """, (err, data) ->
+            console.log err, data
+            tripleStore.length (err, total) ->
+                console.log err, data, total
 
     ###tripleStore._connection.begin {database: 'http_example_org'}, (txId) ->
         console.log '>>>', txId

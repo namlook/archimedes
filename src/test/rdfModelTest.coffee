@@ -257,6 +257,22 @@ describe 'RdfModel', ()->
                     spy.restore()
                     done()
 
+    describe 'delete()', ()->
+        it 'should remove a saved instance from the database', (done) ->
+            blogPost = new db.BlogPost()
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'keyword', ['hello', 'world']
+            blogPost.set 'content', 'article'
+            blogPost.save (err) ->
+                expect(err).to.be.null
+                blogPost.db.length (err, total) ->
+                    expect(err).to.be.null
+                    expect(total).to.be.equal 5
+                    blogPost.delete (err) ->
+                        expect(err).to.be.null
+                        blogPost.db.length (err, total) ->
+                            expect(total).to.be.equal 0
+                            done()
 
     describe 'getJSONObject()', () ->
         it 'should return a jsonable object with related instance ids'

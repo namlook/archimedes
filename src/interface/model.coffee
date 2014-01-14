@@ -549,7 +549,9 @@ class Model
     save: (callback) =>
         @db.sync @, (err, id) =>
             if err
-                return callback err
+                if callback
+                    return callback err
+                return
 
             @_initProperties = {}
             for key, value of @_properties
@@ -560,12 +562,14 @@ class Model
             if callback
                 return callback null, @
 
+
     # ## rollback
     # returns the model to the state it was the last time it was saved (or created)
     rollback: () =>
         @_properties = {}
         for key, value of @_initProperties
             @_properties[key] = _.clone(value)
+
 
     onBeforeSave: (next) =>
         # ...
@@ -577,7 +581,16 @@ class Model
 
     # Delete the object and all its related property uris.
     delete: (callback) =>
-        # ...
+        @db.deleteModel @, (err) =>
+            if err
+                if callback
+                    return callback err
+                return
+
+            @_isNew = true
+
+            if callback
+                return callback null
 
 
     onBeforeDelete: (next) =>

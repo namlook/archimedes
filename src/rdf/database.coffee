@@ -100,10 +100,27 @@ class Database extends DatabaseInterface
     clear: (callback) =>
         @store.clear callback
 
+
     # ## length
     # return the number of data present into the db
     length: (callback) =>
         @store.length callback
+
+
+    # ## deleteModel
+    # remove a model instance from the database
+    #
+    # example:
+    #       @removeModel model, (err) ->
+    deleteModel: (model, callback) =>
+        modelURI = @getModelURI(model)
+        deleteQuery = "delete {<#{modelURI}> ?p ?o .} where {<#{modelURI}> ?p ?o .}"
+        @store.update deleteQuery, (err, ok) =>
+            if err
+                return callback err
+            unless ok
+                return callback "error while deleting the data"
+            return callback null
 
     # ## sync
     # synchronize a model data with the database
@@ -130,7 +147,7 @@ class Database extends DatabaseInterface
             removedTriples = @_fieldsToTriples(model, changes.removed)
 
         if model.isNew()
-            modelURI = "#{model.meta.instancesNamespace}/#{model.id}"
+            modelURI = @getModelURI(model)
             addedTriples.push "<#{modelURI}> a  <#{model.meta.uri}>"
 
         sparqlQuery = ''
@@ -149,6 +166,9 @@ class Database extends DatabaseInterface
             return callback null, model.id
 
 
+    getModelURI: (model) =>
+        return "#{model.meta.instancesNamespace}/#{model.id}"
+
     toRdf: (model) =>
         triples = @_fieldsToTriples(model, model._properties)
         if model.id?
@@ -159,7 +179,7 @@ class Database extends DatabaseInterface
     _fieldsToTriples: (model, fields) =>
         schema = model.schema
         triples = []
-        modelId = "#{model.meta.instancesNamespace}/#{model.id}"
+        modelURI = @getModelURI(model)
 
         for fieldName, value of fields
             # get the property uri
@@ -178,20 +198,20 @@ class Database extends DatabaseInterface
                                 'type': fieldType
                                 'lang': lang
                             })
-                            triples.push "<#{modelId}> <#{propertyUri}> #{rdfValue}"
+                            triples.push "<#{modelURI}> <#{propertyUri}> #{rdfValue}"
                     else
                         rdfValue = @_valueToRdf(val, {
                             'type': fieldType
                             'lang': lang
                         })
-                        triples.push "<#{modelId}> <#{propertyUri}> #{rdfValue}"
+                        triples.push "<#{modelURI}> <#{propertyUri}> #{rdfValue}"
             else if schema[fieldName].multi
                 for val in value
                     rdfValue = @_valueToRdf(val, {'type': fieldType})
-                    triples.push "<#{modelId}> <#{propertyUri}> #{rdfValue}"
+                    triples.push "<#{modelURI}> <#{propertyUri}> #{rdfValue}"
             else
                 rdfValue = @_valueToRdf(value, {'type': fieldType})
-                triples.push "<#{modelId}> <#{propertyUri}> #{rdfValue}"
+                triples.push "<#{modelURI}> <#{propertyUri}> #{rdfValue}"
         return triples
 
 
