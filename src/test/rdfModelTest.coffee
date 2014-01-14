@@ -238,9 +238,10 @@ describe 'RdfModel', ()->
             blogPost.set 'content', 'article'
             blogPost.save (err) ->
                 expect(spy.calledOnce).to.be.true
+                spy.restore()
                 done()
 
-        it.only "shouldn't fire a store request if there is no value changes", (done) ->
+        it "shouldn't fire a store request if there is no value changes", (done) ->
             store = db.store
             spy = sinon.spy(store, 'update')
             blogPost = new db.BlogPost()
@@ -253,6 +254,7 @@ describe 'RdfModel', ()->
                 expect(blogPost.hasChanged()).to.be.false
                 blogPost.save (err) ->
                     expect(spy.calledOnce).to.be.true
+                    spy.restore()
                     done()
 
 
