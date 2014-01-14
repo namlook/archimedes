@@ -70,12 +70,17 @@ describe 'StardogDatabase', ()->
                         "#{i.s.value}::#{i.p.value}::#{i.o.value}" for i in data)
                     nsprop = 'http://example.org/properties'
                     nsinst = 'http://example.org/instances/blogpost'
+                    typeprop = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type'
+                    typeuri = 'http://example.org/classes/BlogPost'
                     expect(results).to.include(
+                        "#{nsinst}/#{id}::#{typeprop}::#{typeuri}"
                         "#{nsinst}/#{id}::#{nsprop}/title::hello world",
                         "#{nsinst}/#{id}::#{nsprop}/keyword::hello",
                         "#{nsinst}/#{id}::#{nsprop}/keyword::world",
                         "#{nsinst}/#{id}::#{nsprop}/content::article")
-                    done()
+                    db.length (err, total) ->
+                        expect(total).to.be.equal 5
+                        done()
 
 
     describe '.clear()', () ->

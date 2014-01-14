@@ -222,12 +222,17 @@ describe 'RdfModel', ()->
                         "#{i.s.value}::#{i.p.value}::#{i.o.value}" for i in data)
                     nsprop = 'http://onto.example.org/properties'
                     bpId = "http://data.example.org/blogpost/#{blogPost.id}"
+                    typeprop = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type'
+                    typeuri = 'http://onto.example.org/classes/BlogPost'
                     expect(results).to.include(
+                        "#{bpId}::#{typeprop}::#{typeuri}"
                         "#{bpId}::#{nsprop}/title::hello world",
                         "#{bpId}::#{nsprop}/keyword::hello",
                         "#{bpId}::#{nsprop}/keyword::world",
                         "#{bpId}::#{nsprop}/content::article")
-                    done()
+                    db.length (err, total) ->
+                        expect(total).to.be.equal 5
+                        done()
 
         it 'should fire a store request only once if there is changes', (done) ->
             store = db.store
