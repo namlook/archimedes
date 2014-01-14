@@ -92,7 +92,21 @@ class Database extends DatabaseInterface
             model::meta.instancesNamespace =  \
                 "#{@defaultInstancesNamespace}/#{loweredModelName}"
 
+    # ## clear
+    # empty the database
+    #
+    # example:
+    #       @clear (err, ok) ->
+    clear: (callback) =>
+        @store.clear callback
 
+    # ## sync
+    # synchronize a model data with the database
+    #
+    # If the model is new (never saved) the model id is genreated automatically.
+    #
+    # example:
+    #       @sync model, (err, modelId) ->
     sync: (model, callback) =>
 
         unless model.id?
@@ -121,7 +135,7 @@ class Database extends DatabaseInterface
             unless ok
                 return callback "error while syncing the data"
 
-        return callback null, model.id #new @[model.meta.name](model._properties)
+            return callback null, model.id
 
 
     toRdf: (model) =>

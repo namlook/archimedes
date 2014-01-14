@@ -6,7 +6,7 @@ should = chai.should()
 RdfsClass = require('../rdf').Model
 RdfDatabase = require('../rdf').Database
 
-describe 'RdfModel', ()->
+describe.skip 'RdfModel', ()->
 
     classes = {}
 

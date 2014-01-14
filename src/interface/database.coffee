@@ -48,6 +48,10 @@ class Database
         return callback null, id;
 
 
+    clear: (callback) =>
+        throw 'not implem'
+
+
     # ## __buildId
     #
     # Generate a unique ID for the model
