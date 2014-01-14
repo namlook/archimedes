@@ -76,7 +76,8 @@ describe 'StardogDatabase', ()->
                         "#{id}::#{nsprop}/content::article")
                     done()
 
-    describe 'clear()', () ->
+
+    describe '.clear()', () ->
         it 'should empty the database', (done) ->
             db.store.update """insert data {
                 <http://example/book1>  <http://example/price>  42 .
@@ -84,20 +85,41 @@ describe 'StardogDatabase', ()->
             }""", (err, ok) ->
                 expect(err).to.be.null
                 expect(ok).to.be.true
-                db.store.query "select (count(*) as ?total) where {?s ?p ?o.}",
-                  (err, data) ->
-                    expect(data[0].total.value).to.be.equal '2'
+                db.length (err, total) ->
+                    expect(total).to.be.equal 2
                     db.clear (err, ok) ->
                         expect(err).to.be.null
                         expect(ok).to.be.ok
-                        db.store.query "select (count(*) as ?total) where {?s ?p ?o.}",
-                          (err, data) ->
-                            expect(data[0].total.value).to.be.equal '0'
-                        done();
+                        db.length (err, total) ->
+                            expect(total).to.be.equal 0
+                            done()
 
-    describe 'validate()', ()->
+
+    describe '.length()', ()->
+        it 'should return the number of data present into the db', (done) ->
+            db.store.update """insert data {
+                <http://example/book1>  <http://example/price>  42 .
+                <http://example/book2>  <http://example/price>  20 .
+            }""", (err, ok) ->
+                expect(err).to.be.null
+                expect(ok).to.be.true
+                db.length (err, total) ->
+                    console.log err
+                    expect(err).to.be.null
+                    expect(total).to.be.equal 2
+                    db.store.update """insert data {
+                        <http://example/book3>  <http://example/price>  32 .
+                    }""", (err, ok) ->
+                        db.length (err, total) ->
+                            expect(err).to.be.null
+                            expect(total).to.be.equal 3
+                            done()
+
+
+    describe '.validate()', ()->
         it 'should throw an exception if <fieldName>.type is not specified'
         it 'should throw an exception if <fieldName>.uri is not specified'
+
 
     describe '.save()', ()->
         it 'should generate a generic id if no id is set', () ->
@@ -122,3 +144,4 @@ describe 'StardogDatabase', ()->
             blogPost2.id = 0
             blogPost2.save()
             expect(blogPost2.id).to.be.equal 0
+

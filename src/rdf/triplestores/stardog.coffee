@@ -106,13 +106,20 @@ module.exports = class StardogStore
         @_connection.begin {database: @databaseName}, (transactionId) =>
             options = {database: @databaseName, txId: transactionId}
             @_connection.clearDB options, (ok) =>
-                console.log '---', ok
                 if _.isString ok
                     return callback ok
                 @_connection.commit options, (data) =>
                     if _.isString data
                         return callback data
                     return callback null, ok
+
+    # ## length
+    # returns the number of data present into the db
+    length: (callback) =>
+        @query "select (count(*) as ?total) where {?s ?p ?o.}", (err, data) =>
+            if err
+                return callback err
+            return callback null, parseInt(data[0].total.value, 10)
 
 if require.main is module
     tripleStore = new StardogStore {

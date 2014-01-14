@@ -100,6 +100,11 @@ class Database extends DatabaseInterface
     clear: (callback) =>
         @store.clear callback
 
+    # ## length
+    # return the number of data present into the db
+    length: (callback) =>
+        @store.length callback
+
     # ## sync
     # synchronize a model data with the database
     #

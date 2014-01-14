@@ -40,6 +40,11 @@ class Database
     validateModel: (modelName, model) =>
         # throw "not implemented"
 
+    # ## length
+    # return the number of data into the whole db
+    length: (callback) ->
+        throw 'not implemented'
+
     sync: (model, callback) =>
         if model.id?
             id = model.id
@@ -49,7 +54,7 @@ class Database
 
 
     clear: (callback) =>
-        throw 'not implem'
+        throw 'not implemented'
 
 
     # ## __buildId
