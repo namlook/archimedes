@@ -13,7 +13,11 @@ class Database
     registerModels: (models) =>
         for modelName, model of models
             @beforeRegister(modelName, model)
-            @_inheritSchema(model)
+
+            # Update the schema of model which inherits of its parent's
+            for field, value of model.__super__?.schema
+                model::schema[field] = value
+
             @validateModel(modelName, model)
             model::db = @
             @[modelName] = model
@@ -43,10 +47,6 @@ class Database
             id = @__buildId()
         return callback null, id;
 
-    # Update the schema of model which inherits of its parent's
-    _inheritSchema: (model) ->
-        for field, value of model.__super__?.schema
-            model::schema[field] = value
 
     # ## __buildId
     #
