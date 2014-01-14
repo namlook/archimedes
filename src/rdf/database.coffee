@@ -98,5 +98,91 @@ class Database extends DatabaseInterface
                 "#{@defaultInstancesNamespace}/#{loweredModelName}"
 
 
+    sync: (model, callback) =>
+
+        changes = model.changes()
+
+        if changes
+            addedTriples = @_fieldsToTriples(model, changes.added)
+            removedTriples = @_fieldsToTriples(model, changes.removed)
+
+        sparqlQuery = ''
+        if removedTriples.length
+            sparqlQuery += "DELETE DATA { #{removedTriples.join(' .\n')} } "
+
+        if addedTriples
+            sparqlQuery += "INSERT DATA { #{addedTriples.join(' .\n')} }"
+
+        console.log(sparqlQuery)
+
+        @store.update sparqlQuery, (err, ok) =>
+            if err
+                return callback err
+            unless ok
+                return callback "error while syncing the data"
+
+        return callback null, new @[model.meta.name](model._properties)
+
+
+    toRdf: (model) =>
+        if model.isNew()
+            instancesNamespace = model.meta.instancesNamespace
+            model.id = "#{instancesNamespace}/#{@__buildId()}"
+        return @_fieldsToTriples(model, model._properties)
+
+
+    _fieldsToTriples: (model, fields) =>
+        schema = model.schema
+        triples = []
+        for fieldName, value of fields
+            # get the property uri
+            propertyUri = schema[fieldName].uri
+            unless propertyUri
+                propertyUri = "#{model.meta.propertiesNamespace}/#{fieldName}"
+
+            # get the property type
+            fieldType = schema[fieldName].type
+
+            if schema[fieldName].i18n
+                for lang, val of value
+                    if schema[fieldName].multi
+                        for vl in val
+                            rdfValue = @_valueToRdf(vl, {
+                                'type': fieldType
+                                'lang': lang
+                            })
+                            triples.push "<#{model.id}> <#{propertyUri}> #{rdfValue}"
+                    else
+                        rdfValue = @_valueToRdf(val, {
+                            'type': fieldType
+                            'lang': lang
+                        })
+                        triples.push "<#{model.id}> <#{propertyUri}> #{rdfValue}"
+            else if schema[fieldName].multi
+                for val in value
+                    rdfValue = @_valueToRdf(val, {'type': fieldType})
+                    triples.push "<#{model.id}> <#{propertyUri}> #{rdfValue}"
+            else
+                rdfValue = @_valueToRdf(value, {'type': fieldType})
+                triples.push "<#{model.id}> <#{propertyUri}> #{rdfValue}"
+        return triples
+
+
+    _valueToRdf: (value, options) =>
+        {type, lang} = options
+        if @[type]?
+            if value.id
+                return "<#{value.id}>"
+            return "<#{value}>"
+        else if type is 'string'
+            quotedValue = value.replace(/"/g, '\\"')
+            if lang
+                return "\"#{quotedValue}\"@#{lang}"
+            return "\"#{quotedValue}\""
+        else if type is 'url'
+            return "\"#{value}\"^^xsd:anyURI"
+        return "#{value}^^xsd:#{type}"
+
+
 module.exports = Database
 

@@ -36,12 +36,24 @@ class Database
     validateModel: (modelName, model) =>
         # throw "not implemented"
 
-    sync: (modelName, model, callback) =>
-        # throw "not implemented"
+    sync: (model, callback) =>
+        if model.id?
+            id = model.id
+        else
+            id = @__buildId()
+        return callback null, id;
 
     # Update the schema of model which inherits of its parent's
     _inheritSchema: (model) ->
         for field, value of model.__super__?.schema
             model::schema[field] = value
+
+    # ## __buildId
+    #
+    # Generate a unique ID for the model
+    __buildId: () ->
+        now = new Date()
+        rand = Math.floor(Math.random() * 10)
+        return rand + parseInt(now.getTime()).toString(36)
 
 module.exports = Database

@@ -91,6 +91,8 @@ class Model
             @_properties[key] = _.clone(value)
             @_initProperties[key] = _.clone(value)
 
+        @id = @_properties.id if @_properties.id?
+        @_isNew = true
 
     # # Static methods
 
@@ -545,8 +547,14 @@ class Model
     # Only the field marked as change will be updated. If fields has been unset,
     # their related property uri will be delete.
     save: (callback) =>
-        if @isNew()
-            @id = @__buildId()
+        @db.sync @, (err, id) =>
+            console.log '------', err, id
+            if err
+                return callback err
+            @_isNew = false
+            @id = id
+            if callback
+                return callback null, @
 
 
     onBeforeSave: (next) =>
@@ -600,7 +608,7 @@ class Model
 
     # Returns true if the object has not been saved yet.
     isNew: () =>
-        return not @id?
+        return @_isNew
 
 
     # Convert the model into a plain old javascript object (usefull for
@@ -635,15 +643,6 @@ class Model
         unless lang
             throw "'#{fieldName}' is i18n and need a language"
         return lang
-
-
-    # ## __buildId
-    #
-    # Generate a unique ID for the model
-    __buildId: () ->
-        now = new Date()
-        rand = Math.floor(Math.random() * 10)
-        return rand + parseInt(now.getTime()).toString(36)
 
 
 module.exports = Model
