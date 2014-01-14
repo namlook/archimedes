@@ -298,6 +298,20 @@ describe 'Model', ()->
             blogPost.has('title', 'en').should.be.false
             blogPost.has('keyword').should.be.false
 
+    describe '.rollback', () ->
+        it 'should return the model into its previous state', () ->
+            blogPost = new db.BlogPost
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'keyword', ['foo', 'bar']
+            blogPost.save()
+            blogPost.set 'title', 'hi world', 'en'
+            blogPost.set 'title', 'salut monde', 'fr'
+            blogPost.pull 'keyword', 'foo'
+            blogPost.rollback()
+            expect(blogPost.get('title', 'fr')).to.be.undefined
+            expect(blogPost.get('title', 'en')).to.be.equal 'hello world'
+            expect(blogPost.get('keyword')).to.include 'foo', 'bar'
+
     describe '.clone()', ()->
         it 'should copy all the values of an instance but not its id', () ->
             blogPost = new db.BlogPost

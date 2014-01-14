@@ -548,14 +548,23 @@ class Model
     # their related property uri will be delete.
     save: (callback) =>
         @db.sync @, (err, id) =>
-            console.log '------', err, id
             if err
                 return callback err
+
+            @_initProperties = {}
+            for key, value of @_properties
+                @_initProperties[key] = _.clone(value)
             @_isNew = false
             @id = id
+
             if callback
                 return callback null, @
 
+
+    rollback: () =>
+        @_properties = {}
+        for key, value of @_initProperties
+            @_properties[key] = _.clone(value)
 
     onBeforeSave: (next) =>
         # ...
