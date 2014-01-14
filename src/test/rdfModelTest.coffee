@@ -6,7 +6,7 @@ should = chai.should()
 RdfsClass = require('../rdf').Model
 RdfDatabase = require('../rdf').Database
 
-describe.skip 'RdfModel', ()->
+describe 'RdfModel', ()->
 
     classes = {}
 
@@ -53,14 +53,16 @@ describe.skip 'RdfModel', ()->
 
     db = new RdfDatabase {
         store: 'stardog'
-        endpoint: 'http://localhost:8889/sparql'
         namespace: 'http://onto.example.org'
         defaultInstancesNamespace: 'http://data.example.org'
-        graphURI: 'http://example.org/blogengine'
-        defaultLang: 'en'
+        graphURI: 'http://example.org'
+        credentials: {login: 'admin', password: 'admin'}
     }
 
     db.registerClasses classes
+
+    beforeEach (done) ->
+        db.clear done
 
     describe 'constructor()', () ->
         it 'should take customs namespace', ()->
@@ -93,7 +95,7 @@ describe.skip 'RdfModel', ()->
 
 
         it 'should have @meta.graphURI', () ->
-            graphURI = 'http://example.org/blogengine'
+            graphURI = 'http://example.org'
             new db.Author().meta.graphURI.should.equal graphURI
 
 
@@ -175,12 +177,42 @@ describe.skip 'RdfModel', ()->
         it 'should throw an error if a field marked as required is missing'
 
     describe 'save()', ()->
-        it 'should generate a generic id if no id is set'
-        it 'should generate an id from a specified field if no id is set'
+        it 'should generate a generic id if no id is set', (done) ->
+            blogPost = new db.BlogPost
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'title', 'salut monde', 'fr'
+            blogPost.set 'content', 'first post'
+            blogPost.set 'keyword', ['hello', 'world']
+            expect(blogPost.isNew()).to.be.true
+            blogPost.save (err, newBlogPost) ->
+                expect(err).to.be.null
+                expect(blogPost.isNew()).to.be.false
+                expect(newBlogPost.isNew()).to.be.false
+                expect(newBlogPost.id).to.be.equal blogPost.id
+                blogPost.db.length (err, total) ->
+                    expect(err).to.be.null
+                    expect(total).to.be.equal 6
+                    done()
+
+        it 'should generate an id from a specified field if no id is set', (done) ->
+            blogPost = new db.BlogPost
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'title', 'salut monde', 'fr'
+            blogPost.set 'content', 'first post'
+            blogPost.set 'keyword', ['hello', 'world']
+            blogPost.id = 'HelloWorld'
+            expect(blogPost.isNew()).to.be.true
+            blogPost.save (err, newBlogPost) ->
+                expect(err).to.be.null
+                expect(blogPost.id).to.be.equal 'HelloWorld'
+                expect(newBlogPost.id).to.be.equal 'HelloWorld'
+                done()
+
         it 'should store the values of an instance into the database'
         it "shouldn't fire a store request if there is no value changes"
         it 'should take a callback with an error if the nugget is not saved'
         it 'should take a callback with the saved nugget'
+
 
     describe 'getJSONObject()', () ->
         it 'should return a jsonable object with related instance ids'

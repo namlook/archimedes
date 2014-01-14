@@ -115,8 +115,7 @@ class Database extends DatabaseInterface
     sync: (model, callback) =>
 
         unless model.id?
-            instancesNamespace = model.meta.instancesNamespace
-            model.id = "#{instancesNamespace}/#{@__buildId()}"
+            model.id = @__buildId()
 
         changes = model.changes()
 
@@ -125,7 +124,8 @@ class Database extends DatabaseInterface
             removedTriples = @_fieldsToTriples(model, changes.removed)
 
         if model.isNew()
-            addedTriples.push "<#{model.id}> a  <#{model.meta.uri}>"
+            modelURI = "#{model.meta.instancesNamespace}/#{model.id}"
+            addedTriples.push "<#{modelURI}> a  <#{model.meta.uri}>"
 
         sparqlQuery = ''
         if removedTriples.length
@@ -144,12 +144,17 @@ class Database extends DatabaseInterface
 
 
     toRdf: (model) =>
-        return @_fieldsToTriples(model, model._properties)
+        triples = @_fieldsToTriples(model, model._properties)
+        if model.id?
+            triple.push "#{instancesNamespace}/#{@__buildId()}"
+        return triples
 
 
     _fieldsToTriples: (model, fields) =>
         schema = model.schema
         triples = []
+        modelId = "#{model.meta.instancesNamespace}/#{model.id}"
+
         for fieldName, value of fields
             # get the property uri
             propertyUri = schema[fieldName].uri
@@ -167,20 +172,20 @@ class Database extends DatabaseInterface
                                 'type': fieldType
                                 'lang': lang
                             })
-                            triples.push "<#{model.id}> <#{propertyUri}> #{rdfValue}"
+                            triples.push "<#{modelId}> <#{propertyUri}> #{rdfValue}"
                     else
                         rdfValue = @_valueToRdf(val, {
                             'type': fieldType
                             'lang': lang
                         })
-                        triples.push "<#{model.id}> <#{propertyUri}> #{rdfValue}"
+                        triples.push "<#{modelId}> <#{propertyUri}> #{rdfValue}"
             else if schema[fieldName].multi
                 for val in value
                     rdfValue = @_valueToRdf(val, {'type': fieldType})
-                    triples.push "<#{model.id}> <#{propertyUri}> #{rdfValue}"
+                    triples.push "<#{modelId}> <#{propertyUri}> #{rdfValue}"
             else
                 rdfValue = @_valueToRdf(value, {'type': fieldType})
-                triples.push "<#{model.id}> <#{propertyUri}> #{rdfValue}"
+                triples.push "<#{modelId}> <#{propertyUri}> #{rdfValue}"
         return triples
 
 

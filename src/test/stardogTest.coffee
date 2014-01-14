@@ -69,11 +69,12 @@ describe 'StardogDatabase', ()->
                     results = (
                         "#{i.s.value}::#{i.p.value}::#{i.o.value}" for i in data)
                     nsprop = 'http://example.org/properties'
+                    nsinst = 'http://example.org/instances/blogpost'
                     expect(results).to.include(
-                        "#{id}::#{nsprop}/title::hello world",
-                        "#{id}::#{nsprop}/keyword::hello",
-                        "#{id}::#{nsprop}/keyword::world",
-                        "#{id}::#{nsprop}/content::article")
+                        "#{nsinst}/#{id}::#{nsprop}/title::hello world",
+                        "#{nsinst}/#{id}::#{nsprop}/keyword::hello",
+                        "#{nsinst}/#{id}::#{nsprop}/keyword::world",
+                        "#{nsinst}/#{id}::#{nsprop}/content::article")
                     done()
 
 
@@ -104,7 +105,6 @@ describe 'StardogDatabase', ()->
                 expect(err).to.be.null
                 expect(ok).to.be.true
                 db.length (err, total) ->
-                    console.log err
                     expect(err).to.be.null
                     expect(total).to.be.equal 2
                     db.store.update """insert data {

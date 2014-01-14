@@ -17,7 +17,9 @@ module.exports = class StardogStore
         unless @endpoint
             throw "endpoint is required"
 
-        @credentials = options.credentials || {}
+        @credentials = options.credentials or {}
+        unless (@credentials.login? and @credentials.password?)
+            throw "credentials are required"
         @databaseName = options.database
         unless @databaseName and options.graphURI?
             @databaseName = _.str.classify options.graphURI
@@ -127,7 +129,10 @@ if require.main is module
         credentials: {login: 'admin', password: 'admin'}
     }
 
-    tripleStore._connection.begin {database: 'http_example_org'}, (txId) ->
+    tripleStore.query "insejdksjs mkljf sdkjfs m", (err, data) ->
+        console.log err, data
+
+    ###tripleStore._connection.begin {database: 'http_example_org'}, (txId) ->
         console.log '>>>', txId
         tripleStore._connection.clearDB {database: 'http_example_org', txId: txId}, (ok) ->
             console.log '---', ok
@@ -135,7 +140,7 @@ if require.main is module
                 console.log '===', data
                 tripleStore._connection.commit {database: 'http_example_org', txId: txId}, (data) ->
                     console.log 'ooo', data
-
+###
     # tripleStore.describe "http://www.Department0.University0.edu/GraduateCourse1", (err, data) ->
     #     if err
     #         throw err
