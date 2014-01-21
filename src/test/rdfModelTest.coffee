@@ -117,36 +117,18 @@ describe 'RdfModel', ()->
             expect(blog.id).to.be.equal 'http://data.example.org/blog/test'
 
 
-    describe '.find()', () ->
+    describe '.find(id)', () ->
         it 'should fetch a model instance by its id', (done) ->
             blog = new db.Blog
             blog.set 'title', 'hello world'
             blog.save (err) ->
                 expect(err).to.be.null
-                db.Blog.find [blog.id], (err, results) ->
+                db.Blog.find blog.id, (err, results) ->
                     expect(results.length).to.be.equal 1
                     newBlog = results[0]
                     expect(newBlog.id).to.be.equal blog.id
                     expect(newBlog.get 'title').to.be.equal 'hello world'
                     done()
-
-        it 'should fetch a model instances by their ids', (done) ->
-            blog = new db.Blog
-            blog.set 'title', 'hello world'
-            blog.save (err) ->
-                expect(err).to.be.null
-                blog2 = new db.Blog
-                blog2.set 'title', 'second blog'
-                blog2.save (err) ->
-                    db.Blog.find [blog.id, blog2.id], (err, results) ->
-                        expect(results.length).to.be.equal 2
-                        newBlog = results[0]
-                        expect(newBlog.id).to.be.equal blog.id
-                        expect(newBlog.get 'title').to.be.equal 'hello world'
-                        newBlog2 = results[1]
-                        expect(newBlog2.id).to.be.equal blog2.id
-                        expect(newBlog2.get 'title').to.be.equal 'second blog'
-                        done()
 
         it 'should fetch a model instance with i18n fields by its id', (done) ->
             blogPost = new db.BlogPost
@@ -164,8 +146,7 @@ describe 'RdfModel', ()->
                     expect(newBlogPost.get('title', 'fr')).to.be.equal 'salut monde'
                     done()
 
-
-        it 'should fetch a model instance with i18n fields by its id (array)', (done) ->
+        it 'should fetch a model instance with i18n fields by its id', (done) ->
             blogPost = new db.BlogPost
             blogPost.set 'title', 'hello world', 'en'
             blogPost.set 'title', 'salut monde', 'fr'
@@ -196,6 +177,31 @@ describe 'RdfModel', ()->
                     expect(newBlog.get 'i18ntags', 'en').to.be.include 'hello', 'world'
                     expect(newBlog.get 'i18ntags', 'fr').to.be.include 'salut', 'monde'
                     done()
+
+
+    describe '.find(ids)', () ->
+
+        it 'should fetch a model instances by their ids', (done) ->
+            blog = new db.Blog
+            blog.set 'title', 'hello world'
+            blog.save (err) ->
+                expect(err).to.be.null
+                blog2 = new db.Blog
+                blog2.set 'title', 'second blog'
+                blog2.save (err) ->
+                    db.Blog.find [blog.id, blog2.id], (err, results) ->
+                        expect(results.length).to.be.equal 2
+                        newBlog = results[0]
+                        expect(newBlog.id).to.be.equal blog.id
+                        expect(newBlog.get 'title').to.be.equal 'hello world'
+                        newBlog2 = results[1]
+                        expect(newBlog2.id).to.be.equal blog2.id
+                        expect(newBlog2.get 'title').to.be.equal 'second blog'
+                        done()
+
+    describe '.find(query)', () ->
+        it 'should fetch all models instances via a mongo-like query'
+
 
     describe 'get()', ()->
         it 'should return the related instance id of a relation field'
