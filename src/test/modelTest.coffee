@@ -285,6 +285,8 @@ describe 'Model', ()->
         it 'should throw an error if used on a non-multi field', () ->
             blogPost = new db.BlogPost
             expect(-> blogPost.pull 'title', 'arf').to.throw(
+                'BlogPost.title is i18n and need a language')
+            expect(-> blogPost.pull 'title', 'arf', 'en').to.throw(
                 'BlogPost.title is not a multi field')
 
 

@@ -301,9 +301,14 @@ class Model
     # If `options` is a string, it is taken as a lang code.
     get: (fieldName, options) =>
         @__checkFieldExistance(fieldName)
+
+        options = @__parseOptions(options, {
+            validate: true, quietProtection: false
+        }, fieldName)
+
         if @schema[fieldName].i18n
             @_properties[fieldName] = {} unless @_properties[fieldName]?
-            lang = @__getLang(fieldName, options)
+            lang = options.lang
             return @_properties[fieldName][lang]
         @_properties[fieldName]
 
@@ -335,7 +340,12 @@ class Model
     # If `options` is a string, it is taken as a lang code
     getLabel: (fieldName, options) =>
         @__checkFieldExistance(fieldName)
-        lang = @__getLang(fieldName, options)
+
+        options = options or {}
+        if _.isString options
+            options = {lang: options}
+        lang = options.lang
+
         label = @schema[fieldName].label
         if _.isObject label
             label = label[lang]
@@ -408,7 +418,7 @@ class Model
                 if isPojo(value)
                     i18nValue = value
                 else
-                    lang = @__getLang(fieldName, options)
+                    lang = options.lang
                     i18nValue = {}
                     i18nValue[lang] = value
 
@@ -454,7 +464,6 @@ class Model
         if @schema[fieldName].i18n
             @_properties[fieldName] = {} unless @_properties[fieldName]?
 
-            # lang = @__getLang(fieldName, options)
             lang = options.lang
 
             unless @_properties[fieldName][lang]?
@@ -489,11 +498,16 @@ class Model
     # If `options` is a string, it is taken as a lang code
     pull: (fieldName, value, options) =>
         @__checkFieldExistance(fieldName)
+
+        options = @__parseOptions(options, {
+            quietProtection: false
+        }, fieldName)
+
         unless @schema[fieldName].multi
             throw new Error("#{@meta.name}.#{fieldName} is not a multi field")
 
         if @schema[fieldName].i18n
-            lang = @__getLang(fieldName, options)
+            lang = options.lang
             if @_properties[fieldName]?[lang]?
                 values = _.without @_properties[fieldName][lang], value
                 @_properties[fieldName][lang] = values
@@ -519,8 +533,13 @@ class Model
     # If `options` is a string, it is taken as a lang code
     unset: (fieldName, options)=>
         @__checkFieldExistance(fieldName)
+
+        options = @__parseOptions(options, {
+            quietProtection: false
+        }, fieldName)
+
         if @schema[fieldName].i18n
-            lang = @__getLang(fieldName, options)
+            lang = options.lang
             if @_properties[fieldName]?[lang]?
                 delete @_properties[fieldName][lang]
         else
@@ -540,8 +559,11 @@ class Model
     # If `options` is a string, it is taken as a lang code
     has: (fieldName, options) =>
         @__checkFieldExistance(fieldName)
+
+        options = @__parseOptions(options, {}, fieldName)
+
         if @schema[fieldName].i18n
-            lang = @__getLang(fieldName, options)
+            lang = options.lang
             return @_properties[fieldName]?[lang]?
         @_properties[fieldName]?
 
@@ -734,21 +756,6 @@ class Model
 
     # # Private methods
     #
-    # ## __getLang
-    # `__getLang(fieldName, [options])`
-    #
-    # return the language if specified in options, fallback to @meta.defaultLang
-    # otherwise and throw an error if no language are found.
-    # `options` can be a string (the lang code) or an object with the following
-    # keys:
-    #
-    # * lang: the lang used
-    __getLang: (fieldName, options) =>
-        lang = options?.lang or options or @meta.defaultLang
-        unless lang
-            throw "#{@meta.name}.#{fieldName} is i18n and need a language"
-        return lang
-
     # ## __parseOptions
     #
     # take an options object, some defaultValues and return a sanitized object.
@@ -772,7 +779,9 @@ class Model
                 options[key] = value
         return options
 
-    # raise an error if the field doesn't exists
+    # ## __checkFieldExistance
+    #
+    # raise an error if the field doesn't exists in schema
     __checkFieldExistance: (fieldName) ->
         unless @schema[fieldName]?
             throw "'#{@meta.name}.#{fieldName}' not found"
