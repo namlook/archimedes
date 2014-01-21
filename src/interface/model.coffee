@@ -65,11 +65,17 @@ class Model
     #      language). See `@set` and `@get` for more details.
     # - **multi**: if true, takes an array of values. See `@push` and `@pull` for
     #      more details.
+    # - **readOnly**: (default false) if true, the property won't accept any
+    #       other values than the first one. Usefull for fields which have to be
+    #       set only once (like `createdAt` or `slug`)
     # - **default**: if a value, set the value automatically while creating the
     #      model. If a function is specified, the returned value will be used
     #      validate: take a `function(value, model)` to validate the value
     #      transform: take a `function(value, model)` which will transform the
     #      value and return it (usefull for hashing passwords by example)
+    # - **compute**: a function to be called each time a property is set.
+    #       `compute` take the model, the value and the language is the field is
+    #       i18n.
     # - **reversed**: the name of the property which will be include into the
     #      related model. This allow to fetch reversed relations via mongo-like
     #      queries. For instance, with `reversed: 'posts'`, blogs can be fetched
@@ -79,7 +85,7 @@ class Model
     #             console.log blogs
     schema: _.clone({
         _id:
-            protected: true
+            readOnly: true
             type: 'string'
             required: true
     })
@@ -118,7 +124,7 @@ class Model
                 else
                     value = field.default #_.clone(field.default)
 
-                @set fieldName, value, {quietProtection: true}
+                @set fieldName, value, {quietReadOnly: true}
 
                 if field.compute?
                     value = field.compute(@, value)
@@ -303,7 +309,7 @@ class Model
         @__checkFieldExistance(fieldName)
 
         options = @__parseOptions(options, {
-            validate: true, quietProtection: false
+            validate: true, quietReadOnly: false
         }, fieldName)
 
         if @schema[fieldName].i18n
@@ -379,8 +385,8 @@ class Model
     # `options`:
     # - **lang**: the lang used in value (for i18n fields)
     # - **validate**: (default true) if false, do not validate the value
-    # - **quietProtection**: (default false) if true, do not throw an error if
-    #       a value is set to a protected-field
+    # - **quietReadOnly**: (default false) if true, do not throw an error if
+    #       a value is set to a read-only field
     #
     # If `options` is a string, it is taken as a lang code
     set: (fieldName, value, options) =>
@@ -393,12 +399,14 @@ class Model
         else
             checkLang = fieldName
         options = @__parseOptions(options,
-            {validate: true, quietProtection: false},
+            {validate: true, quietReadOnly: false},
         checkLang)
 
-        if @_properties[fieldName]? and  @schema[fieldName].protected \
-          and not options.quietProtection
-            throw new ValueError("'#{fieldName}' is protected")
+        if @_properties[fieldName]? and  @schema[fieldName].readOnly
+            if options.quietReadOnly
+                return
+            throw new ValueError("#{@meta.name}.#{fieldName} is read-only")
+
         if isPojo(value) and not @schema[fieldName].i18n
                 throw new ValueError("#{@meta.name}.#{fieldName} doesn't accept object")
 
@@ -449,13 +457,15 @@ class Model
     # `options`:
     # - **lang**: the lang used in value
     # - **validate**: (default true) if false, do not validate the value
+    # - **quietReadOnly**: (default false) if true, do not throw an error if
+    #       a value is set to a read-only field
     #
     # If `options` is a string, it is taken as a lang code
     push: (fieldName, value, options) =>
         @__checkFieldExistance(fieldName)
 
         options = @__parseOptions(options, {
-            validate: true, quietProtection: false
+            validate: true, quietReadOnly: false
         }, fieldName)
 
         unless @schema[fieldName].multi
@@ -494,13 +504,15 @@ class Model
     #
     # `options`:
     # - **lang**: the lang used in value
+    # - **quietReadOnly**: (default false) if true, do not throw an error if
+    #       a value is set to a read-only field
     #
     # If `options` is a string, it is taken as a lang code
     pull: (fieldName, value, options) =>
         @__checkFieldExistance(fieldName)
 
         options = @__parseOptions(options, {
-            quietProtection: false
+            quietReadOnly: false
         }, fieldName)
 
         unless @schema[fieldName].multi
@@ -529,13 +541,15 @@ class Model
     #
     # `options`:
     # - **lang**: the lang used
+    # - **quietReadOnly**: (default false) if true, do not throw an error if
+    #       a value is set to a read-only field
     #
     # If `options` is a string, it is taken as a lang code
     unset: (fieldName, options)=>
         @__checkFieldExistance(fieldName)
 
         options = @__parseOptions(options, {
-            quietProtection: false
+            quietReadOnly: false
         }, fieldName)
 
         if @schema[fieldName].i18n

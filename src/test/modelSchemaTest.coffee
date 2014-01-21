@@ -50,6 +50,10 @@ describe 'Model.schema', ()->
                 type: 'string'
                 compute: (model, value, lang) ->
                     "#{value}@#{lang}"
+
+            readOnlyValue:
+                type: 'string'
+                readOnly: true
     db = new Database
 
     db.registerModels models
@@ -118,4 +122,27 @@ describe 'Model.schema', ()->
             a.push 'computedMultiI18nValue', 8, 'fr'
             expect(a.get 'computedMultiI18nValue', 'en').to.include '1@en', '2@en', '4@en'
             expect(a.get 'computedMultiI18nValue', 'fr').to.include '4@fr', '2@fr', '8@fr'
+
+
+    describe 'read only field', () ->
+        it 'should throw an error when setting a value to a read-only field', () ->
+            a = new db.A
+            a.set 'readOnlyValue', 'this-is-a-test'
+            expect(-> a.set 'readOnlyValue', 'another-test').to.throw(
+                /A.readOnlyValue is read-only/)
+            expect(a.get 'readOnlyValue').to.be.equal 'this-is-a-test'
+
+        it 'should not be able to modify a read-only field passed by constructor', () ->
+            a = new db.A {readOnlyValue: 'foo'}
+            expect(-> a.set 'readOnlyValue', 'another-test').to.throw(
+                /A.readOnlyValue is read-only/)
+            expect(a.get 'readOnlyValue').to.be.equal 'foo'
+
+        it 'should not throw an error when setting a value when quietReadOnly is true', () ->
+            a = new db.A
+            a.set 'readOnlyValue', 'this-is-a-test'
+            expect(
+                -> a.set 'readOnlyValue', 'another-test', {quietReadOnly: true}
+            ).to.not.throw(/A.readOnlyValue is read-only/)
+            expect(a.get 'readOnlyValue').to.be.equal 'this-is-a-test'
 

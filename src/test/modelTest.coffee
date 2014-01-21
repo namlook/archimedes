@@ -33,10 +33,6 @@ describe 'Model', ()->
 
     class models.BlogPost extends Model
         schema:
-            slug:
-                protected: true
-                compute: (model) ->
-                    _.str.slugify model.get('title', 'en')
             title:
                 i18n: true
                 type: 'string'
@@ -160,19 +156,6 @@ describe 'Model', ()->
                 /BlogPost.title is i18n and need a language/)
             expect(-> blogPost.set('title', ['foo', 'bar'], 'en')).to.throw(
                 /BlogPost.title doesn't accept array/)
-
-        it 'should throw an error when setting a value to a protected-field', () ->
-            blogPost = new db.BlogPost
-            blogPost.set 'slug', 'this-is-a-test'
-            expect(-> blogPost.set 'slug', 'another-test').to.throw(
-                /'slug' is protected/)
-
-        it 'should not throw an error when setting a value to a protected-field', () ->
-            blogPost = new db.BlogPost
-            blogPost.set 'slug', 'this-is-a-test'
-            expect(
-                -> blogPost.set 'slug', 'another-test', {quietProtection: true}
-            ).to.not.throw(/'slug' is protected/)
 
         it "should throw an error when the field which don't exists", () ->
             blogPost = new db.BlogPost
