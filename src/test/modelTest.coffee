@@ -85,6 +85,8 @@ describe 'Model', ()->
             expect(author.id).to.be.undefined
             expect(author.get '_id').to.be.undefined
 
+    describe 'schema', () ->
+        it 'should allow default value', () ->
 
     describe '.get()', ()->
         it 'should return the value of a field'
@@ -131,7 +133,7 @@ describe 'Model', ()->
         it 'should throw an eror if the value is an object and the field non-i18n', () ->
             blog = new db.Blog
             expect(-> blog.set('title', {'en': 'foo', 'fr':' toto'})).to.throw(
-                "'title' doesn't accept object")
+                "Blog.title doesn't accept object")
 
 
         it 'should set the value of an i18n field (options is string)', () ->
@@ -155,7 +157,9 @@ describe 'Model', ()->
         it 'should throw an error if the value is an array and the field non-multi', () ->
             blogPost = new db.BlogPost
             expect(-> blogPost.set('title', ['foo', 'bar'])).to.throw(
-                /'title' doesn't accept array/)
+                /BlogPost.title is i18n and need a language/)
+            expect(-> blogPost.set('title', ['foo', 'bar'], 'en')).to.throw(
+                /BlogPost.title doesn't accept array/)
 
         it 'should throw an error when setting a value to a protected-field', () ->
             blogPost = new db.BlogPost
@@ -256,7 +260,7 @@ describe 'Model', ()->
         it 'should throw an error if used on a non-multi field', () ->
             blogPost = new db.BlogPost
             expect(-> blogPost.push 'title', 'arf').to.throw(
-                'BlogPost.title is not a multi field')
+                'BlogPost.title is i18n and need a language')
 
 
     describe '.pull()', ()->
@@ -322,7 +326,7 @@ describe 'Model', ()->
             blogPost = new db.BlogPost
             blogPost.set 'title', 'hello world', 'en'
             blogPost.set 'title', 'bonjour monde', {lang: 'fr'}
-            expect(-> blogPost.has 'title').to.throw(/'title' is i18n and need a language/)
+            expect(-> blogPost.has 'title').to.throw(/BlogPost.title is i18n and need a language/)
 
     describe '.clear()', ()->
         it 'should remove all the values of and instance but not its id', ()->
@@ -520,6 +524,7 @@ describe 'Model', ()->
             blog.set 'i18ntags', ['toto', 'tata'], 'fr'
 
             changes = blog.changes()
+
             expect(changes.removed.i18ntags.en).to.include 'hello', 'world'
             expect(changes.added.i18ntags.en).to.include 'bar'
             expect(changes.removed.i18ntags.fr).to.include 'salut', 'monde'

@@ -116,7 +116,7 @@ class Model
                 if _.isFunction(field.default)
                     value = field.default(@)
                 else
-                    value = _.clone(field.default)
+                    value = field.default #_.clone(field.default)
 
                 @set fieldName, value, {quietProtection: true}
 
@@ -377,44 +377,53 @@ class Model
 
         @__checkFieldExistance(fieldName)
 
-        options = options or {}
-        if _.isString options
-            options = {lang: options}
-        options.validate = true unless options.validate?
-        options.quietProtection = false unless options.quietProtection?
+        # parse options
+        if isPojo(value)
+            checkLang = null
+        else
+            checkLang = fieldName
+        options = @__parseOptions(options,
+            {validate: true, quietProtection: false},
+        checkLang)
 
         if @_properties[fieldName]? and  @schema[fieldName].protected \
           and not options.quietProtection
             throw new ValueError("'#{fieldName}' is protected")
-        if _.isArray(value) and not @schema[fieldName].multi
-            throw new ValueError("'#{fieldName}' doesn't accept array")
         if isPojo(value) and not @schema[fieldName].i18n
-                throw new ValueError("'#{fieldName}' doesn't accept object")
+                throw new ValueError("#{@meta.name}.#{fieldName} doesn't accept object")
 
-        # set the value
-        if @schema[fieldName].i18n
-            unless @_properties[fieldName]?
-                @_properties[fieldName] = {}
-
-            if isPojo(value)
-                i18nValue = value
-            else
-                lang = @__getLang(fieldName, options)
-                i18nValue = {}
-                i18nValue[lang] = value
-
-            for lang, val of i18nValue
-                if @schema[fieldName].compute?
-                    value = @schema[fieldName].compute(@, val, lang)
-                @_properties[fieldName][lang] = val
+        # if the value is an array, delegate to @push
+        if _.isArray(value)
+            unless @schema[fieldName].multi
+                throw new ValueError("#{@meta.name}.#{fieldName} doesn't accept array")
+            @unset fieldName, options
+            for item in value
+                @push fieldName, item, options
         else
-            if @schema[fieldName].compute?
-                value = @schema[fieldName].compute(@, value)
+            # set the value
+            if @schema[fieldName].i18n
+                unless @_properties[fieldName]?
+                    @_properties[fieldName] = {}
 
-            if fieldName is '_id'
-                @id = value
+                if isPojo(value)
+                    i18nValue = value
+                else
+                    lang = @__getLang(fieldName, options)
+                    i18nValue = {}
+                    i18nValue[lang] = value
 
-            @_properties[fieldName] = value
+                for lang, val of i18nValue
+                    if @schema[fieldName].compute?
+                        val = @schema[fieldName].compute(@, val, lang)
+                    @_properties[fieldName][lang] = val
+            else
+                if @schema[fieldName].compute?
+                    value = @schema[fieldName].compute(@, value)
+
+                if fieldName is '_id'
+                    @id = value
+
+                @_properties[fieldName] = value
 
 
     # ## push
@@ -434,17 +443,34 @@ class Model
     # If `options` is a string, it is taken as a lang code
     push: (fieldName, value, options) =>
         @__checkFieldExistance(fieldName)
+
+        options = @__parseOptions(options, {
+            validate: true, quietProtection: false
+        }, fieldName)
+
         unless @schema[fieldName].multi
-            throw new Error("#{@constructor.name}.#{fieldName} is not a multi field")
+            throw new Error("#{@meta.name}.#{fieldName} is not a multi field")
 
         if @schema[fieldName].i18n
             @_properties[fieldName] = {} unless @_properties[fieldName]?
-            lang = @__getLang(fieldName, options)
+
+            # lang = @__getLang(fieldName, options)
+            lang = options.lang
+
             unless @_properties[fieldName][lang]?
                 @_properties[fieldName][lang] = []
+
+            if @schema[fieldName].compute?
+                value = @schema[fieldName].compute(@, value, lang)
+
             @_properties[fieldName][lang].push value
+
         else
             @_properties[fieldName] = [] unless @_properties[fieldName]
+
+            if @schema[fieldName].compute?
+                value = @schema[fieldName].compute(@, value)
+
             @_properties[fieldName].push value
 
 
@@ -464,7 +490,7 @@ class Model
     pull: (fieldName, value, options) =>
         @__checkFieldExistance(fieldName)
         unless @schema[fieldName].multi
-            throw new Error("#{@constructor.name}.#{fieldName} is not a multi field")
+            throw new Error("#{@meta.name}.#{fieldName} is not a multi field")
 
         if @schema[fieldName].i18n
             lang = @__getLang(fieldName, options)
@@ -720,8 +746,31 @@ class Model
     __getLang: (fieldName, options) =>
         lang = options?.lang or options or @meta.defaultLang
         unless lang
-            throw "'#{fieldName}' is i18n and need a language"
+            throw "#{@meta.name}.#{fieldName} is i18n and need a language"
         return lang
+
+    # ## __parseOptions
+    #
+    # take an options object, some defaultValues and return a sanitized object.
+    # it will then throw an error if the field is i18n and no lang is found.
+    # Note that the lang is `options` if `options` is a string
+    __parseOptions: (options, defaultValues, fieldName) ->
+        options = options or {}
+
+        if fieldName
+            if _.isString options
+                if @schema[fieldName].i18n
+                    options = {lang: options}
+                else
+                    throw "bad options: #{@meta.name}.#{fieldName} is not i18n"
+
+            if @schema[fieldName].i18n and not options.lang
+                throw "#{@meta.name}.#{fieldName} is i18n and need a language"
+
+        for key, value of defaultValues
+            unless options[key]?
+                options[key] = value
+        return options
 
     # raise an error if the field doesn't exists
     __checkFieldExistance: (fieldName) ->
