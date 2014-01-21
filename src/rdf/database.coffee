@@ -114,12 +114,14 @@ class Database extends DatabaseInterface
         unless URIsOrQuery
             return callback 'URIsOrQuery are required'
 
-        if _.isArray URIsOrQuery
-                return @_describe model, URIsOrQuery, options, callback
-            else if _.isString URIsOrQuery
-                return @_findViaSparqlite model, URIsOrQuery, options, callback
-            else
-                return @_findViaMongo model, URIsOrQuery, options, callback
+        if _.isArray(URIsOrQuery)
+            return @_describe model, URIsOrQuery, options, callback
+        else if (_.isString(URIsOrQuery) and  _.str.startsWith(URIsOrQuery, 'http://'))
+            return @_describe model, [URIsOrQuery], options, callback
+        else if _.isString URIsOrQuery
+            return @_findViaSparqlite model, URIsOrQuery, options, callback
+        else
+            return @_findViaMongo model, URIsOrQuery, options, callback
 
     _describe: (model, uris, options, callback) =>
         @store.describe uris, options, (err, rawdata) =>

@@ -156,6 +156,23 @@ describe 'RdfModel', ()->
             blogPost.set 'keyword', ['hello', 'world']
             blogPost.save (err) ->
                 expect(err).to.be.null
+                db.BlogPost.find blogPost.id, (err, results) ->
+                    expect(results.length).to.be.equal 1
+                    newBlogPost = results[0]
+                    expect(newBlogPost.id).to.be.equal blogPost.id
+                    expect(newBlogPost.get('title', 'en')).to.be.equal 'hello world'
+                    expect(newBlogPost.get('title', 'fr')).to.be.equal 'salut monde'
+                    done()
+
+
+        it 'should fetch a model instance with i18n fields by its id (array)', (done) ->
+            blogPost = new db.BlogPost
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'title', 'salut monde', 'fr'
+            blogPost.set 'content', 'first post'
+            blogPost.set 'keyword', ['hello', 'world']
+            blogPost.save (err) ->
+                expect(err).to.be.null
                 db.BlogPost.find [blogPost.id], (err, results) ->
                     expect(results.length).to.be.equal 1
                     newBlogPost = results[0]
