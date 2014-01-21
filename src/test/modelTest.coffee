@@ -121,15 +121,18 @@ describe 'Model', ()->
 
         it 'should set the values of an i18n field by passing an object', ()->
             blog = new db.Blog
-            blog.set 'i18ntags', {'en': 'foo', 'fr': 'toto'}
-            blog.get('i18ntags', 'en').should.equal 'foo'
-            blog.get('i18ntags', 'fr').should.equal 'toto'
+            blog.set 'i18ntags', {'en': ['foo'], 'fr': ['toto']}
+            expect(blog.get 'i18ntags', 'en').to.include 'foo'
+            expect(blog.get 'i18ntags', 'fr').to.include 'toto'
 
 
         it 'should throw an eror if the value is an object and the field non-i18n', () ->
             blog = new db.Blog
             expect(-> blog.set('title', {'en': 'foo', 'fr':' toto'})).to.throw(
-                "Blog.title doesn't accept object")
+                "Blog.title must be a string")
+            blogPost = new db.BlogPost {'title': {'en': 'foo', 'fr': 'toto'}}
+            expect(blogPost.get 'title', 'en').to.be.equal 'foo'
+            expect(blogPost.get 'title', 'fr').to.be.equal 'toto'
 
 
         it 'should set the value of an i18n field (options is string)', () ->

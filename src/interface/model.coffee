@@ -3,6 +3,7 @@
 
 _ = require 'underscore'
 objectdiff = require 'objectdiff'
+validators = require './validators'
 
 isPojo = (obj) ->
     _.isObject(obj) and not _.isArray(obj) and not _.isFunction(obj)
@@ -89,8 +90,6 @@ class Model
             type: 'string'
             required: true
     })
-
-
 
     constructor: (properties) ->
         properties = properties or {}
@@ -407,9 +406,6 @@ class Model
                 return
             throw new ValueError("#{@meta.name}.#{fieldName} is read-only")
 
-        if isPojo(value) and not @schema[fieldName].i18n
-                throw new ValueError("#{@meta.name}.#{fieldName} doesn't accept object")
-
         # if the value is an array, delegate to @push
         if _.isArray(value)
             unless @schema[fieldName].multi
@@ -431,9 +427,14 @@ class Model
                     i18nValue[lang] = value
 
                 for lang, val of i18nValue
-                    if @schema[fieldName].compute?
-                        val = @schema[fieldName].compute(@, val, lang)
-                    @_properties[fieldName][lang] = val
+                    if isPojo(value) and @schema[fieldName].multi
+                        for valitem in val
+                            @push fieldName, valitem, lang # XXX options not passed
+                    else
+                        if @schema[fieldName].compute?
+                            val = @schema[fieldName].compute(@, val, lang)
+                        @__validateValue(val, fieldName, lang)
+                        @_properties[fieldName][lang] = val
             else
                 if @schema[fieldName].compute?
                     value = @schema[fieldName].compute(@, value)
@@ -441,6 +442,7 @@ class Model
                 if fieldName is '_id'
                     @id = value
 
+                @__validateValue(value, fieldName)
                 @_properties[fieldName] = value
 
 
@@ -482,6 +484,7 @@ class Model
             if @schema[fieldName].compute?
                 value = @schema[fieldName].compute(@, value, lang)
 
+            @__validateValue(value, fieldName, lang)
             @_properties[fieldName][lang].push value
 
         else
@@ -490,6 +493,7 @@ class Model
             if @schema[fieldName].compute?
                 value = @schema[fieldName].compute(@, value)
 
+            @__validateValue(value, fieldName)
             @_properties[fieldName].push value
 
 
@@ -799,5 +803,13 @@ class Model
     __checkFieldExistance: (fieldName) ->
         unless @schema[fieldName]?
             throw "'#{@meta.name}.#{fieldName}' not found"
+
+    # ## __validateValue
+    #
+    # throw an error if the value is not to the correct type
+    __validateValue: (value, fieldName) ->
+        type = @schema[fieldName].type
+        unless validators[@schema[fieldName].type](value)
+            throw "ValidationError: #{@meta.name}.#{fieldName} must be a #{type}"
 
 module.exports = Model

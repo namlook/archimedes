@@ -24,7 +24,7 @@ describe 'Model.schema', ()->
                     "hello from #{model.meta.name}"
             defaultDate:
                 type: 'date'
-                default: Date.now
+                default: () -> new Date()
             defaultMulti:
                 multi: true
                 type: 'integer'
