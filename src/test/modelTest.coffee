@@ -1,4 +1,7 @@
 
+_ = require 'underscore'
+_.str = require 'underscore.string'
+
 chai = require('chai')
 chai.Assertion.includeStack = true;
 expect = chai.expect
@@ -30,6 +33,10 @@ describe 'Model', ()->
 
     class models.BlogPost extends Model
         schema:
+            slug:
+                protected: true
+                compute: (model) ->
+                    _.str.slugify model.get('title', 'en')
             title:
                 i18n: true
                 type: 'string'
@@ -51,12 +58,6 @@ describe 'Model', ()->
     db.registerModels models
 
     describe '.constructor()', () ->
-        it 'should throw an exception if Model.schema is not specified', ()->
-
-            class BadClass extends Model
-
-            expect(-> db.registerModels {BadClass: BadClass}).to.throw(
-                "BadClass has not schema")
 
         it 'should be created without values', () ->
             author = new db.Author
@@ -78,6 +79,11 @@ describe 'Model', ()->
         it 'should add properties to new instance of model', ()->
             author = new db.Author {login: 'namlook'}
             author.get('login').should.equal 'namlook'
+
+        it 'should not have id', () ->
+            author = new db.Author
+            expect(author.id).to.be.undefined
+            expect(author.get '_id').to.be.undefined
 
 
     describe '.get()', ()->
@@ -114,6 +120,20 @@ describe 'Model', ()->
             blogPost.get('title', {lang: 'en'}).should.equal 'hello world'
             blogPost.get('title', {lang: 'fr'}).should.equal 'bonjour monde'
 
+
+        it 'should set the values of an i18n field by passing an object', ()->
+            blog = new db.Blog
+            blog.set 'i18ntags', {'en': 'foo', 'fr': 'toto'}
+            blog.get('i18ntags', 'en').should.equal 'foo'
+            blog.get('i18ntags', 'fr').should.equal 'toto'
+
+
+        it 'should throw an eror if the value is an object and the field non-i18n', () ->
+            blog = new db.Blog
+            expect(-> blog.set('title', {'en': 'foo', 'fr':' toto'})).to.throw(
+                "'title' doesn't accept object")
+
+
         it 'should set the value of an i18n field (options is string)', () ->
             blogPost = new db.BlogPost
             blogPost.set 'title', 'hello world', 'en'
@@ -137,6 +157,23 @@ describe 'Model', ()->
             expect(-> blogPost.set('title', ['foo', 'bar'])).to.throw(
                 /'title' doesn't accept array/)
 
+        it 'should throw an error when setting a value to a protected-field', () ->
+            blogPost = new db.BlogPost
+            blogPost.set 'slug', 'this-is-a-test'
+            expect(-> blogPost.set 'slug', 'another-test').to.throw(
+                /'slug' is protected/)
+
+        it 'should not throw an error when setting a value to a protected-field', () ->
+            blogPost = new db.BlogPost
+            blogPost.set 'slug', 'this-is-a-test'
+            expect(
+                -> blogPost.set 'slug', 'another-test', {quietProtection: true}
+            ).to.not.throw(/'slug' is protected/)
+
+        it "should throw an error when the field which don't exists", () ->
+            blogPost = new db.BlogPost
+            expect(-> blogPost.set 'dont-exists-field', 'foo').to.throw(
+                /'BlogPost.dont-exists-field' not found/)
 
 
     describe '.unset()', ()->
@@ -318,11 +355,13 @@ describe 'Model', ()->
             blogPost.set 'title', 'hello world', 'en'
             blogPost.set 'keyword', ['foo', 'bar']
             expect(blogPost.id).to.be.undefined
-            blogPost.save()
-            newBlogPost = blogPost.clone()
-            expect(blogPost.id).to.not.be.undefined
-            newBlogPost.get('title', 'en').should.equal 'hello world'
-            newBlogPost.get('keyword').should.include 'foo', 'bar'
+            blogPost.save (err, model) ->
+                expect(err).to.be.null
+                expect(blogPost.id).to.not.be.undefined
+                newBlogPost = blogPost.clone()
+                newBlogPost.get('title', 'en').should.equal 'hello world'
+                newBlogPost.get('keyword').should.include 'foo', 'bar'
+                expect(newBlogPost.id).to.be.undefined
 
 
     describe '.isNew()', ()->
@@ -493,8 +532,13 @@ describe 'Model', ()->
             blogPost.set 'title', 'hello world', 'en'
             blogPost.set 'keyword', ['foo', 'bar']
             expect(blogPost.id).to.be.undefined
-            blogPost.save()
-            expect(blogPost.id).to.be.string
+            blogPost.save (err, model, dbtouched) ->
+                expect(err).to.be.null
+                expect(blogPost.get('_id')).to.be.equal blogPost.id
+                expect(model.get('_id')).to.be.equal blogPost.id
+                expect(model.id).to.be.equal blogPost.id
+                expect(blogPost.id).to.be.not.undefined
+                expect(blogPost.id).to.be.string
 
         it "shouldn't generate an id if the id is set", () ->
             blogPost = new db.BlogPost
@@ -548,9 +592,10 @@ describe 'Model', ()->
             blogPost = new db.BlogPost
             blogPost.set 'title', 'hello world', 'en'
             blogPost.set 'keyword', ['foo', 'bar']
-            blogPost.save()
-            jsonBlogPost = blogPost.toJSONObject()
-            expect(jsonBlogPost.id).to.not.be.undefined
+            blogPost.save (err, model) ->
+                expect(err).to.be.null
+                jsonBlogPost = blogPost.toJSONObject()
+                expect(jsonBlogPost._id).to.not.be.undefined
 
         it 'should not be modified if the model changes', () ->
             blogPost = new db.BlogPost
@@ -572,7 +617,9 @@ describe 'Model', ()->
             blogPost = new db.BlogPost
             blogPost.set 'title', 'hello world', 'en'
             blogPost.set 'keyword', ['foo', 'bar']
-            blogPost.save()
-            jsonBlogPost = JSON.parse blogPost.toJSON()
-            expect(jsonBlogPost.id).to.not.be.undefined
+            blogPost.save (err) ->
+                expect(err).to.be.null
+                jsonBlogPost = JSON.parse blogPost.toJSON()
+                expect(jsonBlogPost._id).to.not.be.undefined
+                expect(jsonBlogPost.id).to.be.undefined
 

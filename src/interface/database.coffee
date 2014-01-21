@@ -18,8 +18,8 @@ class Database
 
             @validateModel(modelName, model)
             model::db = @
+            model.db = @
             @[modelName] = model
-
 
     # ## beforeRegister
     beforeRegister: (modelName, model) ->
@@ -48,14 +48,14 @@ class Database
         throw 'not implemented'
 
 
-    # ## sync
+    # ## syncModel
     # synchronize the model instance with the database
-    sync: (model, callback) =>
+    syncModel: (model, callback) =>
         if model.id?
             id = model.id
         else
             id = @__buildId()
-        return callback null, id;
+        return callback null, {id: id, dbTouched: true};
 
 
     # ## clear

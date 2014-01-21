@@ -56,28 +56,31 @@ describe 'StardogDatabase', ()->
     beforeEach (done) ->
         db.clear done
 
-    describe 'sync()', () ->
+    describe 'syncModel()', () ->
         it 'should store the model values into the db', (done) ->
             blogPost = new db.BlogPost()
             blogPost.set 'title', 'hello world', 'en'
             blogPost.set 'keyword', ['hello', 'world']
             blogPost.set 'content', 'article'
-            db.sync blogPost, (err, id) ->
+            db.syncModel blogPost, (err, syncdata) ->
                 expect(err).to.be.null
+                expect(syncdata.dbTouched).to.be.true
+                expect(syncdata.id).to.be.not.undefined
+                id = syncdata.id
+                expect(id).to.match(/^http:\/\/example.org\/instances\/blogpost/)
                 db.store.query "select * {?s ?p ?o .}", (err, data) ->
                     expect(err).to.be.null
                     results = (
                         "#{i.s.value}::#{i.p.value}::#{i.o.value}" for i in data)
                     nsprop = 'http://example.org/properties'
-                    nsinst = 'http://example.org/instances/blogpost'
                     typeprop = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type'
                     typeuri = 'http://example.org/classes/BlogPost'
                     expect(results).to.include(
-                        "#{nsinst}/#{id}::#{typeprop}::#{typeuri}"
-                        "#{nsinst}/#{id}::#{nsprop}/title::hello world",
-                        "#{nsinst}/#{id}::#{nsprop}/keyword::hello",
-                        "#{nsinst}/#{id}::#{nsprop}/keyword::world",
-                        "#{nsinst}/#{id}::#{nsprop}/content::article")
+                        "#{id}::#{typeprop}::#{typeuri}"
+                        "#{id}::#{nsprop}/title::hello world",
+                        "#{id}::#{nsprop}/keyword::hello",
+                        "#{id}::#{nsprop}/keyword::world",
+                        "#{id}::#{nsprop}/content::article")
                     db.length (err, total) ->
                         expect(total).to.be.equal 5
                         done()

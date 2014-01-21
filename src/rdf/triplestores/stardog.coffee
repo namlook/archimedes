@@ -85,14 +85,15 @@ module.exports = class StardogStore
             return callback null, data
 
     # ## describe
-    # get all related data from an URI
+    # get all related data from a list of URIs
     #
     # options:
     #
     #  * database: the database to use
     #  * limit: the number of row to returns
     #  * offset: the offset
-    describe: (uri, options, callback) =>
+    #
+    describe: (uris, options, callback) =>
         unless callback?
             if typeof(options) is 'function'
                 callback = options
@@ -100,13 +101,25 @@ module.exports = class StardogStore
             else
                 throw "callback required"
 
-        options.query = "describe <#{uri}>"
+        sparqlQuery = "describe "
+        if _.isArray uris
+            for uri in uris
+                sparqlQuery += "<#{uri}> "
+        else
+            sparqlQuery += "<#{uris}>"
+
+        options.query = sparqlQuery
         options.database or= @databaseName
 
         @_connection.queryGraph options, (data) ->
             if _.isString data
                 return callback data
-            return callback null, data[0].attributes
+            unless _.isArray data
+                data = [data]
+            results = {}
+            for item in data
+                results[item.attributes['@id']] = item.attributes
+            return callback null, (results[i] for i in uris)
 
 
     # ## clear
@@ -158,7 +171,7 @@ if require.main is module
     """
     tripleStore.update insertQuery, (err, data) ->
         tripleStore.update """
-            delete {<http://ex.org/book1> ?p ?o .} 
+            delete {<http://ex.org/book1> ?p ?o .}
             where {
                 <http://ex.org/book1> ?p ?o .
             }

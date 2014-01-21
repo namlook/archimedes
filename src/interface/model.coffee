@@ -4,6 +4,9 @@
 _ = require 'underscore'
 objectdiff = require 'objectdiff'
 
+isPojo = (obj) ->
+    _.isObject(obj) and not _.isArray(obj) and not _.isFunction(obj)
+
 class ValueError extends Error
 class ModelError extends Error
 
@@ -74,10 +77,18 @@ class Model
     #
     #         db.Blog.find {'posts.author.login': 'bob'}, (err, blogs) ->
     #             console.log blogs
-    schema: null
+    schema: _.clone({
+        _id:
+            protected: true
+            type: 'string'
+            required: true
+    })
+
 
 
     constructor: (properties) ->
+        properties = properties or {}
+
         # where the values are actually stored
         @_properties = {}
 
@@ -87,12 +98,33 @@ class Model
         # store initial properties so we can track changes later
         @_initProperties = {}
 
+        # the model is not yet synced with the db
+        @_isNew = true
+
+
+        # fill the model with the values passed to the constructor
         for key, value of properties
-            @_properties[key] = _.clone(value)
+            @set key, value
+
+            if @schema[key].compute?
+                value = @schema[key].compute(@, value)
             @_initProperties[key] = _.clone(value)
 
-        @id = @_properties.id if @_properties.id?
-        @_isNew = true
+        # set all other properties to their default values if specified
+        for fieldName, field of @schema
+            if field.default? and not properties[fieldName]?
+                if _.isFunction(field.default)
+                    value = field.default(@)
+                else
+                    value = _.clone(field.default)
+
+                @set fieldName, value, {quietProtection: true}
+
+                if field.compute?
+                    value = field.compute(@, value)
+                @_initProperties[fieldName] = value
+
+
 
     # # Static methods
 
@@ -128,19 +160,8 @@ class Model
     # - **prefixes**: if true, prefix the sparql query with the one specified on
     #    the db. If `prefixes` is an object, the key is the prefix and the value
     #    the full URL.
-    @find: (URIsOrQuery, options, callback)=>
-        unless URIsOrQuery
-            throw new ModelError('URIsOrQuery are required')
-
-        if typeof options is 'function' and not callback
-            callback = options
-
-        if _.isArray URIsOrQuery
-            return @_findViaURIs URIsOrQuery, options, callback
-        else if _.isString URIsOrQuery
-            return @_findViaSparqlite URIsOrQuery, options, callback
-        else
-            return @_findViaMongo URIsOrQuery, options, callback
+    @find: (URIsOrQuery, options, callback) ->
+        @db.findModel @, URIsOrQuery, options, callback
 
 
     # #### Query
@@ -153,7 +174,7 @@ class Model
     # we can reach relations with the doted notation
     #
     #     {'blogPost.comment.author.name': 'Nico'}
-    @_findViaMongo: (mongoQuery, options, callback) =>
+    @_findViaMongo: (mongoQuery, options, callback) ->
 
 
     # ##### Sparql-like query (aka Sparqlite)
@@ -169,12 +190,14 @@ class Model
     #     ?this <[BlogPost.blog]>  <#{nicoblog.id}>  .
     #
     # `?this` should be type of the object we are calling the `find` method.
-    @_findViaSparqlite: (SparqliteQuery, options, callback) =>
+    @_findViaSparqlite: (SparqliteQuery, options, callback) ->
         # ...
 
 
-    @_findViaURIs: (URIs, options, callback) =>
-        # ...
+    @_findViaURIs: (URIs, options, callback) ->
+        if not callback and typeof(options) is 'function'
+            callback = options
+            options = {}
 
 
 
@@ -182,7 +205,7 @@ class Model
     # `findURIs URIsOrQuery, [options], (err, URIs) ->`
     #
     # Like `find` but returns only the object ids (uri)
-    @findURIs: (URIsOrQuery, options, callback) =>
+    @findURIs: (URIsOrQuery, options, callback) ->
         options.instance = false
         @find URIsOrQuery, options, callback
 
@@ -199,7 +222,7 @@ class Model
     # - a string, performs a sparql query
     #
     # `first` takes the same options than `find`
-    @first: (URIOrQuery, options, callback) =>
+    @first: (URIOrQuery, options, callback) ->
         options.limit = 1
         @find URIsOrQuery, options, callback
 
@@ -207,7 +230,7 @@ class Model
     # Like `first` but returns only the first object URI
     #
     # `firstURI URIOrQuery, [options], (err, URI) ->`
-    @firstURI: (URIOrQuery, options, callback)=>
+    @firstURI: (URIOrQuery, options, callback) ->
         options.limit = 1
         options.instance = false
         @find URIsOrQuery, options, callback
@@ -220,7 +243,7 @@ class Model
 
     # * fields: faceting only on the specified fields. If no fields are
     #     set, then the faceting is done for all fields
-    @facets: (query, options, callback)=>
+    @facets: (query, options, callback) ->
         if typeof(options) is 'function' and not callback
             callback = options
         # ...
@@ -277,6 +300,7 @@ class Model
     #
     # If `options` is a string, it is taken as a lang code.
     get: (fieldName, options) =>
+        @__checkFieldExistance(fieldName)
         if @schema[fieldName].i18n
             @_properties[fieldName] = {} unless @_properties[fieldName]?
             lang = @__getLang(fieldName, options)
@@ -292,6 +316,7 @@ class Model
     # If `options.lang` is specified, all i18n field's value will be return in
     # that language. If `options` is a string, it is taken as a lang code.
     getInstance: (fieldName, options) =>
+        @__checkFieldExistance(fieldName)
         # ...
 
 
@@ -309,6 +334,7 @@ class Model
     #
     # If `options` is a string, it is taken as a lang code
     getLabel: (fieldName, options) =>
+        @__checkFieldExistance(fieldName)
         lang = @__getLang(fieldName, options)
         label = @schema[fieldName].label
         if _.isObject label
@@ -343,17 +369,51 @@ class Model
     # `options`:
     # - **lang**: the lang used in value (for i18n fields)
     # - **validate**: (default true) if false, do not validate the value
+    # - **quietProtection**: (default false) if true, do not throw an error if
+    #       a value is set to a protected-field
     #
     # If `options` is a string, it is taken as a lang code
     set: (fieldName, value, options) =>
+
+        @__checkFieldExistance(fieldName)
+
+        options = options or {}
+        if _.isString options
+            options = {lang: options}
+        options.validate = true unless options.validate?
+        options.quietProtection = false unless options.quietProtection?
+
+        if @_properties[fieldName]? and  @schema[fieldName].protected \
+          and not options.quietProtection
+            throw new ValueError("'#{fieldName}' is protected")
         if _.isArray(value) and not @schema[fieldName].multi
             throw new ValueError("'#{fieldName}' doesn't accept array")
+        if isPojo(value) and not @schema[fieldName].i18n
+                throw new ValueError("'#{fieldName}' doesn't accept object")
+
+        # set the value
         if @schema[fieldName].i18n
             unless @_properties[fieldName]?
                 @_properties[fieldName] = {}
-            lang = @__getLang(fieldName, options)
-            @_properties[fieldName][lang] = value
+
+            if isPojo(value)
+                i18nValue = value
+            else
+                lang = @__getLang(fieldName, options)
+                i18nValue = {}
+                i18nValue[lang] = value
+
+            for lang, val of i18nValue
+                if @schema[fieldName].compute?
+                    value = @schema[fieldName].compute(@, val, lang)
+                @_properties[fieldName][lang] = val
         else
+            if @schema[fieldName].compute?
+                value = @schema[fieldName].compute(@, value)
+
+            if fieldName is '_id'
+                @id = value
+
             @_properties[fieldName] = value
 
 
@@ -373,6 +433,7 @@ class Model
     #
     # If `options` is a string, it is taken as a lang code
     push: (fieldName, value, options) =>
+        @__checkFieldExistance(fieldName)
         unless @schema[fieldName].multi
             throw new Error("#{@constructor.name}.#{fieldName} is not a multi field")
 
@@ -401,6 +462,7 @@ class Model
     #
     # If `options` is a string, it is taken as a lang code
     pull: (fieldName, value, options) =>
+        @__checkFieldExistance(fieldName)
         unless @schema[fieldName].multi
             throw new Error("#{@constructor.name}.#{fieldName} is not a multi field")
 
@@ -430,6 +492,7 @@ class Model
     #
     # If `options` is a string, it is taken as a lang code
     unset: (fieldName, options)=>
+        @__checkFieldExistance(fieldName)
         if @schema[fieldName].i18n
             lang = @__getLang(fieldName, options)
             if @_properties[fieldName]?[lang]?
@@ -450,6 +513,7 @@ class Model
     #
     # If `options` is a string, it is taken as a lang code
     has: (fieldName, options) =>
+        @__checkFieldExistance(fieldName)
         if @schema[fieldName].i18n
             lang = @__getLang(fieldName, options)
             return @_properties[fieldName]?[lang]?
@@ -462,6 +526,7 @@ class Model
     #
     # `isPopulated(fieldName)`
     isPopulated: (fieldName) =>
+        @__checkFieldExistance(fieldName)
         # ...
 
 
@@ -548,7 +613,7 @@ class Model
     # Only the field marked as change will be updated. If fields has been unset,
     # their related property uri will be delete.
     save: (callback) =>
-        @db.sync @, (err, id) =>
+        @db.syncModel @, (err, data) =>
             if err
                 if callback
                     return callback err
@@ -557,12 +622,18 @@ class Model
             @_initProperties = {}
             for key, value of @_properties
                 @_initProperties[key] = _.clone(value)
-            @_isNew = false
-            @id = id
+
+            if data.dbTouched
+                @_isNew = false
+                unless @id?
+                    @set '_id', data.id
 
             if callback
-                return callback null, @
+                return callback null, @, data.dbTouched
 
+
+    beforeSave: (next) ->
+        next()
 
     # ## rollback
     # returns the model to the state it was the last time it was saved (or created)
@@ -607,8 +678,10 @@ class Model
     # ## clone
     # Returns a new instance of the model with identical attributes.
     # Note that the new cloned instance is a new object thus it has no id.
-    clone: ()=>
-        return new @constructor(@_properties)
+    clone: () ->
+        props = @toJSONObject()
+        delete props._id
+        return new @constructor(props)
 
 
     # ## isNew
@@ -624,8 +697,6 @@ class Model
         jsonObject = {}
         for key, value of @_properties
             jsonObject[key] = _.clone(value)
-        if @id
-            jsonObject.id = @id
         return jsonObject
 
 
@@ -652,5 +723,9 @@ class Model
             throw "'#{fieldName}' is i18n and need a language"
         return lang
 
+    # raise an error if the field doesn't exists
+    __checkFieldExistance: (fieldName) ->
+        unless @schema[fieldName]?
+            throw "'#{@meta.name}.#{fieldName}' not found"
 
 module.exports = Model

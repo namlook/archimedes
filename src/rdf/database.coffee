@@ -16,7 +16,7 @@ class Database extends DatabaseInterface
     #   * credentials.login: the user login to use
     #   * credentials.password: the password
     constructor: (options) ->
-        super
+        super options
 
         # the URI where the data will be stored
         @graphURI = options.graphURI
@@ -28,7 +28,6 @@ class Database extends DatabaseInterface
             throw "store is required"
 
         @store = new triplestores[options.store](options)
-
 
         # if namespace is not specified, graphURI is used
         # example 'http://onto.example.org'
@@ -50,6 +49,16 @@ class Database extends DatabaseInterface
         @defaultInstancesNamespace = options.defaultInstancesNamespace
         unless @defaultInstancesNamespace
             @defaultInstancesNamespace = "#{@namespace}/instances"
+
+        @_propertiesIndexURI = {}
+
+
+    registerModels: (models) =>
+        super models
+        for modelName, model of models
+            for fieldName, field of model::schema
+                uri = field.uri or "#{model::meta.propertiesNamespace}/#{fieldName}"
+                @_propertiesIndexURI[uri] = fieldName
 
 
     # ## registerClasses
@@ -96,6 +105,60 @@ class Database extends DatabaseInterface
             model::meta.instancesNamespace =  \
                 "#{@defaultInstancesNamespace}/#{loweredModelName}"
 
+
+    findModel: (model, URIsOrQuery, options, callback) =>
+        if typeof options is 'function' and not callback
+            callback = options
+            options = {}
+
+        unless URIsOrQuery
+            return callback 'URIsOrQuery are required'
+
+        if _.isArray URIsOrQuery
+                return @_describe model, URIsOrQuery, options, callback
+            else if _.isString URIsOrQuery
+                return @_findViaSparqlite model, URIsOrQuery, options, callback
+            else
+                return @_findViaMongo model, URIsOrQuery, options, callback
+
+    _describe: (model, uris, options, callback) =>
+        @store.describe uris, options, (err, rawdata) =>
+            if err
+                return callback err
+
+            properties = {}
+            schema = model::schema
+
+            results = []
+            for data in rawdata
+                for uri, item of data
+                    if uri is '@id'
+                        properties._id = item
+
+                    else if uri isnt '@type'
+                        prop = @_propertiesIndexURI[uri]
+                        if schema[prop].i18n
+                            unless properties[prop]?
+                                properties[prop] = {}
+                            for _item in item
+                                lang = _item['@language']
+                                value = _item['@value']
+                                if schema[prop].multi
+                                    unless lang
+                                        throw 'something wrong'
+                                    unless properties[prop][lang]?
+                                        properties[prop][lang] = []
+                                    properties[prop][lang].push value
+                                else
+                                    properties[prop][lang] = value
+
+                        else if schema[prop].multi
+                            properties[prop] = (_item['@value'] for _item in item)
+                        else
+                            properties[prop] = item[0]['@value']
+                results.push new model(properties)
+            return callback null, results
+
     # ## clear
     # empty the database
     #
@@ -119,7 +182,7 @@ class Database extends DatabaseInterface
     deleteModel: (model, callback) =>
         unless model.id?
             return callback "can't delete a non-saved model"
-        modelURI = @getModelURI(model)
+        modelURI = model.id
         deleteQuery = "delete {<#{modelURI}> ?p ?o .} where {<#{modelURI}> ?p ?o .}"
         @store.update deleteQuery, (err, ok) =>
             if err
@@ -129,69 +192,57 @@ class Database extends DatabaseInterface
             return callback null
 
 
-    # ## sync
+    # ## syncModel
     # synchronize a model data with the database
     #
     # If the model is new (never saved) the model id is genreated automatically.
     #
     # example:
-    #       @sync model, (err, modelId) ->
-    sync: (model, callback) =>
+    #       @syncModel model, (err, modelId) ->
+    syncModel: (model, callback) =>
 
         changes = model.changes()
 
         # if there is no changes, we don't need to make a server call
         unless changes
-            return callback null, model.id
+            return callback null, {id: model.id, dbTouched: false}
 
-        unless model.id?
-            model.id = @__buildId()
-
-        addedTriples = []
-        removedTriples = []
-        if changes
-            addedTriples = @_fieldsToTriples(model, changes.added)
-            removedTriples = @_fieldsToTriples(model, changes.removed)
-
-        if model.isNew()
-            modelURI = @getModelURI(model)
-            addedTriples.push "<#{modelURI}> a  <#{model.meta.uri}>"
-
-        sparqlQuery = ''
-        if removedTriples.length
-            sparqlQuery += "DELETE DATA { #{removedTriples.join(' .\n')} } "
-
-        if addedTriples.length
-            sparqlQuery += "INSERT DATA { #{addedTriples.join(' .\n')} }"
-
-        @store.update sparqlQuery, (err, ok) =>
+        model.beforeSave (err) =>
             if err
                 return callback err
-            unless ok
-                return callback "error while syncing the data"
 
-            return callback null, model.id
+            addedTriples = []
+            removedTriples = []
+            if changes
+                addedTriples = @_fieldsToTriples(model, changes.added)
+                removedTriples = @_fieldsToTriples(model, changes.removed)
 
+            if model.isNew()
+                addedTriples.push "<#{model.id}> a  <#{model.meta.uri}>"
 
-    # ## getModelURI
-    # returns the model URI based on its id and the instancesNamespace
-    getModelURI: (model) =>
-        return "#{model.meta.instancesNamespace}/#{model.id}"
+            sparqlQuery = ''
+            if removedTriples.length
+                sparqlQuery += "DELETE DATA { #{removedTriples.join(' .\n')} } "
 
+            if addedTriples.length
+                sparqlQuery += "INSERT DATA { #{addedTriples.join(' .\n')} }"
 
-    # ## modelToTriples
-    # returns a list of triples related to the model values
-    modelToTriples: (model) =>
-        triples = @_fieldsToTriples(model, model._properties)
-        if model.id?
-            triple.push "#{instancesNamespace}/#{@__buildId()}"
-        return triples
+            @store.update sparqlQuery, (err, ok) =>
+                if err
+                    return callback err
+                unless ok
+                    return callback "error while syncing the data"
+
+                return callback null, {id: model.id, dbTouched: true}
+
 
 
     _fieldsToTriples: (model, fields) =>
         schema = model.schema
         triples = []
-        modelURI = @getModelURI(model)
+        unless model.id?
+            throw "'#{model.meta.name}' has no id"
+        modelURI = model.id
 
         for fieldName, value of fields
             # get the property uri
