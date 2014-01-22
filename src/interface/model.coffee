@@ -2,6 +2,7 @@
 # # Model
 
 _ = require 'underscore'
+async = require 'async'
 objectdiff = require 'objectdiff'
 validators = require './validators'
 
@@ -106,6 +107,8 @@ class Model
         # the model is not yet synced with the db
         @_isNew = true
 
+        # where the pending relations are stored
+        @__pendingRelations = []
 
         # fill the model with the values passed to the constructor
         for key, value of properties
@@ -434,6 +437,9 @@ class Model
                         if @schema[fieldName].compute?
                             val = @schema[fieldName].compute(@, val, lang)
                         @__validateValue(val, fieldName, lang)
+
+                        if val.meta?.name? and not val.isNew()
+                            @__pendingRelations.push val
                         @_properties[fieldName][lang] = val
             else
                 if @schema[fieldName].compute?
@@ -441,6 +447,9 @@ class Model
 
                 if fieldName is '_id'
                     @id = value
+
+                if value.meta?.name? and value.isNew()
+                    @__pendingRelations.push value
 
                 @__validateValue(value, fieldName)
                 @_properties[fieldName] = value
@@ -485,6 +494,11 @@ class Model
                 value = @schema[fieldName].compute(@, value, lang)
 
             @__validateValue(value, fieldName, lang)
+
+
+            if value.meta?.name? and value.isNew()
+                @__pendingRelations.push value
+
             @_properties[fieldName][lang].push value
 
         else
@@ -494,6 +508,9 @@ class Model
                 value = @schema[fieldName].compute(@, value)
 
             @__validateValue(value, fieldName)
+
+            if value.meta?.name? and value.isNew()
+                @__pendingRelations.push value
             @_properties[fieldName].push value
 
 
@@ -679,6 +696,13 @@ class Model
     # Only the field marked as change will be updated. If fields has been unset,
     # their related property uri will be delete.
     save: (callback) =>
+        # save all pending relations...
+        async.each @__pendingRelations, (model, cb) ->
+            model.save cb
+        ,  (err) ->
+            if err
+                return callback err
+
         @db.syncModel @, (err, data) =>
             if err
                 if callback

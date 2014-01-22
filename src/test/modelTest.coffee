@@ -548,6 +548,78 @@ describe 'Model', ()->
             blogPost2.save()
             expect(blogPost2.id).to.be.equal 0
 
+        it 'should save all unsaved relations', (done) ->
+            blog = new db.Blog {title: 'My blog'}
+            author = new db.Author {login: 'nico'}
+            blogPost = new db.BlogPost
+            blogPost.set 'title', {en: 'hello world', fr: 'salut monde'}
+            blogPost.set 'content', 'first post'
+            blogPost.set 'author', author
+            blogPost.set 'blog', blog
+
+            expect(blog.isNew()).to.be.true
+            expect(author.isNew()).to.be.true
+
+            expect(blog.id).to.be.undefined
+            expect(author.id).to.be.undefined
+            expect(blogPost.id).to.be.undefined
+
+            pending = blogPost.__pendingRelations
+            expect(pending).to.include author
+            expect(pending).to.include blog
+
+            blogPost.save (err, obj, dbtouched) ->
+                expect(err).to.be.null
+                expect(dbtouched).to.be.true
+                expect(blogPost.id).to.be.not.undefined
+                expect(blogPost.get('author').id).to.be.not.undefined
+                expect(blogPost.get('blog').id).to.be.not.undefined
+
+                expect(blog.id).to.equal blogPost.get('blog').id
+                expect(author.id).to.equal blogPost.get('author').id
+                done()
+
+
+        it 'should discard all unsaved relations if unset', () ->
+            blog = new db.Blog {title: 'My blog'}
+            author = new db.Author {login: 'nico'}
+            blogPost = new db.BlogPost
+            blogPost.set 'title', {en: 'hello world', fr: 'salut monde'}
+            blogPost.set 'content', 'first post'
+            blogPost.set 'author', author
+            blogPost.set 'blog', blog
+
+            pendings = blogPost.__pendingRelations
+            expect(pendings).to.include author
+            expect(pendings).to.include blog
+
+            blogPost.unset 'author'
+            expect(pendings).to.not.include author
+            expect(pendings).to.include blog
+
+            blogPost.unset 'blog'
+            expect(pendings).to.not.include blog
+
+        it 'should discard all unsaved relations if pulled', () ->
+            blog = new db.Blog {title: 'My blog'}
+            author = new db.Author {login: 'nico'}
+            blogPost = new db.BlogPost
+            blogPost.set 'title', {en: 'hello world', fr: 'salut monde'}
+            blogPost.set 'content', 'first post'
+            blogPost.set 'author', author
+            blogPost.set 'blog', blog
+
+            pendings = blogPost.__pendingRelations
+            expect(pendings).to.include author
+            expect(pendings).to.include blog
+
+            blogPost.unset 'author'
+            expect(pendings).to.not.include author
+            expect(pendings).to.include blog
+
+            blogPost.unset 'blog'
+            expect(pendings).to.not.include blog
+
 
         it 'should generate an id from a specified field if no id is set'
         it 'should store the values of an instance into the database'
