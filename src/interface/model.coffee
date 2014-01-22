@@ -809,7 +809,13 @@ class Model
     # throw an error if the value is not to the correct type
     __validateValue: (value, fieldName) ->
         type = @schema[fieldName].type
-        unless validators[@schema[fieldName].type](value)
+        ok = true
+        if validators[type]?
+            unless validators[type](value)
+                ok = false
+        else if @db[type]? and type isnt value.meta?.name
+            ok = false
+        unless ok
             throw "ValidationError: #{@meta.name}.#{fieldName} must be a #{type}"
 
 module.exports = Model

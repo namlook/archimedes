@@ -109,7 +109,7 @@ describe 'Model validation:', ()->
 
 
 
-    describe '.set()', () ->
+    describe 'relation types', () ->
         it 'should throw an error if the relation type doesnt match', (done) ->
             blog = new db.Blog {title: 'My blog'}
             blog.save (err) ->
@@ -122,7 +122,8 @@ describe 'Model validation:', ()->
                         /BlogPost.author must be a Author/)
                     blogPost.set 'blog', blog
                     expect(-> blogPost.set 'content', blog).to.throw(
-                        /BlogPost.title must be a string/)
+                        /BlogPost.content must be a string/)
+                    done()
 
 
 
