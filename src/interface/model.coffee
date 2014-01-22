@@ -440,8 +440,8 @@ class Model
                             val = @schema[fieldName].compute(@, val, lang)
                         @__validateValue(val, fieldName, lang)
 
-                        if val.meta?.name? and val.isNew()
-                            @__pendingRelations.push val
+                        @__addPendingRelation(fieldName, value, lang)
+
                         @_properties[fieldName][lang] = val
             else
                 if @schema[fieldName].compute?
@@ -450,8 +450,7 @@ class Model
                 if fieldName is '_id'
                     @id = value
 
-                if value.meta?.name? and value.isNew()
-                    @__pendingRelations.push value
+                @__addPendingRelation(fieldName, value)
 
                 @__validateValue(value, fieldName)
                 @_properties[fieldName] = value
@@ -497,9 +496,7 @@ class Model
 
             @__validateValue(value, fieldName, lang)
 
-
-            if value.meta?.name? and value.isNew()
-                @__pendingRelations.push value
+            @__addPendingRelation(fieldName, value, lang)
 
             @_properties[fieldName][lang].push value
 
@@ -511,8 +508,7 @@ class Model
 
             @__validateValue(value, fieldName)
 
-            if value.meta?.name? and value.isNew()
-                @__pendingRelations.push value
+            @__addPendingRelation(fieldName, value)
 
             @_properties[fieldName].push value
 
@@ -546,18 +542,14 @@ class Model
             lang = options.lang
             if @_properties[fieldName]?[lang]?
 
-                # remove pending relations
-                @__pendingRelations = (
-                    i for i in @__pendingRelations when i isnt value)
+                @__removePendingRelation(fieldName, value, lang)
 
                 values = _.without @_properties[fieldName][lang], value
                 @_properties[fieldName][lang] = values
         else
             if @_properties[fieldName]
 
-                # remove pending relations
-                @__pendingRelations = (
-                    i for i in @__pendingRelations when i isnt value)
+                @__removePendingRelation(fieldName, value)
 
                 values = _.without @_properties[fieldName], value
                 @_properties[fieldName] = values
@@ -589,24 +581,11 @@ class Model
         if @schema[fieldName].i18n
             lang = options.lang
             if @_properties[fieldName]?[lang]?
-                if @schema[fieldName].multi
-                    relations = @_properties[fieldName][lang]
-                    @__pendingRelations = (
-                        i for i in @__pendingRelations when i not in relations)
-                else
-                    relation = @_properties[fieldName][lang]
-                    @__pendingRelations = (
-                        i for i in @__pendingRelations when i isnt relation)
+                @__removePendingRelation(fieldName, null, lang, true)
                 delete @_properties[fieldName][lang]
 
         else
-            if @schema[fieldName].multi
-                relations = @_properties[fieldName]
-                @__pendingRelations = (
-                    i for i in @__pendingRelations when i not in relations)
-            else
-                @__pendingRelations = (
-                    i for i in @__pendingRelations when i isnt @_properties[fieldName])
+            @__removePendingRelation(fieldName, null, null, true)
             delete @_properties[fieldName]
 
 
@@ -726,7 +705,7 @@ class Model
     # their related property uri will be delete.
     save: (callback) =>
         # save all pending relations...
-        async.each @__pendingRelations, (model, cb) ->
+        async.each @_getPendingRelations(), (model, cb) ->
             model.save cb
         ,  (err) ->
             if err
@@ -870,5 +849,54 @@ class Model
             ok = false
         unless ok
             throw "ValidationError: #{@meta.name}.#{fieldName} must be a #{type}"
+
+    # ## __addPendingRelation(fieldName, value, lang)
+    #
+    # add the pending relation. if lang is undefined, use '_' for unsepecified
+    # language
+    __addPendingRelation: (fieldName, value, lang) ->
+
+        unless lang?
+            lang = '_'
+
+        if @db[@schema[fieldName].type]? and value.isNew()
+            @__pendingRelations[lang] = {} unless @__pendingRelations[lang]?
+            if @schema[fieldName].multi
+                unless @__pendingRelations[lang][fieldName]?
+                    @__pendingRelations[lang][fieldName] = []
+                @__pendingRelations[lang][fieldName].push value
+            else
+                @__pendingRelations[lang][fieldName] = [value]
+
+    # ## __removePendingRelation(value, lang, unset)
+    #
+    # remove the pending relation. if lang is undefined, use '_' for unsepecified
+    # language. If unset is true, just delete all relations from the field. Usefull
+    # for the `unset` method where is no value to remove
+    __removePendingRelation: (fieldName, value, lang, unset) ->
+
+        unless lang?
+            lang = '_'
+
+        if unset
+            if @__pendingRelations[lang]?[fieldName]?
+                @__pendingRelations[lang][fieldName] = []
+
+        else if @db[@schema[fieldName].type]? and value.isNew()
+            if @schema[fieldName].multi
+                @__pendingRelations[lang][fieldName] = (
+                    i for i in @__pendingRelations[lang][fieldName] when i isnt value)
+            else
+                @__pendingRelations[lang][fieldName] = []
+
+    # ## __getPendingRelations()
+    #
+    # returns all the pending relations of the model
+    _getPendingRelations: () ->
+        pendings = []
+        for lang, field of @__pendingRelations
+            for fieldName, values of field
+                pendings = _.union(pendings, values)
+        return pendings
 
 module.exports = Model

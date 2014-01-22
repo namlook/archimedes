@@ -580,13 +580,13 @@ describe 'Model', ()->
             expect(blog.isNew()).to.be.true
             expect(author.isNew()).to.be.true
 
+            pending = blogPost._getPendingRelations()
+            expect(pending).to.include author
+            expect(pending).to.include blog
+
             expect(blog.id).to.be.undefined
             expect(author.id).to.be.undefined
             expect(blogPost.id).to.be.undefined
-
-            pending = blogPost.__pendingRelations
-            expect(pending).to.include author
-            expect(pending).to.include blog
 
             blogPost.save (err, obj, dbtouched) ->
                 expect(err).to.be.null
@@ -598,115 +598,6 @@ describe 'Model', ()->
                 expect(blog.id).to.equal blogPost.get('blog').id
                 expect(author.id).to.equal blogPost.get('author').id
                 done()
-
-
-        it 'should discard all unsaved relations if unset', () ->
-            blog = new db.Blog {title: 'My blog'}
-            author = new db.Author {login: 'nico'}
-            blogPost = new db.BlogPost
-            blogPost.set 'title', {en: 'hello world', fr: 'salut monde'}
-            blogPost.set 'content', 'first post'
-            blogPost.set 'author', author
-            blogPost.set 'blog', blog
-
-            expect(blogPost.__pendingRelations).to.include author
-            expect(blogPost.__pendingRelations).to.include blog
-
-            blogPost.unset 'author'
-            expect(blogPost.__pendingRelations).to.not.include author
-            expect(blogPost.__pendingRelations).to.include blog
-
-            blogPost.unset 'blog'
-            expect(blogPost.__pendingRelations).to.not.include blog
-
-        it 'should discard all unsaved relations if unset a i18n field', () ->
-            nico = new db.Author {login: 'nico'}
-            thib = new db.Author {login: 'thib'}
-            blogIndex = new db.BlogIndex
-            blogIndex.set 'i18nAuthor', nico, 'en'
-            blogIndex.set 'i18nAuthor', thib, 'fr'
-
-            expect(blogIndex.__pendingRelations).to.include nico
-            expect(blogIndex.__pendingRelations).to.include thib
-
-            blogIndex.unset 'i18nAuthor', 'en'
-            expect(blogIndex.__pendingRelations).to.not.include nico
-            expect(blogIndex.__pendingRelations).to.include thib
-
-            blogIndex.unset 'i18nAuthor', 'fr'
-            expect(blogIndex.__pendingRelations).to.not.include thib
-
-        it 'should discard all unsaved relations if unset a multi field', () ->
-            blog1 = new db.Blog {title: 'My first blog'}
-            blog2 = new db.Blog {title: 'My second blog'}
-            blog3 = new db.Blog {title: 'My third blog'}
-            blogIndex = new db.BlogIndex
-            blogIndex.set 'multiBlogs', [blog1, blog2]
-            blogIndex.push 'multiBlogs', blog3
-
-
-            expect(blogIndex.__pendingRelations).to.include blog1
-            expect(blogIndex.__pendingRelations).to.include blog2
-            expect(blogIndex.__pendingRelations).to.include blog3
-
-
-            blogIndex.unset 'multiBlogs'
-            expect(blogIndex.__pendingRelations).to.not.include blog1
-            expect(blogIndex.__pendingRelations).to.not.include blog2
-            expect(blogIndex.__pendingRelations).to.not.include blog3
-
-        it 'should discard all unsaved relations if pulled a multi field', () ->
-            blog1 = new db.Blog {title: 'My first blog'}
-            blog2 = new db.Blog {title: 'My second blog'}
-            blog3 = new db.Blog {title: 'My third blog'}
-            blogIndex = new db.BlogIndex
-            blogIndex.set 'multiBlogs', [blog1, blog2]
-            blogIndex.push 'multiBlogs', blog3
-
-
-            expect(blogIndex.__pendingRelations).to.include blog1
-            expect(blogIndex.__pendingRelations).to.include blog2
-            expect(blogIndex.__pendingRelations).to.include blog3
-
-            blogIndex.pull 'multiBlogs', blog2
-
-            expect(blogIndex.__pendingRelations).to.include blog1
-            expect(blogIndex.__pendingRelations).to.not.include blog2
-            expect(blogIndex.__pendingRelations).to.include blog3
-
-            blogIndex.pull 'multiBlogs', blog3
-            expect(blogIndex.__pendingRelations).to.not.include blog3
-
-
-        it 'should discard all matching unsaved relations on a multi-i18n field', () ->
-            blog1 = new db.Blog {title: 'My first blog'}
-            blog2 = new db.Blog {title: 'My second blog'}
-            blog3 = new db.Blog {title: 'Mon premier blog'}
-            blog4 = new db.Blog {title: 'Mon second blog'}
-            blogIndex = new db.BlogIndex
-            blogIndex.set 'multiI18nBlogs', [blog1, blog2], 'en'
-            blogIndex.push 'multiI18nBlogs', blog3, 'fr'
-            blogIndex.push 'multiI18nBlogs', blog4, 'fr'
-
-            expect(blogIndex.__pendingRelations).to.include blog1
-            expect(blogIndex.__pendingRelations).to.include blog2
-            expect(blogIndex.__pendingRelations).to.include blog3
-            expect(blogIndex.__pendingRelations).to.include blog4
-
-            blogIndex.pull 'multiI18nBlogs', blog3, 'fr'
-
-            expect(blogIndex.__pendingRelations).to.include blog1
-            expect(blogIndex.__pendingRelations).to.include blog2
-            expect(blogIndex.__pendingRelations).to.not.include blog3
-            expect(blogIndex.__pendingRelations).to.include blog4
-
-
-            blogIndex.unset 'multiI18nBlogs', 'en'
-            expect(blogIndex.__pendingRelations).to.not.include blog1
-            expect(blogIndex.__pendingRelations).to.not.include blog2
-            expect(blogIndex.__pendingRelations).to.not.include blog3
-            expect(blogIndex.__pendingRelations).to.include blog4
-
 
         it 'should generate an id from a specified field if no id is set'
         it 'should store the values of an instance into the database'
@@ -775,3 +666,147 @@ describe 'Model', ()->
                 expect(jsonBlogPost._id).to.not.be.undefined
                 expect(jsonBlogPost.id).to.be.undefined
 
+
+    describe '._getPendingRelations()', () ->
+
+        it 'should push a pending relation', () ->
+            blog1 = new db.Blog {title: 'My first blog'}
+            blog2 = new db.Blog {title: 'My second blog'}
+            blog3 = new db.Blog {title: 'My third blog'}
+            blogIndex = new db.BlogIndex
+            blogIndex.push 'multiBlogs', blog1
+
+            expect(blogIndex._getPendingRelations()).to.include blog1
+
+            blogIndex.push 'multiBlogs', blog2
+            expect(blogIndex._getPendingRelations()).to.include blog2
+
+
+        it 'should discard all unsaved relations if unset', () ->
+            blog = new db.Blog {title: 'My blog'}
+            author = new db.Author {login: 'nico'}
+            blogPost = new db.BlogPost
+            blogPost.set 'title', {en: 'hello world', fr: 'salut monde'}
+            blogPost.set 'content', 'first post'
+            blogPost.set 'author', author
+            blogPost.set 'blog', blog
+
+            expect(blogPost._getPendingRelations()).to.include author
+            expect(blogPost._getPendingRelations()).to.include blog
+
+            blogPost.unset 'author'
+            expect(blogPost._getPendingRelations()).to.not.include author
+            expect(blogPost._getPendingRelations()).to.include blog
+
+            blogPost.unset 'blog'
+            expect(blogPost._getPendingRelations()).to.not.include blog
+
+        it 'should discard all unsaved relations if unset a i18n field', () ->
+            nico = new db.Author {login: 'nico'}
+            thib = new db.Author {login: 'thib'}
+            blogIndex = new db.BlogIndex
+            blogIndex.set 'i18nAuthor', nico, 'en'
+            blogIndex.set 'i18nAuthor', thib, 'fr'
+
+            expect(blogIndex._getPendingRelations()).to.include nico
+            expect(blogIndex._getPendingRelations()).to.include thib
+
+            blogIndex.unset 'i18nAuthor', 'en'
+            expect(blogIndex._getPendingRelations()).to.not.include nico
+            expect(blogIndex._getPendingRelations()).to.include thib
+
+            blogIndex.unset 'i18nAuthor', 'fr'
+            expect(blogIndex._getPendingRelations()).to.not.include thib
+
+        it 'should discard all unsaved relations if unset a multi field', () ->
+            blog1 = new db.Blog {title: 'My first blog'}
+            blog2 = new db.Blog {title: 'My second blog'}
+            blog3 = new db.Blog {title: 'My third blog'}
+            blogIndex = new db.BlogIndex
+            blogIndex.set 'multiBlogs', [blog1, blog2]
+            blogIndex.push 'multiBlogs', blog3
+
+
+            expect(blogIndex._getPendingRelations()).to.include blog1
+            expect(blogIndex._getPendingRelations()).to.include blog2
+            expect(blogIndex._getPendingRelations()).to.include blog3
+
+
+            blogIndex.unset 'multiBlogs'
+            expect(blogIndex._getPendingRelations()).to.not.include blog1
+            expect(blogIndex._getPendingRelations()).to.not.include blog2
+            expect(blogIndex._getPendingRelations()).to.not.include blog3
+
+        it 'should discard all unsaved relations if pulled a multi field', () ->
+            blog1 = new db.Blog {title: 'My first blog'}
+            blog2 = new db.Blog {title: 'My second blog'}
+            blog3 = new db.Blog {title: 'My third blog'}
+            blogIndex = new db.BlogIndex
+            blogIndex.set 'multiBlogs', [blog1, blog2]
+            blogIndex.push 'multiBlogs', blog3
+
+
+            expect(blogIndex._getPendingRelations()).to.include blog1
+            expect(blogIndex._getPendingRelations()).to.include blog2
+            expect(blogIndex._getPendingRelations()).to.include blog3
+
+            blogIndex.pull 'multiBlogs', blog2
+
+            expect(blogIndex._getPendingRelations()).to.include blog1
+            expect(blogIndex._getPendingRelations()).to.not.include blog2
+            expect(blogIndex._getPendingRelations()).to.include blog3
+
+            blogIndex.pull 'multiBlogs', blog3
+            expect(blogIndex._getPendingRelations()).to.not.include blog3
+
+
+        it 'should discard all matching unsaved relations on a multi-i18n field', () ->
+            blog1 = new db.Blog {title: 'My first blog'}
+            blog2 = new db.Blog {title: 'My second blog'}
+            blog3 = new db.Blog {title: 'Mon premier blog'}
+            blog4 = new db.Blog {title: 'Mon second blog'}
+            blogIndex = new db.BlogIndex
+            blogIndex.set 'multiI18nBlogs', [blog1, blog2], 'en'
+            blogIndex.push 'multiI18nBlogs', blog3, 'fr'
+            blogIndex.push 'multiI18nBlogs', blog4, 'fr'
+
+            expect(blogIndex._getPendingRelations()).to.include blog1
+            expect(blogIndex._getPendingRelations()).to.include blog2
+            expect(blogIndex._getPendingRelations()).to.include blog3
+            expect(blogIndex._getPendingRelations()).to.include blog4
+
+            blogIndex.pull 'multiI18nBlogs', blog3, 'fr'
+
+            expect(blogIndex._getPendingRelations()).to.include blog1
+            expect(blogIndex._getPendingRelations()).to.include blog2
+            expect(blogIndex._getPendingRelations()).to.not.include blog3
+            expect(blogIndex._getPendingRelations()).to.include blog4
+
+
+            blogIndex.unset 'multiI18nBlogs', 'en'
+            expect(blogIndex._getPendingRelations()).to.not.include blog1
+            expect(blogIndex._getPendingRelations()).to.not.include blog2
+            expect(blogIndex._getPendingRelations()).to.not.include blog3
+            expect(blogIndex._getPendingRelations()).to.include blog4
+
+        it 'should discard only the matching relation on a i18n-field', () ->
+            nico = new db.Author {login: 'nico'}
+            thib = new db.Author {login: 'thib'}
+            blogIndex = new db.BlogIndex
+            blogIndex.set 'i18nAuthor', nico, 'en'
+            blogIndex.set 'i18nAuthor', thib, 'fr'
+            blogIndex.set 'i18nAuthor', nico, 'eo'
+
+            expect(blogIndex._getPendingRelations()).to.include nico
+            expect(blogIndex._getPendingRelations()).to.include thib
+
+            blogIndex.unset 'i18nAuthor', 'en'
+            expect(blogIndex._getPendingRelations()).to.include nico
+            expect(blogIndex._getPendingRelations()).to.include thib
+
+            blogIndex.unset 'i18nAuthor', 'eo'
+            expect(blogIndex._getPendingRelations()).to.not.include nico
+            expect(blogIndex._getPendingRelations()).to.include thib
+
+            blogIndex.unset 'i18nAuthor', 'fr'
+            expect(blogIndex._getPendingRelations()).to.not.include thib
