@@ -396,14 +396,15 @@ class Model
         @__checkFieldExistance(fieldName)
 
         # parse options
-        if isPojo(value)
+        checkLang = fieldName
+        if isPojo(value) and not value.meta?.name?
             checkLang = null
-        else
-            checkLang = fieldName
         options = @__parseOptions(options,
             {validate: true, quietReadOnly: false},
         checkLang)
 
+        # check if the field is read-only. If so, throw an error if a value is
+        # already set
         if @_properties[fieldName]? and  @schema[fieldName].readOnly
             if options.quietReadOnly
                 return
@@ -412,7 +413,8 @@ class Model
         # if the value is an array, delegate to @push
         if _.isArray(value)
             unless @schema[fieldName].multi
-                throw new ValueError("#{@meta.name}.#{fieldName} doesn't accept array")
+                throw new ValueError(
+                    "#{@meta.name}.#{fieldName} doesn't accept array")
             @unset fieldName, options
             for item in value
                 @push fieldName, item, options
@@ -422,7 +424,7 @@ class Model
                 unless @_properties[fieldName]?
                     @_properties[fieldName] = {}
 
-                if isPojo(value)
+                if isPojo(value) and not value.meta?.name
                     i18nValue = value
                 else
                     lang = options.lang
@@ -438,7 +440,7 @@ class Model
                             val = @schema[fieldName].compute(@, val, lang)
                         @__validateValue(val, fieldName, lang)
 
-                        if val.meta?.name? and not val.isNew()
+                        if val.meta?.name? and val.isNew()
                             @__pendingRelations.push val
                         @_properties[fieldName][lang] = val
             else
@@ -511,6 +513,7 @@ class Model
 
             if value.meta?.name? and value.isNew()
                 @__pendingRelations.push value
+
             @_properties[fieldName].push value
 
 
@@ -542,10 +545,20 @@ class Model
         if @schema[fieldName].i18n
             lang = options.lang
             if @_properties[fieldName]?[lang]?
+
+                # remove pending relations
+                @__pendingRelations = (
+                    i for i in @__pendingRelations when i isnt value)
+
                 values = _.without @_properties[fieldName][lang], value
                 @_properties[fieldName][lang] = values
         else
             if @_properties[fieldName]
+
+                # remove pending relations
+                @__pendingRelations = (
+                    i for i in @__pendingRelations when i isnt value)
+
                 values = _.without @_properties[fieldName], value
                 @_properties[fieldName] = values
 
@@ -576,8 +589,24 @@ class Model
         if @schema[fieldName].i18n
             lang = options.lang
             if @_properties[fieldName]?[lang]?
+                if @schema[fieldName].multi
+                    relations = @_properties[fieldName][lang]
+                    @__pendingRelations = (
+                        i for i in @__pendingRelations when i not in relations)
+                else
+                    relation = @_properties[fieldName][lang]
+                    @__pendingRelations = (
+                        i for i in @__pendingRelations when i isnt relation)
                 delete @_properties[fieldName][lang]
+
         else
+            if @schema[fieldName].multi
+                relations = @_properties[fieldName]
+                @__pendingRelations = (
+                    i for i in @__pendingRelations when i not in relations)
+            else
+                @__pendingRelations = (
+                    i for i in @__pendingRelations when i isnt @_properties[fieldName])
             delete @_properties[fieldName]
 
 
