@@ -23,6 +23,8 @@ describe 'Model validation:', ()->
                 type: 'boolean'
             date:
                 type: 'date'
+            email:
+                type: 'email'
             url:
                 type: 'url'
 
@@ -96,17 +98,42 @@ describe 'Model validation:', ()->
             expect(-> a.set 'boolean', "hello").to.throw(
                 /ValidationError: A.boolean must be a boolean/)
 
+
     describe 'complexe types', () ->
         it 'should validate a date', () ->
             a = new db.A
             date = new Date()
             datestring = Date()
             dateint = Date.now()
-            # expect(-> a.set 'date', date).to.not.throw()
+            expect(-> a.set 'date', date).to.not.throw()
             error = /ValidationError: A.date must be a date/
             expect(-> a.set 'date', datestring).to.not.throw()
             expect(-> a.set 'date', dateint).to.throw(error)
 
+        it 'should validate an email', () ->
+            a = new db.A
+            expect(-> a.set 'email', 'foo@bar.com').to.not.throw()
+            expect(-> a.set 'email', 'foo@.com').to.throw(
+                /ValidationError: A.email must be a email/)
+            expect(-> a.set 'email', 'foo.com').to.throw(
+                /ValidationError: A.email must be a email/)
+            expect(-> a.set 'email', 'foo@fscom').to.throw(
+                /ValidationError: A.email must be a email/)
+
+
+        it 'should validate an url', () ->
+            a = new db.A
+            expect(-> a.set 'url', 'http://www.foo.com').to.not.throw()
+            expect(-> a.set 'url', 'http://www.foo.com/arf?bla=3#foo').to.not.throw()
+            expect(-> a.set 'url', 'www.foo.com').to.not.throw()
+            expect(-> a.set 'url', 'http://foo.com').to.not.throw()
+            expect(-> a.set 'url', 'https://foo.com').to.not.throw()
+            expect(-> a.set 'url', 'ftp://foo.com').to.not.throw()
+            expect(-> a.set 'url', 'foo.com').to.not.throw()
+            expect(-> a.set 'url', 'foo@.com').to.throw(
+                /ValidationError: A.url must be a url/)
+            expect(-> a.set 'url', 'barfoo').to.throw(
+                /ValidationError: A.url must be a url/)
 
 
     describe 'relation types', () ->
