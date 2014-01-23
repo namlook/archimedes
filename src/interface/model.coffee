@@ -4,7 +4,6 @@
 _ = require 'underscore'
 async = require 'async'
 objectdiff = require 'objectdiff'
-validators = require './validators'
 
 isPojo = (obj) ->
     _.isObject(obj) and not _.isArray(obj) and not _.isFunction(obj)
@@ -75,9 +74,9 @@ class Model
     #      validate: take a `function(value, model)` to validate the value
     #      transform: take a `function(value, model)` which will transform the
     #      value and return it (usefull for hashing passwords by example)
-    # - **compute**: a function to be called each time a property is set.
-    #       `compute` take the model, the value and the language is the field is
-    #       i18n.
+    # - **compute(model, value, lang)**: a function to be called each time a
+    #       property is set. `compute` take the model, the value and the language
+    #       is the field is i18n.
     # - **reversed**: the name of the property which will be include into the
     #      related model. This allow to fetch reversed relations via mongo-like
     #      queries. For instance, with `reversed: 'posts'`, blogs can be fetched
@@ -91,6 +90,7 @@ class Model
             type: 'string'
             required: true
     })
+
 
     constructor: (properties) ->
         properties = properties or {}
@@ -774,20 +774,6 @@ class Model
                 return callback null
 
 
-    # ## validate
-    # If the field as a validate field in schema, apply the validator against
-    # the value. Example:
-    #
-    #    value:
-    #       type: 'integer'
-    #       require: true
-    #       validation: (value, obj) ->
-    #           value > 0 && model.get('othervalue') is value
-    #
-    validate: () =>
-      # ...
-
-
     # ## clone
     # Returns a new instance of the model with identical attributes.
     # Note that the new cloned instance is a new object thus it has no id.
@@ -868,8 +854,8 @@ class Model
     __validateValue: (fieldName, value, lang) ->
         type = @schema[fieldName].type
         ok = true
-        if validators[type]?
-            unless validators[type].validate(value)
+        if @db._types[type]?
+            unless @db._types[type].validate(value)
                 ok = false
         else if @db[type]? and type isnt value.meta?.name
             ok = false
@@ -882,8 +868,8 @@ class Model
     # return the computed the value by the schema's field's `compute` function
     __computeValue: (fieldName, value, lang) ->
         type = @schema[fieldName].type
-        if validators[type]?.compute?
-            value = validators[type].compute(@, value, lang)
+        if @db._types[type]?.compute?
+            value = @db._types[type].compute(@, value, lang)
         if @schema[fieldName].compute?
             return @schema[fieldName].compute(@, value, lang)
         return value

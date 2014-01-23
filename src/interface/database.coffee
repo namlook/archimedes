@@ -1,8 +1,36 @@
 
+defaultTypes = require './types'
+
+
 class Database
 
     constructor: (options) ->
         options = options || {}
+
+        # the types used by the schema to describe, validate and compute values
+        @_types = defaultTypes
+
+    # ## registerCustomTypes
+    #
+    # allow the developper to add custom types. The type should take the form or
+    # a schema's field. Example:
+    #
+    # db.registerCustomType({
+    #   slug: {
+    #       type: 'string',
+    #       compute: function(model, value, lang){
+    #           return lang+'-'+value.toLowerCase().split(' ').join('-')
+    #       }),
+    #       validate: function(value) ->
+    #           return value.indexOf(' ') === -1
+    #    }
+    # });
+    #
+    # Note that one can overwrite the default values (eg: string, boolean) so be
+    # carreful !
+    registerCustomTypes: (types) ->
+        for typeName, type of types
+            @_types[typeName] = type
 
     # Register the models
     # The registration make some fill the models with default values and sanitize

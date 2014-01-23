@@ -219,4 +219,25 @@ describe 'Model.schema', ()->
             a.push 'readOnlyI18nValues', 'toto', 'fr'
             expect(-> a.push 'readOnlyI18nValues', 'titi', 'fr').to.throw(/A.readOnlyI18nValues is read-only/)
 
+    describe 'custom types', () ->
+        it 'should be able to register custom types', () ->
+            db.registerCustomTypes {
+                slug:
+                    type: 'string'
+                    compute: (model, value, lang) ->
+                        "#{lang}-#{value.toLowerCase().split(' ').join('-')}"
+                    validate: (value) ->
+                        ' ' not in value
+            }
+
+            class B extends Model
+                schema:
+                    theslug:
+                        type: 'slug'
+
+            db.registerModels(B: B)
+
+            b = new db.B
+            b.set 'theslug', 234
+            b.set 'theslug', 'hello world'
 

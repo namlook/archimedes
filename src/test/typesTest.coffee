@@ -7,7 +7,7 @@ should = chai.should()
 Model = require('../interface').Model
 Database = require('../interface').Database
 
-describe 'Model validation:', ()->
+describe 'Model types:', ()->
 
     models = {}
 
