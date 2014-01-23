@@ -1,6 +1,33 @@
 
 defaultTypes = require './types'
 
+class Type
+
+    constructor: (@db, @type) ->
+
+    compute: (value, attrs) ->
+        if @type.type
+            inheritedType = @db._types[@type.type]
+            if inheritedType.compute?
+                value = inheritedType.compute(value, attrs)
+            if inheritedType.validate?
+                unless inheritedType.validate(value, attrs)
+                    modelName = attrs.model.meta.name
+                    fieldName = attrs.fieldName
+                    throw "ValidationError: #{modelName}.#{fieldName} should be a #{@type.type}"
+
+        if @type.compute?
+            value = @type.compute(value, attrs)
+        return value
+
+    validate: (value, attrs) ->
+        ok = true
+        if @type.type
+            ok = @db._types[@type.type].validate(value, attrs)
+        if ok and @type.validate?
+            ok = @type.validate(value, attrs)
+        return ok
+
 
 class Database
 
@@ -19,7 +46,7 @@ class Database
     #   slug: {
     #       type: 'string',
     #       compute: function(model, value, lang){
-    #           return lang+'-'+value.toLowerCase().split(' ').join('-')
+    #           return lang+'-'+value.toLowerCase().split(' ').join('-')-
     #       }),
     #       validate: function(value) ->
     #           return value.indexOf(' ') === -1
@@ -30,7 +57,7 @@ class Database
     # carreful !
     registerCustomTypes: (types) ->
         for typeName, type of types
-            @_types[typeName] = type
+            @_types[typeName] = new Type(@, type)
 
     # Register the models
     # The registration make some fill the models with default values and sanitize

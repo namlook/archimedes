@@ -32,24 +32,24 @@ describe 'Model.schema', ()->
 
             computedValue:
                 type: 'string'
-                compute: (model, value) ->
-                    "#{value} setted to #{model.meta.name}"
+                compute: (value, attrs) ->
+                    "#{value} setted to #{attrs.model.meta.name}"
             computedMultiValue:
                 multi: true
                 type: 'integer'
-                compute: (model, value) ->
+                compute: (value, attrs) ->
                     parseInt(value, 10) * 100
             computedI18nValue:
                 i18n: true
                 type: 'string'
-                compute: (model, value, lang) ->
-                    "#{value} setted to #{model.meta.name} in #{lang}"
+                compute: (value, attrs) ->
+                    "#{value} setted to #{attrs.model.meta.name} in #{attrs.lang}"
             computedMultiI18nValue:
                 i18n: true
                 multi: true
                 type: 'string'
-                compute: (model, value, lang) ->
-                    "#{value}@#{lang}"
+                compute: (value, attrs) ->
+                    "#{value}@#{attrs.lang}"
 
             readOnlyValue:
                 type: 'string'
@@ -220,12 +220,36 @@ describe 'Model.schema', ()->
             expect(-> a.push 'readOnlyI18nValues', 'titi', 'fr').to.throw(/A.readOnlyI18nValues is read-only/)
 
     describe 'custom types', () ->
+
         it 'should be able to register custom types', () ->
+            db.registerCustomTypes {
+                foo:
+                    compute: (value) ->
+                        "foo-#{value}"
+                    validate: (value) ->
+                        ok = value[4] isnt '5'
+                        return ok
+            }
+
+            class B extends Model
+                schema:
+                    thefoo:
+                        type: 'foo'
+
+            db.registerModels(B: B)
+
+            b = new db.B
+            b.set 'thefoo', 'abc'
+            expect(-> b.set 'thefoo', '5st').to.throw('B.thefoo must be a foo')
+
+
+        it 'should be able to register custom types with inherited validation', () ->
             db.registerCustomTypes {
                 slug:
                     type: 'string'
-                    compute: (model, value, lang) ->
-                        "#{lang}-#{value.toLowerCase().split(' ').join('-')}"
+                    compute: (value, attrs) ->
+                        name = attrs.model.meta.name
+                        "#{name}-#{value.toLowerCase().split(' ').join('-')}"
                     validate: (value) ->
                         ' ' not in value
             }
@@ -238,6 +262,9 @@ describe 'Model.schema', ()->
             db.registerModels(B: B)
 
             b = new db.B
-            b.set 'theslug', 234
-            b.set 'theslug', 'hello world'
-
+            b.set 'theslug', 'Hello World'
+            expect(b.get 'theslug').to.be.equal "B-hello-world"
+            expect(-> b.set 'theslug', 234).to.throw(
+                'ValidationError: B.theslug should be a string')
+            expect(-> b.set 'theslug', '534').to.throw(
+                'ValidationError: B.theslug should be a slug')

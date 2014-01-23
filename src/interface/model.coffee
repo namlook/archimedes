@@ -114,7 +114,7 @@ class Model
         for key, value of properties
             @set key, value
 
-            value = @__computeValue(key, value)
+            value = @__computeValue(value, {fieldName: key, model: @})
             @_initProperties[key] = _.clone(value)
 
         # set all other properties to their default values if specified
@@ -127,7 +127,7 @@ class Model
 
                 @set fieldName, value, {quietReadOnly: true}
 
-                value = @__computeValue(fieldName, value)
+                value = @__computeValue(value, {fieldName: fieldName, model: @})
                 @_initProperties[fieldName] = value
 
 
@@ -438,13 +438,14 @@ class Model
                         for valitem in val
                             @push fieldName, valitem, lang # XXX options not passed
                     else
-                        val = @__processValue(fieldName, val, lang)
+                        val = @__processValue(val,
+                            {fieldName: fieldName, lang: lang, model: @})
 
                         @__addPendingRelation(fieldName, val, lang)
 
                         @_properties[fieldName][lang] = val
             else
-                value = @__processValue(fieldName, value)
+                value = @__processValue(value, {fieldName: fieldName, model: @})
 
                 if fieldName is '_id'
                     @id = value
@@ -499,7 +500,8 @@ class Model
             unless @_properties[fieldName][lang]?
                 @_properties[fieldName][lang] = []
 
-            value = @__processValue(fieldName, value, lang)
+            value = @__processValue(value,
+                {fieldName: fieldName, lang: lang, model: @})
 
             @__addPendingRelation(fieldName, value, lang)
 
@@ -508,7 +510,7 @@ class Model
         else
             @_properties[fieldName] = [] unless @_properties[fieldName]
 
-            value = @__processValue(fieldName, value)
+            value = @__processValue(value, {fieldName: fieldName, model: @})
 
             @__addPendingRelation(fieldName, value)
 
@@ -842,17 +844,17 @@ class Model
     # ## __processValue
     #
     # compute and validate the value before returning it.
-    __processValue: (fieldName, value, lang) ->
-        value = @__computeValue(fieldName, value, lang)
-        @__validateValue(fieldName, value, lang)
+    __processValue: (value, attrs) ->
+        value = @__computeValue(value, attrs)
+        @__validateValue(value, attrs)
         return value
 
 
     # ## __validateValue
     #
     # throw an error if the value is not to the correct type
-    __validateValue: (fieldName, value, lang) ->
-        type = @schema[fieldName].type
+    __validateValue: (value, attrs) ->
+        type = @schema[attrs.fieldName].type
         ok = true
         if @db._types[type]?
             unless @db._types[type].validate(value)
@@ -860,18 +862,20 @@ class Model
         else if @db[type]? and type isnt value.meta?.name
             ok = false
         unless ok
-            throw "ValidationError: #{@meta.name}.#{fieldName} must be a #{type}"
+            throw "ValidationError: #{@meta.name}.#{attrs.fieldName} must be a #{type}"
 
 
     # ## __computeValue
     #
     # return the computed the value by the schema's field's `compute` function
-    __computeValue: (fieldName, value, lang) ->
+    __computeValue: (value, attrs) ->
+        fieldName = attrs.fieldName
+        lang = attrs.lang
         type = @schema[fieldName].type
         if @db._types[type]?.compute?
-            value = @db._types[type].compute(@, value, lang)
+            value = @db._types[type].compute(value, attrs)
         if @schema[fieldName].compute?
-            return @schema[fieldName].compute(@, value, lang)
+            return @schema[fieldName].compute(value, attrs)
         return value
 
 

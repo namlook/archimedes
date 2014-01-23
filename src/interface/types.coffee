@@ -6,6 +6,7 @@ _ = require 'underscore'
 module.exports = {
 	'string':
 		validate: _.isString
+		# compute: (value) -> check.toString(value)
 	'integer':
 		validate: check.isInt
 	'float':
@@ -16,7 +17,7 @@ module.exports = {
 	# complexe
 	'date':
 		validate: check.isDate
-		compute: (model, value) -> check.toDate(value)
+		compute: (value) -> check.toDate(value)
 	'email':
 		validate: check.isEmail
 	'url':

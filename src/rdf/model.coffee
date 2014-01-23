@@ -15,9 +15,9 @@ class RdfModel extends ModelInterface
             required: true
             protected: true
             type: 'string'
-            compute: (model, value) ->
+            compute: (value, attrs) ->
                 unless _.str.startsWith value, 'http://'
-                   return "#{model.meta.instancesNamespace}/#{value}"
+                   return "#{attrs.model.meta.instancesNamespace}/#{value}"
                 else
                     return value
 
