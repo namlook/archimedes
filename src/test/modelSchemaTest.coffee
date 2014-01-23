@@ -219,6 +219,7 @@ describe 'Model.schema', ()->
             a.push 'readOnlyI18nValues', 'toto', 'fr'
             expect(-> a.push 'readOnlyI18nValues', 'titi', 'fr').to.throw(/A.readOnlyI18nValues is read-only/)
 
+
     describe 'custom types', () ->
 
         it 'should be able to register custom types', () ->
@@ -251,7 +252,7 @@ describe 'Model.schema', ()->
                         name = attrs.model.meta.name
                         "#{name}-#{value.toLowerCase().split(' ').join('-')}"
                     validate: (value) ->
-                        ' ' not in value
+                        value.split('-')[1][0] isnt '5'
             }
 
             class B extends Model
@@ -265,6 +266,6 @@ describe 'Model.schema', ()->
             b.set 'theslug', 'Hello World'
             expect(b.get 'theslug').to.be.equal "B-hello-world"
             expect(-> b.set 'theslug', 234).to.throw(
-                'ValidationError: B.theslug should be a string')
+                'ValidationError: B.theslug must be a string')
             expect(-> b.set 'theslug', '534').to.throw(
-                'ValidationError: B.theslug should be a slug')
+                'ValidationError: B.theslug must be a slug')

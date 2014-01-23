@@ -58,7 +58,7 @@ class exports.Type
                 unless inheritedType.validate(value, attrs)
                     modelName = attrs.model.meta.name
                     fieldName = attrs.fieldName
-                    throw "ValidationError: #{modelName}.#{fieldName} should be a #{@type.type}"
+                    throw "ValidationError: #{modelName}.#{fieldName} must be a #{@type.type}"
 
         if @type.compute?
             value = @type.compute(value, attrs)
