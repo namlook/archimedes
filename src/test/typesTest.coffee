@@ -2,7 +2,6 @@
 chai = require('chai')
 chai.Assertion.includeStack = true;
 expect = chai.expect
-should = chai.should()
 
 Model = require('../interface').Model
 Database = require('../interface').Database
