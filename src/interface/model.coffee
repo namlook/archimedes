@@ -88,7 +88,6 @@ class Model
         _id:
             readOnly: true
             type: 'string'
-            required: true
     })
 
 
@@ -480,7 +479,8 @@ class Model
         }, fieldName)
 
         unless @schema[fieldName].multi
-            throw new Error("#{@meta.name}.#{fieldName} is not a multi field")
+            throw new ValueError(
+                "#{@meta.name}.#{fieldName} is not a multi field")
 
         # check if the field is read-only. If so, throw an error if a value is
         # already set
@@ -540,7 +540,8 @@ class Model
         }, fieldName)
 
         unless @schema[fieldName].multi
-            throw new Error("#{@meta.name}.#{fieldName} is not a multi field")
+            throw new ValueError(
+                "#{@meta.name}.#{fieldName} is not a multi field")
 
         # a read-only field cannot be removed
         if @schema[fieldName].readOnly
@@ -721,6 +722,9 @@ class Model
     # Only the field marked as change will be updated. If fields has been unset,
     # their related property uri will be delete.
     save: (callback) =>
+
+        @__checkRequiredFields()
+
         # save all pending relations...
         async.each @_getPendingRelations(), (model, cb) ->
             model.save cb
@@ -841,6 +845,30 @@ class Model
             throw "'#{@meta.name}.#{fieldName}' not found"
 
 
+    # ##  __checkRequiredFields
+    #
+    # raise an error if a requied field is empty
+    __checkRequiredFields: () ->
+        for fieldName, field of @schema
+            if field.required
+                ok = true
+                unless @_properties[fieldName]?
+                    ok = false
+                else if field.i18n
+                    keys = _.keys(@_properties[fieldName])
+                    if keys.length is 0
+                        ok = false
+                    else if field.multi
+                        for lang, values of @_properties[fieldName]
+                            if values.length is 0
+                                ok = false
+                else if field.multi
+                    if @_properties[fieldName].length is 0
+                        ok = false
+                unless ok
+                    throw new ValueError("#{@meta.name}.#{fieldName} is required")
+
+
     # ## __processValue
     #
     # compute and validate the value before returning it.
@@ -862,7 +890,8 @@ class Model
         else if @db[type]? and type isnt value.meta?.name
             ok = false
         unless ok
-            throw "ValidationError: #{@meta.name}.#{attrs.fieldName} must be a #{type}"
+            throw new ValueError(
+                "#{@meta.name}.#{attrs.fieldName} must be a #{type}")
 
 
     # ## __computeValue

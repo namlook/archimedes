@@ -68,9 +68,12 @@ describe 'Model.schema', ()->
                 multi: true
                 i18n: true
 
-    db = new Database
+    db = null
 
-    db.registerModels models
+    beforeEach (next) ->
+        db = new Database
+        db.registerModels models
+        next()
 
     describe 'default value', () ->
 
@@ -219,6 +222,227 @@ describe 'Model.schema', ()->
             a.push 'readOnlyI18nValues', 'toto', 'fr'
             expect(-> a.push 'readOnlyI18nValues', 'titi', 'fr').to.throw(/A.readOnlyI18nValues is read-only/)
 
+    describe 'required fields', () ->
+        it 'should throw an error on save if a required field is empty', (done) ->
+            class B extends models.A
+                schema:
+                    requiredValue:
+                        type: 'string'
+                        required: true
+
+            db.registerModels {B: B}
+
+            b = new db.B {requiredValue: 'foo'}
+            b.save (err) ->
+                expect(err).to.be.null
+
+                b = new db.B
+                expect(-> b.save()).to.throw(
+                    'B.requiredValue is required')
+                b.set 'requiredValue', 'foo'
+                b.save (err) ->
+                    expect(err).to.be.null
+                    done()
+
+        it 'should check required-multi fields (via constructor)', (done) ->
+            class B extends models.A
+                schema:
+                    requiredValues:
+                        type: 'string'
+                        required: true
+                        multi: true
+
+            db.registerModels {B: B}
+
+            b = new db.B {requiredValues: ['foo']}
+            b.save (err) ->
+                expect(err).to.be.null
+                done()
+
+        it 'should check required-multi fields (push)', (done) ->
+            class B extends models.A
+                schema:
+                    requiredValues:
+                        type: 'string'
+                        required: true
+                        multi: true
+
+            db.registerModels {B: B}
+
+            b = new db.B
+            expect(-> b.save()).to.throw(
+                'B.requiredValues is required')
+            b.push 'requiredValues', 'foo'
+            b.save (err) ->
+                expect(err).to.be.null
+                done()
+
+        it 'should check required-multi fields (set)', (done) ->
+
+
+            class B extends models.A
+                schema:
+                    requiredValues:
+                        type: 'string'
+                        required: true
+                        multi: true
+
+            db.registerModels {B: B}
+
+            b = new db.B
+            expect(-> b.save()).to.throw(
+                'B.requiredValues is required')
+            b.set 'requiredValues', ['foo']
+            b.save (err) ->
+                expect(err).to.be.null
+                done()
+
+        it 'should check required-multi fields (empty list)', () ->
+            class B extends models.A
+                schema:
+                    requiredValues:
+                        type: 'string'
+                        required: true
+                        multi: true
+
+            db.registerModels {B: B}
+
+            b = new db.B
+            expect(-> b.save()).to.throw(
+                'B.requiredValues is required')
+            b.set 'requiredValues', ['foo']
+            b.pull 'requiredValues', 'foo'
+            expect(-> b.save()).to.throw(
+                'B.requiredValues is required')
+            b.set 'requiredValues', []
+            expect(-> b.save()).to.throw(
+                'B.requiredValues is required')
+
+        it 'should check required-i18n fields (via constructor)', (done) ->
+            class B extends models.A
+                schema:
+                    requiredI18nValue:
+                        type: 'string'
+                        required: true
+                        i18n: true
+
+            db.registerModels {B: B}
+
+            b = new db.B {requiredI18nValue: {en: 'foo', fr: 'bar'}}
+            b.save (err) ->
+                expect(err).to.be.null
+                done()
+
+        it 'should check required-i18n fields (via constructor)', (done) ->
+            class B extends models.A
+                schema:
+                    requiredI18nValue:
+                        type: 'string'
+                        required: true
+                        i18n: true
+
+            db.registerModels {B: B}
+
+            b = new db.B
+            expect(-> b.save()).to.throw(
+                'B.requiredI18nValue is required')
+            b.set 'requiredI18nValue', 'foo', 'en'
+            b.save (err) ->
+                expect(err).to.be.null
+                done()
+
+        it 'should check required-i18n fields (empty)', () ->
+            class B extends models.A
+                schema:
+                    requiredI18nValue:
+                        type: 'string'
+                        required: true
+                        i18n: true
+
+            db.registerModels {B: B}
+
+            b = new db.B
+            expect(-> b.save()).to.throw(
+                'B.requiredI18nValue is required')
+            b.set 'requiredI18nValue', {}
+            expect(-> b.save()).to.throw(
+                'B.requiredI18nValue is required')
+
+        it 'should check required-multi-i18n fields (via constructor)', (done) ->
+            class B extends models.A
+                schema:
+                    requiredI18nValues:
+                        type: 'string'
+                        required: true
+                        i18n: true
+                        multi: true
+
+            db.registerModels {B: B}
+
+            b = new db.B {requiredI18nValues: {en: ['foo'], fr: ['bar']}}
+            b.save (err) ->
+                expect(err).to.be.null
+                done()
+
+        it 'should check required-multi-i18n fields (set)', (done) ->
+            class B extends models.A
+                schema:
+                    requiredI18nValues:
+                        type: 'string'
+                        required: true
+                        i18n: true
+                        multi: true
+
+            db.registerModels {B: B}
+
+            b = new db.B
+            expect(-> b.save()).to.throw(
+                'B.requiredI18nValues is required')
+            b.set 'requiredI18nValues', ['foo'], 'en'
+            b.save (err) ->
+                expect(err).to.be.null
+                done()
+
+        it 'should check required-multi-i18n fields (push)', (done) ->
+            class B extends models.A
+                schema:
+                    requiredI18nValues:
+                        type: 'string'
+                        required: true
+                        i18n: true
+                        multi: true
+
+            db.registerModels {B: B}
+
+            b = new db.B
+            expect(-> b.save()).to.throw(
+                'B.requiredI18nValues is required')
+            b.push 'requiredI18nValues', 'foo', 'en'
+            b.save (err) ->
+                expect(err).to.be.null
+                done()
+
+
+        it 'should check required-multi-i18n fields (empty)', () ->
+            class B extends models.A
+                schema:
+                    requiredI18nValues:
+                        type: 'string'
+                        required: true
+                        i18n: true
+                        multi: true
+
+            db.registerModels {B: B}
+
+            b = new db.B
+            expect(-> b.save()).to.throw(
+                'B.requiredI18nValues is required')
+            b.set 'requiredI18nValues', [], 'en'
+            expect(-> b.save()).to.throw(
+                'B.requiredI18nValues is required')
+            b.set 'requiredI18nValues', {}
+            expect(-> b.save()).to.throw(
+                'B.requiredI18nValues is required')
 
     describe 'custom types', () ->
 
@@ -265,7 +489,5 @@ describe 'Model.schema', ()->
             b = new db.B
             b.set 'theslug', 'Hello World'
             expect(b.get 'theslug').to.be.equal "B-hello-world"
-            expect(-> b.set 'theslug', 234).to.throw(
-                'ValidationError: B.theslug must be a string')
-            expect(-> b.set 'theslug', '534').to.throw(
-                'ValidationError: B.theslug must be a slug')
+            expect(-> b.set 'theslug', 234).to.throw('B.theslug must be a string')
+            expect(-> b.set 'theslug', '534').to.throw('B.theslug must be a slug')

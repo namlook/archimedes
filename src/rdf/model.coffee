@@ -12,7 +12,6 @@ class RdfModel extends ModelInterface
 
     schema:
         _id:
-            required: true
             protected: true
             type: 'string'
             compute: (value, attrs) ->

@@ -71,31 +71,31 @@ describe 'Model types:', ()->
             a = new db.A
             expect(-> a.set 'string', 'hello').to.not.throw()
             expect(-> a.set 'string', 1).to.throw(
-                /ValidationError: A.string must be a string/)
+                /A.string must be a string/)
 
         it 'should validate an integer', () ->
             a = new db.A
             expect(-> a.set 'integer', 10).to.not.throw()
             # expect(-> a.set 'integer', 1.0).to.throw(
-            #     /ValidationError: A.integer must be a integer/)
+            #     /A.integer must be a integer/)
             expect(-> a.set 'integer', "hello").to.throw(
-                /ValidationError: A.integer must be a integer/)
+                /A.integer must be a integer/)
 
         it 'should validate an float', () ->
             a = new db.A
             expect(-> a.set 'float', 1.0).to.not.throw()
             # expect(-> a.set 'float', 10).to.throw(
-            #     /ValidationError: A.float must be a float/)
+            #     /A.float must be a float/)
             expect(-> a.set 'float', "hello").to.throw(
-                /ValidationError: A.float must be a float/)
+                /A.float must be a float/)
 
         it 'should validate an boolean', () ->
             a = new db.A
             expect(-> a.set 'boolean', true).to.not.throw()
             expect(-> a.set 'boolean', 10).to.throw(
-                /ValidationError: A.boolean must be a boolean/)
+                /A.boolean must be a boolean/)
             expect(-> a.set 'boolean', "hello").to.throw(
-                /ValidationError: A.boolean must be a boolean/)
+                /A.boolean must be a boolean/)
 
 
     describe 'complexe types', () ->
@@ -107,7 +107,7 @@ describe 'Model types:', ()->
             expect(-> a.set 'date', date).to.not.throw()
             expect(-> a.set 'date', datestring).to.not.throw()
             expect(-> a.set 'date', dateint).to.throw(
-                /ValidationError: A.date must be a date/)
+                /A.date must be a date/)
 
         it 'should compute a date', () ->
             a = new db.A
@@ -123,11 +123,11 @@ describe 'Model types:', ()->
             a = new db.A
             expect(-> a.set 'email', 'foo@bar.com').to.not.throw()
             expect(-> a.set 'email', 'foo@.com').to.throw(
-                /ValidationError: A.email must be a email/)
+                /A.email must be a email/)
             expect(-> a.set 'email', 'foo.com').to.throw(
-                /ValidationError: A.email must be a email/)
+                /A.email must be a email/)
             expect(-> a.set 'email', 'foo@fscom').to.throw(
-                /ValidationError: A.email must be a email/)
+                /A.email must be a email/)
 
 
         it 'should validate an url', () ->
@@ -140,9 +140,9 @@ describe 'Model types:', ()->
             expect(-> a.set 'url', 'ftp://foo.com').to.not.throw()
             expect(-> a.set 'url', 'foo.com').to.not.throw()
             expect(-> a.set 'url', 'foo@.com').to.throw(
-                /ValidationError: A.url must be a url/)
+                /A.url must be a url/)
             expect(-> a.set 'url', 'barfoo').to.throw(
-                /ValidationError: A.url must be a url/)
+                /A.url must be a url/)
 
 
     describe 'relation types', () ->
