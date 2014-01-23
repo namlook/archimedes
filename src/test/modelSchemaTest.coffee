@@ -98,10 +98,17 @@ describe 'Model.schema', ()->
             expect(b.get 'defaultMulti').to.not.include 4
 
         it 'should not be set if a value is passed to the constructor', () ->
-            a = new db.A {defaultValue: 'foo', defaultValueFn: 'bar', defaultDate: 123}
+            date = new Date()
+            a = new db.A {defaultValue: 'foo', defaultValueFn: 'bar', defaultDate: date}
             expect(a.get 'defaultValue').to.be.equal 'foo'
             expect(a.get 'defaultValueFn').to.be.equal 'bar'
-            expect(a.get 'defaultDate').to.be.equal 123
+            expect(a.get 'defaultDate').to.be.equal date
+
+            date2 = new Date()
+            a.set 'defaultDate', date2
+            expect(a.get 'defaultDate').to.be.equal date2
+            a.set 'defaultDate', date2.toJSON()
+            expect(a.get('defaultDate').toJSON()).to.be.equal date2.toJSON()
 
     describe 'computed value', () ->
 

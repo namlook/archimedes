@@ -114,9 +114,10 @@ describe 'Model validation:', ()->
             a = new db.A
             date = new Date()
             a.set 'date', date.toJSON()
-            expect(a.get 'date').to.be.equal date
-            a.set 'date', date.getTime()
-            expect(a.get 'date').to.be.equal date
+            expect(a.get('date').getTime()).to.be.equal date.getTime()
+            a.set('date', date.toUTCString())
+            expect(a.get('date').getTime()).to.be.equal(
+                new Date(date.toUTCString()).getTime())
 
 
         it 'should validate an email', () ->

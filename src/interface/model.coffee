@@ -869,7 +869,7 @@ class Model
         type = @schema[fieldName].type
         ok = true
         if validators[type]?
-            unless validators[type](value)
+            unless validators[type].validate(value)
                 ok = false
         else if @db[type]? and type isnt value.meta?.name
             ok = false
@@ -881,6 +881,9 @@ class Model
     #
     # return the computed the value by the schema's field's `compute` function
     __computeValue: (fieldName, value, lang) ->
+        type = @schema[fieldName].type
+        if validators[type]?.compute?
+            value = validators[type].compute(@, value, lang)
         if @schema[fieldName].compute?
             return @schema[fieldName].compute(@, value, lang)
         return value
