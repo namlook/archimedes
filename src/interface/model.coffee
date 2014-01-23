@@ -114,8 +114,7 @@ class Model
         for key, value of properties
             @set key, value
 
-            if @schema[key].compute?
-                value = @schema[key].compute(@, value)
+            value = @__computeValue(key, value)
             @_initProperties[key] = _.clone(value)
 
         # set all other properties to their default values if specified
@@ -128,8 +127,7 @@ class Model
 
                 @set fieldName, value, {quietReadOnly: true}
 
-                if field.compute?
-                    value = field.compute(@, value)
+                value = @__computeValue(fieldName, value)
                 @_initProperties[fieldName] = value
 
 
@@ -440,23 +438,19 @@ class Model
                         for valitem in val
                             @push fieldName, valitem, lang # XXX options not passed
                     else
-                        if @schema[fieldName].compute?
-                            val = @schema[fieldName].compute(@, val, lang)
-                        @__validateValue(val, fieldName, lang)
+                        val = @__processValue(fieldName, val, lang)
 
-                        @__addPendingRelation(fieldName, value, lang)
+                        @__addPendingRelation(fieldName, val, lang)
 
                         @_properties[fieldName][lang] = val
             else
-                if @schema[fieldName].compute?
-                    value = @schema[fieldName].compute(@, value)
+                value = @__processValue(fieldName, value)
 
                 if fieldName is '_id'
                     @id = value
 
                 @__addPendingRelation(fieldName, value)
 
-                @__validateValue(value, fieldName)
                 @_properties[fieldName] = value
 
 
@@ -505,10 +499,7 @@ class Model
             unless @_properties[fieldName][lang]?
                 @_properties[fieldName][lang] = []
 
-            if @schema[fieldName].compute?
-                value = @schema[fieldName].compute(@, value, lang)
-
-            @__validateValue(value, fieldName, lang)
+            value = @__processValue(fieldName, value, lang)
 
             @__addPendingRelation(fieldName, value, lang)
 
@@ -517,10 +508,7 @@ class Model
         else
             @_properties[fieldName] = [] unless @_properties[fieldName]
 
-            if @schema[fieldName].compute?
-                value = @schema[fieldName].compute(@, value)
-
-            @__validateValue(value, fieldName)
+            value = @__processValue(fieldName, value)
 
             @__addPendingRelation(fieldName, value)
 
@@ -856,6 +844,7 @@ class Model
                 options[key] = value
         return options
 
+
     # ## __checkFieldExistance
     #
     # raise an error if the field doesn't exists in schema
@@ -863,10 +852,20 @@ class Model
         unless @schema[fieldName]?
             throw "'#{@meta.name}.#{fieldName}' not found"
 
+
+    # ## __processValue
+    #
+    # compute and validate the value before returning it.
+    __processValue: (fieldName, value, lang) ->
+        value = @__computeValue(fieldName, value, lang)
+        @__validateValue(fieldName, value, lang)
+        return value
+
+
     # ## __validateValue
     #
     # throw an error if the value is not to the correct type
-    __validateValue: (value, fieldName) ->
+    __validateValue: (fieldName, value, lang) ->
         type = @schema[fieldName].type
         ok = true
         if validators[type]?
@@ -876,6 +875,16 @@ class Model
             ok = false
         unless ok
             throw "ValidationError: #{@meta.name}.#{fieldName} must be a #{type}"
+
+
+    # ## __computeValue
+    #
+    # return the computed the value by the schema's field's `compute` function
+    __computeValue: (fieldName, value, lang) ->
+        if @schema[fieldName].compute?
+            return @schema[fieldName].compute(@, value, lang)
+        return value
+
 
     # ## __addPendingRelation(fieldName, value, lang)
     #
@@ -894,6 +903,7 @@ class Model
                 @__pendingRelations[lang][fieldName].push value
             else
                 @__pendingRelations[lang][fieldName] = [value]
+
 
     # ## __removePendingRelation(value, lang, unset)
     #
@@ -915,6 +925,7 @@ class Model
                     i for i in @__pendingRelations[lang][fieldName] when i isnt value)
             else
                 @__pendingRelations[lang][fieldName] = []
+
 
     # ## __getPendingRelations()
     #

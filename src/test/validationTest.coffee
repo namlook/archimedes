@@ -106,9 +106,18 @@ describe 'Model validation:', ()->
             datestring = Date()
             dateint = Date.now()
             expect(-> a.set 'date', date).to.not.throw()
-            error = /ValidationError: A.date must be a date/
             expect(-> a.set 'date', datestring).to.not.throw()
-            expect(-> a.set 'date', dateint).to.throw(error)
+            expect(-> a.set 'date', dateint).to.throw(
+                /ValidationError: A.date must be a date/)
+
+        it 'should compute a date', () ->
+            a = new db.A
+            date = new Date()
+            a.set 'date', date.toJSON()
+            expect(a.get 'date').to.be.equal date
+            a.set 'date', date.getTime()
+            expect(a.get 'date').to.be.equal date
+
 
         it 'should validate an email', () ->
             a = new db.A
