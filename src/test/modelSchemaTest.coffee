@@ -54,6 +54,20 @@ describe 'Model.schema', ()->
             readOnlyValue:
                 type: 'string'
                 readOnly: true
+            readOnlyI18nValue:
+                type: 'string'
+                i18n: true
+                readOnly: true
+            readOnlyValues:
+                type: 'string'
+                readOnly: true
+                multi: true
+            readOnlyI18nValues:
+                type: 'string'
+                readOnly: true
+                multi: true
+                i18n: true
+
     db = new Database
 
     db.registerModels models
@@ -145,4 +159,57 @@ describe 'Model.schema', ()->
                 -> a.set 'readOnlyValue', 'another-test', {quietReadOnly: true}
             ).to.not.throw(/A.readOnlyValue is read-only/)
             expect(a.get 'readOnlyValue').to.be.equal 'this-is-a-test'
+
+        it 'should not be able to unset a setted value', () ->
+            a = new db.A
+            a.set 'readOnlyValue', 'test'
+            expect(-> a.unset 'readOnlyValue').to.throw(
+                /A.readOnlyValue is read-only/)
+
+        it 'should not be able to unset a setted value (i18n)', () ->
+            a = new db.A
+            a.set 'readOnlyI18nValue', 'test', 'en'
+            expect(-> a.unset 'readOnlyI18nValue', 'en').to.throw(
+                /A.readOnlyI18nValue is read-only/)
+
+        it 'should not be able to pull a setted value', () ->
+            a = new db.A
+            a.push 'readOnlyValues', 'test'
+            expect(-> a.push 'readOnlyValues', 'test2').to.throw(
+                /A.readOnlyValues is read-only/)
+            expect(-> a.pull 'readOnlyValues').to.throw(
+                /A.readOnlyValues is read-only/)
+
+        it 'should not be able to pull a setted value (i18n)', () ->
+            a = new db.A
+            a.push 'readOnlyI18nValues', 'test', 'en'
+            expect(-> a.push 'readOnlyI18nValues', 'test2', 'en').to.throw(
+                /A.readOnlyI18nValues is read-only/)
+            expect(-> a.pull 'readOnlyI18nValues', 'test', 'en').to.throw(
+                /A.readOnlyI18nValues is read-only/)
+
+        it 'should set readOnly-multi field', () ->
+            a = new db.A
+            a.set 'readOnlyValues', ['foo', 'bar']
+            expect(-> a.push 'readOnlyValues', 'arf').to.throw(/A.readOnlyValues is read-only/)
+
+        it 'should set readOnly-i18n field', () ->
+            a = new db.A
+            a.set 'readOnlyI18nValue', 'foo', 'en'
+            a.set 'readOnlyI18nValue', 'toto', 'fr'
+            expect(-> a.set 'readOnlyI18nValue', 'bar', 'en').to.throw(/A.readOnlyI18nValue is read-only/)
+
+        it 'should set readOnly-i18n-multi field', () ->
+            a = new db.A
+            a.set 'readOnlyI18nValues', ['foo', 'bar'], 'en'
+            a.set 'readOnlyI18nValues', ['toto', 'tata'], 'fr'
+            expect(-> a.push 'readOnlyI18nValues', 'arf', 'en').to.throw(/A.readOnlyI18nValues is read-only/)
+            expect(-> a.push 'readOnlyI18nValues', 'titi', 'fr').to.throw(/A.readOnlyI18nValues is read-only/)
+
+            a = new db.A
+            a.push 'readOnlyI18nValues', 'foo', 'en'
+            expect(-> a.push 'readOnlyI18nValues', 'bar', 'en').to.throw(/A.readOnlyI18nValues is read-only/)
+            a.push 'readOnlyI18nValues', 'toto', 'fr'
+            expect(-> a.push 'readOnlyI18nValues', 'titi', 'fr').to.throw(/A.readOnlyI18nValues is read-only/)
+
 

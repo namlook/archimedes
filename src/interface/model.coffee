@@ -294,7 +294,7 @@ class Model
     #
     # - If the field is i18n, options.lang must be pass to specify in which
     # local the value will be returned.
-    # - If the field is i18n and no optionslang is specified, the default
+    # - If the field is i18n and no `options.lang` is specified, the default
     # language is used.
     # - If a options.lang is passed on a non-i18n field, the lang is not taked in
     # account.
@@ -381,7 +381,7 @@ class Model
     #
     # The value can be of any valid type (included instance).
     # - If the field is multi, the value should be an array of object/uris
-    # - If the field is a i18n-field, a optionslang can be passed.
+    # - If the field is a i18n-field, a `options.lang` can be passed.
     # - If the field is a non-i18n field, the `options.lang` is ignored.
     #
     # `options`:
@@ -395,6 +395,7 @@ class Model
 
         @__checkFieldExistance(fieldName)
 
+
         # parse options
         checkLang = fieldName
         if isPojo(value) and not value.meta?.name?
@@ -405,16 +406,19 @@ class Model
 
         # check if the field is read-only. If so, throw an error if a value is
         # already set
-        if @_properties[fieldName]? and  @schema[fieldName].readOnly
-            if options.quietReadOnly
-                return
-            throw new ValueError("#{@meta.name}.#{fieldName} is read-only")
+        if @schema[fieldName].readOnly
+            if (not @schema[fieldName].i18n and @_properties[fieldName]?) or (
+              @schema[fieldName].i18n and @_properties[fieldName]?[options.lang]?)
+                if options.quietReadOnly
+                    return
+                throw new ValueError("#{@meta.name}.#{fieldName} is read-only")
 
         # if the value is an array, delegate to @push
         if _.isArray(value)
             unless @schema[fieldName].multi
                 throw new ValueError(
                     "#{@meta.name}.#{fieldName} doesn't accept array")
+            options.quietReadOnly = true
             @unset fieldName, options
             for item in value
                 @push fieldName, item, options
@@ -483,6 +487,16 @@ class Model
         unless @schema[fieldName].multi
             throw new Error("#{@meta.name}.#{fieldName} is not a multi field")
 
+        # check if the field is read-only. If so, throw an error if a value is
+        # already set
+        if @schema[fieldName].readOnly
+            if (not @schema[fieldName].i18n and @_properties[fieldName]?) or (
+              @schema[fieldName].i18n and @_properties[fieldName]?[options.lang]?)
+                if options.quietReadOnly
+                    return
+                throw new ValueError("#{@meta.name}.#{fieldName} is read-only")
+
+
         if @schema[fieldName].i18n
             @_properties[fieldName] = {} unless @_properties[fieldName]?
 
@@ -538,6 +552,12 @@ class Model
         unless @schema[fieldName].multi
             throw new Error("#{@meta.name}.#{fieldName} is not a multi field")
 
+        # a read-only field cannot be removed
+        if @schema[fieldName].readOnly
+            if options.quietReadOnly
+                return
+            throw new ValueError("#{@meta.name}.#{fieldName} is read-only")
+
         if @schema[fieldName].i18n
             lang = options.lang
             if @_properties[fieldName]?[lang]?
@@ -578,6 +598,13 @@ class Model
             quietReadOnly: false
         }, fieldName)
 
+        # a read-only field cannot be unset
+        if @schema[fieldName].readOnly
+            if options.quietReadOnly
+                return
+            throw new ValueError("#{@meta.name}.#{fieldName} is read-only")
+
+        # unset the field
         if @schema[fieldName].i18n
             lang = options.lang
             if @_properties[fieldName]?[lang]?
