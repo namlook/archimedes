@@ -3,10 +3,10 @@ check = require('validator')
 _ = require 'underscore'
 
 
-module.exports = {
+
+exports.defaultTypes = {
 	'string':
 		validate: _.isString
-		# compute: (value) -> check.toString(value)
 	'integer':
 		validate: check.isInt
 	'float':
@@ -19,12 +19,15 @@ module.exports = {
 		validate: check.isDate
 		compute: (value) -> check.toDate(value)
 	'email':
+		type: 'string'
 		validate: check.isEmail
 	'url':
+		type: 'string'
 		validate: check.isURL
 
 	# other
 	'creditcard':
+		type: 'string'
 		validate: check.isCreditCard
 	'ip':
 		validate: (value) -> check.isIP(value, 4) or check.isIP(value, 6)
@@ -41,3 +44,31 @@ module.exports = {
 			uuid = check.isUUID
 			uuid(value, 3) or uuid(value, 4) or uuid(value, 5)
 }
+
+class exports.Type
+
+    constructor: (@db, @type) ->
+
+    compute: (value, attrs) ->
+        if @type.type
+            inheritedType = @db._types[@type.type]
+            if inheritedType.compute?
+                value = inheritedType.compute(value, attrs)
+            if inheritedType.validate?
+                unless inheritedType.validate(value, attrs)
+                    modelName = attrs.model.meta.name
+                    fieldName = attrs.fieldName
+                    throw "ValidationError: #{modelName}.#{fieldName} should be a #{@type.type}"
+
+        if @type.compute?
+            value = @type.compute(value, attrs)
+        return value
+
+    validate: (value, attrs) ->
+        ok = true
+        if @type.type
+            ok = @db._types[@type.type].validate(value, attrs)
+        if ok and @type.validate?
+            ok = @type.validate(value, attrs)
+        return ok
+
