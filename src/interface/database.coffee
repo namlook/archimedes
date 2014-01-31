@@ -1,8 +1,11 @@
 
 {defaultTypes, Type} = require './types'
+{extendOnClass} = require('extendonclass')
 
 
 class Database
+    # allow to extend the model in javascript
+    @extend: extendOnClass
 
     constructor: (options) ->
         options = options || {}

@@ -4,14 +4,20 @@
 _ = require 'underscore'
 async = require 'async'
 objectdiff = require 'objectdiff'
+{extendOnClass} = require('extendonclass')
+
 
 isPojo = (obj) ->
     _.isObject(obj) and not _.isArray(obj) and not _.isFunction(obj)
 
+
 class ValueError extends Error
 class ModelError extends Error
 
+
 class Model
+    # allow to extend the model in javascript
+    @extend: extendOnClass
 
     # The `db` attribute will be added when the model will be registered to the
     # database. It is used to fetch and store the model
