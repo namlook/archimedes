@@ -2,6 +2,7 @@
 {defaultTypes, Type} = require './types'
 {extendOnClass} = require('extendonclass')
 objectdiff = require 'objectdiff'
+async = require 'async'
 _ = require 'underscore'
 
 
@@ -15,88 +16,100 @@ class Database
         # the types used by the schema to describe, validate and compute values
         @_types = defaultTypes
 
-    # ## registerCustomTypes
-    #
-    # allow the developper to add custom types. The type should take the form or
-    # a schema's field. Example:
-    #
-    # db.registerCustomType({
-    #   slug: {
-    #       type: 'string',
-    #       compute: function(model, value, lang){
-    #           return lang+'-'+value.toLowerCase().split(' ').join('-')-
-    #       }),
-    #       validate: function(value) ->
-    #           return value.indexOf(' ') === -1
-    #    }
-    # });
-    #
-    # Note that one can overwrite the default values (eg: string, boolean) so be
-    # carreful !
-    registerCustomTypes: (types) ->
-        for typeName, type of types
-            @_types[typeName] = new Type(@, type)
-
-    # Register the models
-    # The registration make some fill the models with default values and sanitize
-    # and check their schema. Finally, attach each models to the database
-    # instance so we can access them easily
-    registerModels: (models) =>
-        for modelName, model of models
-            @beforeRegister(modelName, model)
-
-            # Update the schema of model which inherits of its parent's
-            for field, value of model.__super__?.schema
-                model::schema[field] = value
-
-            @validateModel(modelName, model)
-            model::db = @
-            model.db = @
-            @[modelName] = model
-
-    # ## beforeRegister
-    beforeRegister: (modelName, model) ->
-        unless model::meta?
-            model::meta = {}
-
-        model::meta.name = modelName
-
-        unless model::schema?
-            throw "#{modelName} has not schema"
-
-        # if the model doesn't specify default language, we set it
-        unless model::meta.defaultLang
-            model::meta.defaultLang = @defaultLang
-
-
-    # ## validateModel
-    # Check the model structure for any errors
-    validateModel: (modelName, model) =>
-        # throw "not implemented"
-
-
     # ## length
     # return the number of data into the whole db
     length: (callback) ->
-        throw 'not implemented'
+        callback 'not implemented'
 
 
     # ## syncModel
     # synchronize the model instance with the database
-    syncModel: (model, callback) =>
-        if model.id?
-            id = model.id
-        else
-            id = @__buildId()
-        return callback null, {id: id, dbTouched: true};
+    # syncModel: (model, callback) =>
+    #     if model.id?
+    #         id = model.id
+    #     else
+    #         id = @__buildId()
+    #     return callback null, {id: id, dbTouched: true};
 
 
     # ## clear
     # remove all data from the database
     clear: (callback) =>
-        throw 'not implemented'
+        callback 'not implemented'
 
 
+    # ## find
+    # Returns the document that match the query
+    #
+    # example
+    #   @find {title: foo, age: {$gt: 1}}, options, (err, docs) ->
+    find: (query, options, callback) ->
+        if typeof options is 'function' and not callback
+            callback = options
+            options = {}
+
+        if _.isString query
+            @_findById query, options, callback
+        else if _.isArray query
+            @_findByIds query, options, callback
+        else
+            @_find query, options, callback
+
+
+    _findById: (query, options, callback) ->
+        callback 'not implemented'
+
+    _findByIds: (query, options, callback) ->
+        callback 'not implemented'
+
+    _find: (query, options, callback) ->
+        callback 'not implemented'
+
+    # ## sync
+    # Insert or update a pojo into the database. An `_id` attribute
+    # will be added if there isn't already.
+    #
+    # example:
+    #   @sync pojo, (err, obj) ->
+    sync: (pojo, callback) ->
+
+        changes = null
+
+        changes = @changes pojo
+        if changes is null
+            return callback null, pojo, {dbTouched: false}
+
+        if pojo._id
+            @_update pojo, changes, (err, obj) =>
+                @_updateCache(pojo)
+                return callback null, pojo, {dbTouched: true}
+        else
+            @_insert pojo, (err, obj) =>
+                @_updateCache(pojo)
+                return callback null, obj, {dbTouched: true}
+
+
+    _update: (pojo, changes, callback) ->
+        callback 'not implemented'
+
+
+    _insert: (pojo, callback) ->
+        callback 'not implemented'
+
+    # ## batchSync
+    #
+    # Sync multiple pojo at a time
+    #
+    # example:
+    #   @batchSync pojos, (err, data)
+    batchSync: (pojos, callback) ->
+        async.map pojos, (pojo, cb) =>
+            @sync pojo, (err, result, options) ->
+                cb err, {result: result, options: options}
+        , (err, results, options) ->
+            if err
+                return callback err
+            return callback null, results
 
     # ## changes
     # Returns the changed properties before the last synchronisation of the model.
@@ -171,6 +184,106 @@ class Database
 
         return null
 
+
+    # ## first
+    # Returns the first document that match the query
+    #
+    # example:
+    #   @first query, options, (err, doc) ->
+    first: (query, options, callback) ->
+        if typeof options is 'function' and not callback
+            callback = options
+            options = {}
+        options.limit = 1
+
+        @find query, options, (err, results) ->
+            if err
+                return callback err
+            if results.length > 0
+                results = results[0]
+            else
+                results = null
+            return callback null, results
+
+
+    ################################
+    #
+    #
+    # Model dealing section
+    #
+    #
+    ################################
+
+    # ## registerCustomTypes
+    #
+    # allow the developper to add custom types. The type should take the form or
+    # a schema's field. Example:
+    #
+    # db.registerCustomType({
+    #   slug: {
+    #       type: 'string',
+    #       compute: function(model, value, lang){
+    #           return lang+'-'+value.toLowerCase().split(' ').join('-')-
+    #       }),
+    #       validate: function(value) ->
+    #           return value.indexOf(' ') === -1
+    #    }
+    # });
+    #
+    # Note that one can overwrite the default values (eg: string, boolean) so be
+    # carreful !
+    registerCustomTypes: (types) ->
+        for typeName, type of types
+            @_types[typeName] = new Type(@, type)
+
+    # Register the models
+    # The registration make some fill the models with default values and sanitize
+    # and check their schema. Finally, attach each models to the database
+    # instance so we can access them easily
+    registerModels: (models) =>
+        for modelName, model of models
+            @beforeRegister(modelName, model)
+
+            # Update the schema of model which inherits of its parent's
+            for field, value of model.__super__?.schema
+                model::schema[field] = value
+
+            @validateModel(modelName, model)
+            model::db = @
+            model.db = @
+            @[modelName] = model
+
+    # ## beforeRegister
+    beforeRegister: (modelName, model) ->
+        unless model::meta?
+            model::meta = {}
+
+        model::meta.name = modelName
+
+        unless model::schema?
+            throw "#{modelName} has not schema"
+
+        # if the model doesn't specify default language, we set it
+        unless model::meta.defaultLang
+            model::meta.defaultLang = @defaultLang
+
+
+    # ## validateModel
+    # Check the model structure for any errors
+    validateModel: (modelName, model) =>
+        # throw "not implemented"
+
+
+
+    #
+    #
+    # Private methods
+    #
+    #
+
+    # ## _updateCache
+    #
+    # Update the internal cache. This cache is useful for tracking pojos changes
     _updateCache: (obj) ->
         @_cache[obj._id] = {}
         for key, value of obj

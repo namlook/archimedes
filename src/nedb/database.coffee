@@ -1,7 +1,6 @@
 # # RDF Database
 
 _ = require 'underscore'
-async = require 'async'
 
 DatabaseInterface = require '../interface/database'
 Datastore = require 'nedb'
@@ -36,42 +35,23 @@ class Database extends DatabaseInterface
             return callback null, count
 
 
-    # ## sync
-    # Insert or update a pojo into the database. An `_id` attribute
-    # will be added if there isn't already.
-    #
-    # example:
-    #   @sync pojo, (err, obj) ->
-    sync: (pojo, callback) ->
-
-        changes = null
-
-        changes = @changes pojo
-        if changes is null
-            return callback null, pojo, {dbTouched: false}
-
-        if pojo._id
-            @store.update {_id: pojo._id}, pojo, (err, obj) =>
-                if err
-                    return callback err
-                @_updateCache(pojo)
-                return callback null, pojo, {dbTouched: true}
-        else
-            @store.insert pojo, (err, obj) =>
-                if err
-                    return callback err
-                @_updateCache(pojo)
-                return callback null, obj, {dbTouched: true}
-
-
-    batchSync: (pojos, callback) ->
-        async.map pojos, (pojo, cb) =>
-            @sync pojo, (err, result, options) ->
-                cb err, {result: result, options: options}
-        , (err, results, options) ->
+    # ## _update
+    # update a pojo into the database
+    _update: (pojo, changes, callback) ->
+        @store.update {_id: pojo._id}, pojo, (err, obj) =>
             if err
                 return callback err
-            return callback null, results
+            return callback null, obj
+
+
+    # ## _insert
+    # insert a pojo into the database
+    _insert: (pojo, callback) ->
+        @store.insert pojo, (err, obj) =>
+            if err
+                return callback err
+            return callback null, obj
+
 
     # ## delete
     # Delete the item in database that match the id
@@ -85,24 +65,6 @@ class Database extends DatabaseInterface
             if err
                 return callback err
             return callback null, numRemoved
-
-
-    # ## find
-    # Returns the document that match the query
-    #
-    # example
-    #   @find {title: foo, age: {$gt: 1}}, options, (err, docs) ->
-    find: (query, options, callback) ->
-        if typeof options is 'function' and not callback
-            callback = options
-            options = {}
-
-        if _.isString query
-            @_findById query, options, callback
-        else if _.isArray query
-            @_findByIds query, options, callback
-        else
-            @_find query, options, callback
 
 
     # ## _find
@@ -134,48 +96,29 @@ class Database extends DatabaseInterface
         @store.find {_id: id}, callback
 
 
-    # ## first
-    # Returns the first document that match the query
-    #
-    # example:
-    #   @first query, options, (err, doc) ->
-    first: (query, options, callback) ->
-        if typeof options is 'function' and not callback
-            callback = options
-            options = {}
-        options.limit = 1
 
-        @find query, options, (err, results) ->
-            if err
-                return callback err
-            if results.length > 0
-                results = results[0]
-            else
-                results = null
-            return callback null, results
+    # findModel: (model, IDsOrQuery, options, callback) =>
+    #     if typeof options is 'function' and not callback
+    #         callback = options
+    #         options = {}
 
-    findModel: (model, IDsOrQuery, options, callback) =>
-        if typeof options is 'function' and not callback
-            callback = options
-            options = {}
+    #     unless IDsOrQuery
+    #         return callback 'IDsOrQuery are required'
 
-        unless IDsOrQuery
-            return callback 'IDsOrQuery are required'
+    #     if _.isArray(IDsOrQuery)
+    #         query = {'$or': ({'_id': id} for id in IDsOrQuery)}
+    #     else if _.isString(IDsOrQuery)
+    #         query = {'_id': IDsOrQuery}
+    #     else
+    #         query = IDsOrQuery
 
-        if _.isArray(IDsOrQuery)
-            query = {'$or': ({'_id': id} for id in IDsOrQuery)}
-        else if _.isString(IDsOrQuery)
-            query = {'_id': IDsOrQuery}
-        else
-            query = IDsOrQuery
-
-        @store.find query, (err, data) ->
-            if err
-                return callback err
-            results = []
-            for item in data
-                results.push new model(item)
-            return callback null, results
+    #     @store.find query, (err, data) ->
+    #         if err
+    #             return callback err
+    #         results = []
+    #         for item in data
+    #             results.push new model(item)
+    #         return callback null, results
 
 
 
@@ -186,28 +129,28 @@ class Database extends DatabaseInterface
     #
     # example:
     #       @syncModel model, (err, modelId) ->
-    syncModel: (model, callback) =>
+    # syncModel: (model, callback) =>
 
-        changes = model.changes()
+    #     changes = model.changes()
 
-        # if there is no changes, we don't need to make a server call
-        unless changes
-            return callback null, {id: model.id, dbTouched: false}
+    #     # if there is no changes, we don't need to make a server call
+    #     unless changes
+    #         return callback null, {id: model.id, dbTouched: false}
 
-        model.beforeSave (err) =>
-            if err
-                return callback err
+    #     model.beforeSave (err) =>
+    #         if err
+    #             return callback err
 
-            if model.isNew()
-                @store.insert model.toJSONObject(), (err, newDoc) ->
-                    if err
-                        return callback err
-                    return callback null, {id: newDoc._id, dbTouched: true}
-            else
-                @store.update {_id: model.id}, model.toJSONObject(), (err, newDoc) ->
-                    if err
-                        return callback err
-                    return callback null, {id: newDoc._id, dbTouched: true}
+    #         if model.isNew()
+    #             @store.insert model.toJSONObject(), (err, newDoc) ->
+    #                 if err
+    #                     return callback err
+    #                 return callback null, {id: newDoc._id, dbTouched: true}
+    #         else
+    #             @store.update {_id: model.id}, model.toJSONObject(), (err, newDoc) ->
+    #                 if err
+    #                     return callback err
+    #                 return callback null, {id: newDoc._id, dbTouched: true}
 
 
 
