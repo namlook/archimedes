@@ -4,7 +4,9 @@ chai.Assertion.includeStack = true;
 expect = chai.expect
 
 Model = require('../interface').Model
-Database = require('../interface').Database
+# Database = require('../interface').Database
+Database = require('./config').Database
+
 
 describe "Model's inheritance:", ()->
 
@@ -37,7 +39,7 @@ describe "Model's inheritance:", ()->
             cfield:
                 type: 'string'
 
-    db = new Database
+    db = Database()
 
     db.registerModels models
 

@@ -4,7 +4,9 @@ chai.Assertion.includeStack = true;
 expect = chai.expect
 
 Model = require('../interface').Model
-Database = require('../interface').Database
+# Database = require('../interface').Database
+Database = require('./config').Database
+
 
 describe 'Model types:', ()->
 
@@ -62,7 +64,7 @@ describe 'Model types:', ()->
                 type: 'string'
                 multi: true
 
-    db = new Database
+    db = Database()
 
     db.registerModels models
 

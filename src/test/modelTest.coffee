@@ -8,7 +8,9 @@ expect = chai.expect
 should = chai.should()
 
 Model = require('../interface').Model
-Database = require('../interface').Database
+# Database = require('../interface').Database
+Database = require('./config').Database
+
 
 describe 'Model', ()->
 
@@ -62,7 +64,7 @@ describe 'Model', ()->
                 type: 'string'
                 multi: true
 
-    db = new Database
+    db = Database()
 
     db.registerModels models
 

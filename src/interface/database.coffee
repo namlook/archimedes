@@ -1,6 +1,8 @@
 
 {defaultTypes, Type} = require './types'
 {extendOnClass} = require('extendonclass')
+objectdiff = require 'objectdiff'
+_ = require 'underscore'
 
 
 class Database
@@ -9,7 +11,7 @@ class Database
 
     constructor: (options) ->
         options = options || {}
-
+        @_cache = {}
         # the types used by the schema to describe, validate and compute values
         @_types = defaultTypes
 
@@ -93,6 +95,93 @@ class Database
     # remove all data from the database
     clear: (callback) =>
         throw 'not implemented'
+
+
+
+    # ## changes
+    # Returns the changed properties before the last synchronisation of the model.
+    # Returns null if nothing has changed
+    # Return undefined if the pojo is not yet saved into the db
+    changes: (pojo) ->
+
+        if @_cache[pojo._id] is undefined
+            return undefined
+
+        cachedPojo = @_cache[pojo._id]
+        diff = objectdiff.diff(cachedPojo, pojo)
+        added = {}
+        removed = {}
+
+        if diff.changed is 'object change'
+            for fieldName, infos of diff.value
+                if infos.changed is 'object change'
+                    if _.isArray pojo[fieldName]
+                        if infos.changed isnt 'equal'
+                            # process multi field
+                            for key, _infos of infos.value
+                                if _infos.changed isnt 'equal'
+                                    added[fieldName] = [] unless added[fieldName]
+                                    removed[fieldName] = [] unless removed[fieldName]
+                                    if _infos.changed is 'added'
+                                        added[fieldName].push _infos.value
+                                    else if _infos.changed is 'removed'
+                                        removed[fieldName].push _infos.value
+                                    else if _infos.changed is 'primitive change'
+                                        added[fieldName].push _infos.added
+                                        removed[fieldName].push _infos.removed
+
+                    else # this is i18n
+                        if infos.changed isnt 'equal'
+                            added[fieldName] = {} unless added[fieldName]
+                            removed[fieldName] = {} unless removed[fieldName]
+                            for lang, _infos of infos.value
+                                if _infos.changed is 'added'
+                                    added[fieldName][lang] = _infos.value
+                                else if _infos.changed is 'removed'
+                                    removed[fieldName][lang] = _infos.value
+                                else if _infos.changed is 'primitive change'
+                                    added[fieldName][lang] = _infos.added
+                                    removed[fieldName][lang] = _infos.removed
+                                else if _infos.changed is 'object change'
+                                    # this is a multi-i18n field
+                                    for index, __infos of _infos.value
+                                        added[fieldName][lang] = [] unless added[fieldName][lang]
+                                        removed[fieldName][lang] = [] unless removed[fieldName][lang]
+                                        if __infos.changed is 'added'
+                                            added[fieldName][lang] = __infos.value
+                                        else if __infos.changed is 'removed'
+                                            removed[fieldName][lang] = __infos.value
+                                        else if __infos.changed is 'primitive change'
+                                            added[fieldName][lang] = __infos.added
+                                            removed[fieldName][lang] = __infos.removed
+
+                else # this is a regular field
+                    if infos.changed is 'added'
+                        added[fieldName] = infos.value
+                    else if infos.changed is 'removed'
+                        removed[fieldName] = infos.value
+                    else if infos.changed is 'primitive change'
+                        added[fieldName] = infos.added
+                        removed[fieldName] = infos.removed
+
+            return {
+                added: added
+                removed: removed
+            }
+
+        return null
+
+    _updateCache: (obj) ->
+        @_cache[obj._id] = {}
+        for key, value of obj
+            if _.isArray value
+                @_cache[obj._id][key] = (_.clone(val) for val in value)
+            else if _.isObject(value) and not _.isArray(value)
+                @_cache[obj._id][key] = {} unless @_cache[obj._id][key]
+                for lang, val of value
+                    @_cache[obj._id][key][lang] = _.clone(val)
+            else
+                @_cache[obj._id][key] = _.clone(value)
 
 
     # ## __buildId
