@@ -238,12 +238,12 @@ describe 'Model.schema', ()->
                 expect(err).to.be.null
 
                 b = new db.B
-                expect(-> b.save()).to.throw(
-                    'B.requiredValue is required')
-                b.set 'requiredValue', 'foo'
                 b.save (err) ->
-                    expect(err).to.be.null
-                    done()
+                    expect(err).to.be.equal 'B.requiredValue is required'
+                    b.set 'requiredValue', 'foo'
+                    b.save (err) ->
+                        expect(err).to.be.null
+                        done()
 
         it 'should check required-multi fields (via constructor)', (done) ->
             class B extends models.A
@@ -271,12 +271,12 @@ describe 'Model.schema', ()->
             db.registerModels {B: B}
 
             b = new db.B
-            expect(-> b.save()).to.throw(
-                'B.requiredValues is required')
-            b.push 'requiredValues', 'foo'
             b.save (err) ->
-                expect(err).to.be.null
-                done()
+                expect(err).to.be.equal 'B.requiredValues is required'
+                b.push 'requiredValues', 'foo'
+                b.save (err) ->
+                    expect(err).to.be.null
+                    done()
 
         it 'should check required-multi fields (set)', (done) ->
 
@@ -291,12 +291,12 @@ describe 'Model.schema', ()->
             db.registerModels {B: B}
 
             b = new db.B
-            expect(-> b.save()).to.throw(
-                'B.requiredValues is required')
-            b.set 'requiredValues', ['foo']
             b.save (err) ->
-                expect(err).to.be.null
-                done()
+                expect(err).to.be.equal 'B.requiredValues is required'
+                b.set 'requiredValues', ['foo']
+                b.save (err) ->
+                    expect(err).to.be.null
+                    done()
 
         it 'should check required-multi fields (empty list)', () ->
             class B extends models.A
@@ -309,15 +309,15 @@ describe 'Model.schema', ()->
             db.registerModels {B: B}
 
             b = new db.B
-            expect(-> b.save()).to.throw(
-                'B.requiredValues is required')
-            b.set 'requiredValues', ['foo']
-            b.pull 'requiredValues', 'foo'
-            expect(-> b.save()).to.throw(
-                'B.requiredValues is required')
-            b.set 'requiredValues', []
-            expect(-> b.save()).to.throw(
-                'B.requiredValues is required')
+            b.save (err) ->
+                expect(err).to.be.equal 'B.requiredValues is required'
+                b.set 'requiredValues', ['foo']
+                b.pull 'requiredValues', 'foo'
+                b.save (err) ->
+                    expect(err).to.be.equal 'B.requiredValues is required'
+                    b.set 'requiredValues', []
+                    b.save (err) ->
+                        expect(err).to.be.equal 'B.requiredValues is required'
 
         it 'should check required-i18n fields (via constructor)', (done) ->
             class B extends models.A
@@ -345,12 +345,12 @@ describe 'Model.schema', ()->
             db.registerModels {B: B}
 
             b = new db.B
-            expect(-> b.save()).to.throw(
-                'B.requiredI18nValue is required')
-            b.set 'requiredI18nValue', 'foo', 'en'
             b.save (err) ->
-                expect(err).to.be.null
-                done()
+                expect(err).to.be.equal 'B.requiredI18nValue is required'
+                b.set 'requiredI18nValue', 'foo', 'en'
+                b.save (err) ->
+                    expect(err).to.be.null
+                    done()
 
         it 'should check required-i18n fields (empty)', () ->
             class B extends models.A
@@ -363,11 +363,11 @@ describe 'Model.schema', ()->
             db.registerModels {B: B}
 
             b = new db.B
-            expect(-> b.save()).to.throw(
-                'B.requiredI18nValue is required')
-            b.set 'requiredI18nValue', {}
-            expect(-> b.save()).to.throw(
-                'B.requiredI18nValue is required')
+            b.save (err) ->
+                expect(err).to.be.equal 'B.requiredI18nValue is required'
+                b.set 'requiredI18nValue', {}
+                b.save (err) ->
+                    expect(err).to.be.equal 'B.requiredI18nValue is required'
 
         it 'should check required-multi-i18n fields (via constructor)', (done) ->
             class B extends models.A
@@ -397,12 +397,12 @@ describe 'Model.schema', ()->
             db.registerModels {B: B}
 
             b = new db.B
-            expect(-> b.save()).to.throw(
-                'B.requiredI18nValues is required')
-            b.set 'requiredI18nValues', ['foo'], 'en'
             b.save (err) ->
-                expect(err).to.be.null
-                done()
+                expect(err).to.be.equal 'B.requiredI18nValues is required'
+                b.set 'requiredI18nValues', ['foo'], 'en'
+                b.save (err) ->
+                    expect(err).to.be.null
+                    done()
 
         it 'should check required-multi-i18n fields (push)', (done) ->
             class B extends models.A
@@ -416,12 +416,12 @@ describe 'Model.schema', ()->
             db.registerModels {B: B}
 
             b = new db.B
-            expect(-> b.save()).to.throw(
-                'B.requiredI18nValues is required')
-            b.push 'requiredI18nValues', 'foo', 'en'
             b.save (err) ->
-                expect(err).to.be.null
-                done()
+                expect(err).to.be.equal 'B.requiredI18nValues is required'
+                b.push 'requiredI18nValues', 'foo', 'en'
+                b.save (err) ->
+                    expect(err).to.be.null
+                    done()
 
 
         it 'should check required-multi-i18n fields (empty)', () ->
@@ -436,14 +436,14 @@ describe 'Model.schema', ()->
             db.registerModels {B: B}
 
             b = new db.B
-            expect(-> b.save()).to.throw(
-                'B.requiredI18nValues is required')
-            b.set 'requiredI18nValues', [], 'en'
-            expect(-> b.save()).to.throw(
-                'B.requiredI18nValues is required')
-            b.set 'requiredI18nValues', {}
-            expect(-> b.save()).to.throw(
-                'B.requiredI18nValues is required')
+            b.save (err) ->
+                expect(err).to.be.equal 'B.requiredI18nValues is required'
+                b.set 'requiredI18nValues', [], 'en'
+                b.save (err) ->
+                    expect(err).to.be.equal 'B.requiredI18nValues is required'
+                    b.set 'requiredI18nValues', {}
+                    b.save (err) ->
+                        expect(err).to.be.equal 'B.requiredI18nValues is required'
 
     describe 'custom types', () ->
 

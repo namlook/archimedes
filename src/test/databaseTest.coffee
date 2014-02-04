@@ -305,7 +305,6 @@ describe 'Database', ()->
                 expect(obj._id).to.be.not.null
                 db.first obj._id, (err, doc) ->
                     expect(err).to.be.null
-                    console.log doc
                     expect(doc.title).to.be.equal pojo.title
                     expect(doc.index).to.be.equal pojo.index
                     expect(doc._id).to.be.equal pojo._id

@@ -1,4 +1,4 @@
-# # RDF Database
+# # NeDB adapter
 
 _ = require 'underscore'
 

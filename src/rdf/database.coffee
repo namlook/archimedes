@@ -106,6 +106,39 @@ class Database extends DatabaseInterface
                 "#{@defaultInstancesNamespace}/#{loweredModelName}"
 
 
+    # #### Query
+    #
+    # ##### Mongo-like query
+    # A mongo-like query take the following form:
+    #
+    #     {fieldName: value}
+    #
+    # we can reach relations with the doted notation
+    #
+    #     {'blogPost.comment.author.name': 'Nico'}
+    @_findViaMongo: (mongoQuery, options, callback) ->
+        # ...
+
+
+
+
+    # ##### Sparql-like query (aka Sparqlite)
+    # A Sparql-like query take the followin form:
+    #
+    #     ?this <[[fieldName]]> "value" .
+    #
+    # We can reach relations and make complex query like this
+    #
+    #     ?this <[BlogPost.comment]> ?comment .
+    #     ?comment <[Comment.author]> ?author .
+    #     ?author <[Author.name]> "Nico" .
+    #     ?this <[BlogPost.blog]>  <#{nicoblog.id}>  .
+    #
+    # `?this` should be type of the object we are calling the `find` method.
+    @_findViaSparqlite: (SparqliteQuery, options, callback) ->
+        # ...
+
+
     findModel: (model, URIsOrQuery, options, callback) =>
         if typeof options is 'function' and not callback
             callback = options

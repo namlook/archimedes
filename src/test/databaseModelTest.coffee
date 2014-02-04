@@ -1,6 +1,5 @@
 
 chai = require('chai')
-sinon = require('sinon')
 expect = chai.expect
 Model = require('../interface').Model
 Database = require('./config').Database
@@ -257,34 +256,29 @@ describe 'Database', ()->
                         done()
 
         it 'should fire a store request only once if there is changes', (done) ->
-            store = db.store
-            spy = sinon.spy(store, 'insert')
             blogPost = new db.BlogPost()
             blogPost.set 'title', 'hello world', 'en'
             blogPost.set 'keyword', ['hello', 'world']
             blogPost.set 'content', 'article'
-            blogPost.save (err) ->
+            blogPost.save (err, obj, infos) ->
                 expect(err).to.be.null
-                expect(spy.calledOnce).to.be.true
-                spy.restore()
+                expect(infos.dbTouched).to.be.true
                 done()
 
         it "shouldn't fire a store request if there is no value changes", (done) ->
-            store = db.store
-            spy = sinon.spy(store, 'insert')
             blogPost = new db.BlogPost()
             blogPost.set 'title', 'hello world', 'en'
             blogPost.set 'keyword', ['hello', 'world']
             blogPost.set 'content', 'article'
-            blogPost.save (err) ->
+            blogPost.save (err, obj, infos) ->
                 expect(err).to.be.null
+                expect(infos.dbTouched).to.be.true
                 blogPost.set 'title', 'salut monde', 'fr'
                 blogPost.rollback()
                 expect(blogPost.hasChanged()).to.be.false
-                blogPost.save (err) ->
+                blogPost.save (err, obj, infos) ->
                     expect(err).to.be.null
-                    expect(spy.calledOnce).to.be.true
-                    spy.restore()
+                    expect(infos.dbTouched).to.be.false
                     done()
 
         it 'should sync the changed saved model', (done) ->
@@ -321,7 +315,7 @@ describe 'Database', ()->
                             expect(total).to.be.equal 0
                             done()
 
-        it 'should throw an error if we try to delete a non-saved model', (done) ->
+        it 'should return an error if we try to delete a non-saved model', (done) ->
             blogPost = new db.BlogPost()
             blogPost.set 'title', 'hello world', 'en'
             blogPost.set 'keyword', ['hello', 'world']

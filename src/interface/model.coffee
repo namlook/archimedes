@@ -107,7 +107,7 @@ class Model
         @_instances = {}
 
         # store initial properties so we can track changes later
-        @_initProperties = {}
+        @_cachedProperties = {}
 
         # the model is not yet synced with the db
         @_isNew = true
@@ -119,8 +119,8 @@ class Model
         for key, value of properties
             @set key, value
 
-            value = @__computeValue(value, {fieldName: key, model: @})
-            @_initProperties[key] = _.clone(value)
+            # value = @__computeValue(value, {fieldName: key, model: @})
+            # @_initProperties[key] = _.clone(value)
 
         # set all other properties to their default values if specified
         for fieldName, field of @schema
@@ -132,24 +132,25 @@ class Model
 
                 @set fieldName, value, {quietReadOnly: true}
 
-                value = @__computeValue(value, {fieldName: fieldName, model: @})
-                @_initProperties[fieldName] = value
+                # value = @__computeValue(value, {fieldName: fieldName, model: @})
+                # @_initProperties[fieldName] = value
 
+        @_updateCachedProperties()
 
 
     # # Static methods
 
     # ## find
-    # `find URIsOrQuery, [options], (err, results) ->`
+    # `find query, [options], (err, results) ->`
     #
     # Returns an arraw of instances
     # The `find` method is the only way to fetch objects.
     #
-    # If `URIsOrQuery` is:
+    # If `query` is:
     #
-    # - un array, fetch all instance by their ids
+    # - an id, then fetch the document that match this id
+    # - un array of id, then fetch all instance by their ids
     # - un object, performs a mongo-like query
-    # - a string, performs a sparql query
     #
     # `find` takes the following options:
     #
@@ -171,54 +172,30 @@ class Model
     # - **prefixes**: if true, prefix the sparql query with the one specified on
     #    the db. If `prefixes` is an object, the key is the prefix and the value
     #    the full URL.
-    @find: (URIsOrQuery, options, callback) ->
-        @db.findModel @, URIsOrQuery, options, callback
-
-
-    # #### Query
-    #
-    # ##### Mongo-like query
-    # A mongo-like query take the following form:
-    #
-    #     {fieldName: value}
-    #
-    # we can reach relations with the doted notation
-    #
-    #     {'blogPost.comment.author.name': 'Nico'}
-    @_findViaMongo: (mongoQuery, options, callback) ->
-
-
-    # ##### Sparql-like query (aka Sparqlite)
-    # A Sparql-like query take the followin form:
-    #
-    #     ?this <[[fieldName]]> "value" .
-    #
-    # We can reach relations and make complex query like this
-    #
-    #     ?this <[BlogPost.comment]> ?comment .
-    #     ?comment <[Comment.author]> ?author .
-    #     ?author <[Author.name]> "Nico" .
-    #     ?this <[BlogPost.blog]>  <#{nicoblog.id}>  .
-    #
-    # `?this` should be type of the object we are calling the `find` method.
-    @_findViaSparqlite: (SparqliteQuery, options, callback) ->
-        # ...
-
-
-    @_findViaURIs: (URIs, options, callback) ->
-        if not callback and typeof(options) is 'function'
+    @find: (query, options, callback) ->
+        if typeof(options) is 'function' and not callback
             callback = options
             options = {}
-
+        unless callback
+            throw 'callback is required'
+        @db.find query, options, (err, pojos) =>
+            if err
+                return callback err
+            return callback null, (new @(pojo) for pojo in pojos)
 
 
     # ## findURIs
-    # `findURIs URIsOrQuery, [options], (err, URIs) ->`
+    # `findIDs query, [options], (err, ids) ->`
     #
-    # Like `find` but returns only the object ids (uri)
-    @findURIs: (URIsOrQuery, options, callback) ->
+    # Like `find` but returns only the object ids
+    @findIDs: (query, options, callback) ->
+        if typeof(options) is 'function' and not callback
+            callback = options
+            options = {}
+        unless callback
+            throw 'callback is required'
         options.instance = false
-        @find URIsOrQuery, options, callback
+        @find query, options, callback
 
 
     # ## first
@@ -234,17 +211,28 @@ class Model
     #
     # `first` takes the same options than `find`
     @first: (URIOrQuery, options, callback) ->
-        options.limit = 1
-        @find URIsOrQuery, options, callback
+        if typeof(options) is 'function' and not callback
+            callback = options
+            options = {}
+        unless callback
+            throw 'callback is required'
+        @first query, options, (err, pojo) ->
+            if err
+                return callback err
+            return callback null, new @(pojo)
 
     # ## firstURI
     # Like `first` but returns only the first object URI
     #
     # `firstURI URIOrQuery, [options], (err, URI) ->`
-    @firstURI: (URIOrQuery, options, callback) ->
-        options.limit = 1
+    @firstID: (URIOrQuery, options, callback) ->
+        if typeof(options) is 'function' and not callback
+            callback = options
+            options = {}
+        unless callback
+            throw 'callback is required'
         options.instance = false
-        @find URIsOrQuery, options, callback
+        @first URIsOrQuery, options, callback
 
 
     # ## facets
@@ -257,6 +245,9 @@ class Model
     @facets: (query, options, callback) ->
         if typeof(options) is 'function' and not callback
             callback = options
+            options = {}
+        unless callback
+            throw 'callback is required'
         # ...
 
 
@@ -691,7 +682,7 @@ class Model
 
         added = {}
         removed = {}
-        diff = objectdiff.diff(@_initProperties, @_properties)
+        diff = objectdiff.diff(@_cachedProperties, @_properties)
 
         if diff.changed is 'object change'
             for fieldName, infos of diff.value
@@ -728,33 +719,32 @@ class Model
     # Only the field marked as change will be updated. If fields has been unset,
     # their related property uri will be delete.
     save: (callback) =>
+        unless callback
+            throw 'callback is required'
 
-        @__checkRequiredFields()
+        try
+            @__checkRequiredFields()
+        catch e
+            return callback e.message
 
         # save all pending relations...
         async.each @_getPendingRelations(), (model, cb) ->
             model.save cb
-        ,  (err) ->
+        ,  (err) =>
             if err
                 return callback err
 
-        @db.syncModel @, (err, data) =>
-            if err
-                if callback
+            @db.sync @toJSONObject(), (err, obj, infos) =>
+                if err
                     return callback err
-                return
 
-            @_initProperties = {}
-            for key, value of @_properties
-                @_initProperties[key] = _.clone(value)
+                if infos.dbTouched
+                    @_isNew = false
+                    unless @id?
+                        @set '_id', obj._id
 
-            if data.dbTouched
-                @_isNew = false
-                unless @id?
-                    @set '_id', data.id
-
-            if callback
-                return callback null, @, data.dbTouched
+                @_updateCachedProperties()
+                return callback null, @, infos
 
 
     beforeSave: (next) ->
@@ -764,8 +754,15 @@ class Model
     # returns the model to the state it was the last time it was saved (or created)
     rollback: () =>
         @_properties = {}
-        for key, value of @_initProperties
-            @_properties[key] = _.clone(value)
+        for key, value of @_cachedProperties
+            if _.isArray value
+                @_properties[key] = (_.clone(val) for val in value)
+            else if _.isObject(value) and not _.isArray(value)
+                @_properties[key] = {} unless @_properties[key]
+                for lang, val of value
+                    @_properties[key][lang] = _.clone(val)
+            else
+                @_properties[key] = _.clone(value)
 
 
     # ## delete
@@ -774,13 +771,18 @@ class Model
     # example:
     #       @delete (err) ->
     delete: (callback) =>
-        @db.deleteModel @, (err) =>
+        unless callback
+            throw 'callback is required'
+        unless @id
+            return callback "can't delete a non-saved model"
+        @db.delete @id, (err) =>
             if err
                 if callback
                     return callback err
                 return
 
             @_isNew = true
+            @_cachedProperties = {}
 
             if callback
                 return callback null
@@ -804,10 +806,37 @@ class Model
     # ## toJSONObject
     # Convert the model into a plain old javascript object (usefull for
     # templating)
-    toJSONObject: () =>
+    #
+    # options:
+    #   - embed: if true, include the relation. For example, if a blogpost
+    #       has a author setted, then the author is included into the resulted
+    #       object. If `embed` is false, only the id of the embed object is added
+    toJSONObject: (options) =>
+        options = {} or options
         jsonObject = {}
         for key, value of @_properties
-            jsonObject[key] = _.clone(value)
+            if _.isArray value
+                for val in value
+                    jsonObject[key] = [] unless jsonObject[key]?
+                    if val.meta?.name and val.toJSONObject?
+                        if options.embed
+                            jsonObject[key].push val.toJSONObject(options)
+                        else
+                            jsonObject[key].push val.id
+                    else
+                        jsonObject[key].push _.clone(val)
+            else if _.isObject(value) and not _.isArray(value)
+                jsonObject[key] = {} unless jsonObject[key]?
+                if value.meta?.name and value.toJSONObject?
+                    if options.embed
+                        jsonObject[key] = value.toJSONObject(options)
+                    else
+                        jsonObject[key] = value.id
+                else
+                    for lang, val of value
+                        jsonObject[key][lang] = _.clone(val)
+            else
+                jsonObject[key] = _.clone(value)
         return jsonObject
 
 
@@ -964,5 +993,21 @@ class Model
             for fieldName, values of field
                 pendings = _.union(pendings, values)
         return pendings
+
+
+    # ## _updateCachedProperties()
+    #
+    # update the cached properties
+    _updateCachedProperties: () ->
+        @_cachedProperties = {}
+        for key, value of @_properties
+            if _.isArray value
+                @_cachedProperties[key] = (_.clone(val) for val in value)
+            else if _.isObject(value) and not _.isArray(value)
+                @_cachedProperties[key] = {} unless @_cachedProperties[key]
+                for lang, val of value
+                    @_cachedProperties[key][lang] = _.clone(val)
+            else
+                @_cachedProperties[key] = _.clone(value)
 
 module.exports = Model

@@ -68,6 +68,9 @@ describe 'Model', ()->
 
     db.registerModels models
 
+    afterEach (done) ->
+        db.clear done
+
     describe '.constructor()', () ->
 
         it 'should be created without values', () ->
@@ -350,11 +353,20 @@ describe 'Model', ()->
             blogPost.has('keyword').should.be.false
 
     describe '.rollback', () ->
-        it 'should return the model into its previous state', () ->
+        it 'should return the model into its previous state (empty)', () ->
             blogPost = new db.BlogPost
             blogPost.set 'title', 'hello world', 'en'
             blogPost.set 'keyword', ['foo', 'bar']
-            blogPost.save()
+            blogPost.rollback()
+            expect(blogPost.get('title', 'fr')).to.be.undefined
+            expect(blogPost.get('title', 'en')).to.be.undefined
+            expect(blogPost.get('keyword')).to.be.undefined
+
+        it 'should return the model into its previous state (specified)', () ->
+            blogPost = new db.BlogPost {
+                title: {en: 'hello world'}
+                keyword: ['foo', 'bar']
+            }
             blogPost.set 'title', 'hi world', 'en'
             blogPost.set 'title', 'salut monde', 'fr'
             blogPost.pull 'keyword', 'foo'
@@ -362,6 +374,22 @@ describe 'Model', ()->
             expect(blogPost.get('title', 'fr')).to.be.undefined
             expect(blogPost.get('title', 'en')).to.be.equal 'hello world'
             expect(blogPost.get('keyword')).to.include 'foo', 'bar'
+
+
+        it 'should return the model into its previous state (saved)', (done) ->
+            blogPost = new db.BlogPost()
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'keyword', ['foo', 'bar']
+            blogPost.save (err, obj) ->
+                expect(err).to.be.null
+                blogPost.set 'title', 'hi world', 'en'
+                blogPost.set 'title', 'salut monde', 'fr'
+                blogPost.pull 'keyword', 'foo'
+                blogPost.rollback()
+                expect(blogPost.get('title', 'fr')).to.be.undefined
+                expect(blogPost.get('title', 'en')).to.be.equal 'hello world'
+                expect(blogPost.get('keyword')).to.include 'foo', 'bar'
+                done()
 
     describe '.clone()', ()->
         it 'should copy all the values of an instance but not its id', () ->
@@ -385,29 +413,35 @@ describe 'Model', ()->
             blogPost.set 'keyword', ['foo', 'bar']
             blogPost.isNew().should.be.true
 
-        it 'should return false when the model is already saved (ie: has an ID)', () ->
+        it 'should return false when the model is already saved (ie: has an ID)', (done) ->
             blogPost = new db.BlogPost
             blogPost.set 'title', 'hello world', 'en'
             blogPost.set 'keyword', ['foo', 'bar']
-            blogPost.save()
-            blogPost.isNew().should.be.false
+            blogPost.save (err) ->
+                expect(err).to.be.null
+                blogPost.isNew().should.be.false
+                done()
 
-        it 'should return false if the model is saved and has 0 as id', () ->
+        it 'should return false if the model is saved and has 0 as id', (done) ->
             blogPost = new db.BlogPost
             blogPost.set 'title', 'hello world', 'en'
             blogPost.set 'keyword', ['foo', 'bar']
             blogPost.id = 0
-            blogPost.save()
-            blogPost.isNew().should.be.false
+            blogPost.save (err) ->
+                expect(err).to.be.null
+                blogPost.isNew().should.be.false
+                done()
 
-        it 'should return true on a cloned model', () ->
+        it 'should return true on a cloned model', (done) ->
             blogPost = new db.BlogPost
             blogPost.set 'title', 'hello world', 'en'
             blogPost.set 'keyword', ['foo', 'bar']
-            blogPost.save()
-            blogPost.isNew().should.be.false
-            newBlogPost = blogPost.clone()
-            newBlogPost.isNew().should.be.true
+            blogPost.save (err) ->
+                expect(err).to.be.null
+                blogPost.isNew().should.be.false
+                newBlogPost = blogPost.clone()
+                newBlogPost.isNew().should.be.true
+                done()
 
 
     describe '.populate()', ()->
@@ -555,20 +589,23 @@ describe 'Model', ()->
                 expect(blogPost.id).to.be.not.undefined
                 expect(blogPost.id).to.be.string
 
-        it "shouldn't generate an id if the id is set", () ->
+        it "shouldn't generate an id if the id is set", (done) ->
             blogPost = new db.BlogPost
             blogPost.set 'title', 'hello world', 'en'
             blogPost.set 'keyword', ['foo', 'bar']
             blogPost.id = 'blogPost'
-            blogPost.save()
-            expect(blogPost.id).to.be.equal 'blogPost'
+            blogPost.save (err) ->
+                expect(err).to.be.null
+                expect(blogPost.id).to.be.equal 'blogPost'
 
-            blogPost2 = new db.BlogPost
-            blogPost2.set 'title', 'hello world', 'en'
-            blogPost2.set 'keyword', ['foo', 'bar']
-            blogPost2.id = 0
-            blogPost2.save()
-            expect(blogPost2.id).to.be.equal 0
+                blogPost2 = new db.BlogPost
+                blogPost2.set 'title', 'hello world', 'en'
+                blogPost2.set 'keyword', ['foo', 'bar']
+                blogPost2.id = 0
+                blogPost2.save (err) ->
+                    expect(err).to.be.null
+                    expect(blogPost2.id).to.be.equal 0
+                    done()
 
         it 'should save all unsaved relations', (done) ->
             blog = new db.Blog {title: 'My blog'}
@@ -590,9 +627,9 @@ describe 'Model', ()->
             expect(author.id).to.be.undefined
             expect(blogPost.id).to.be.undefined
 
-            blogPost.save (err, obj, dbtouched) ->
+            blogPost.save (err, obj, infos) ->
                 expect(err).to.be.null
-                expect(dbtouched).to.be.true
+                expect(infos.dbTouched).to.be.true
                 expect(blogPost.id).to.be.not.undefined
                 expect(blogPost.get('author').id).to.be.not.undefined
                 expect(blogPost.get('blog').id).to.be.not.undefined

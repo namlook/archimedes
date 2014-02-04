@@ -48,6 +48,9 @@ class Database
             callback = options
             options = {}
 
+        unless callback
+            throw 'callback is required'
+
         if _.isString query
             @_findById query, options, callback
         else if _.isArray query
@@ -72,6 +75,9 @@ class Database
     # example:
     #   @sync pojo, (err, obj) ->
     sync: (pojo, callback) ->
+
+        unless callback
+            throw 'callback is required'
 
         changes = null
 
@@ -103,6 +109,10 @@ class Database
     # example:
     #   @batchSync pojos, (err, data)
     batchSync: (pojos, callback) ->
+
+        unless callback
+            throw 'callback is required'
+
         async.map pojos, (pojo, cb) =>
             @sync pojo, (err, result, options) ->
                 cb err, {result: result, options: options}
@@ -274,7 +284,6 @@ class Database
         # throw "not implemented"
 
 
-
     #
     #
     # Private methods
@@ -304,5 +313,6 @@ class Database
         now = new Date()
         rand = Math.floor(Math.random() * 10)
         return rand + parseInt(now.getTime()).toString(36)
+
 
 module.exports = Database
