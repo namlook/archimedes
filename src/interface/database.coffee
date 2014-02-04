@@ -68,6 +68,29 @@ class Database
     _find: (query, options, callback) ->
         callback 'not implemented'
 
+
+    # ## first
+    # Returns the first document that match the query
+    #
+    # example:
+    #   @first query, options, (err, doc) ->
+    first: (query, options, callback) ->
+        if typeof options is 'function' and not callback
+            callback = options
+            options = {}
+        options.limit = 1
+
+        @find query, options, (err, results) ->
+            if err
+                return callback err
+            if results.length > 0
+                results = results[0]
+            else
+                results = null
+            return callback null, results
+
+
+
     # ## sync
     # Insert or update a pojo into the database. An `_id` attribute
     # will be added if there isn't already.
@@ -193,27 +216,6 @@ class Database
             }
 
         return null
-
-
-    # ## first
-    # Returns the first document that match the query
-    #
-    # example:
-    #   @first query, options, (err, doc) ->
-    first: (query, options, callback) ->
-        if typeof options is 'function' and not callback
-            callback = options
-            options = {}
-        options.limit = 1
-
-        @find query, options, (err, results) ->
-            if err
-                return callback err
-            if results.length > 0
-                results = results[0]
-            else
-                results = null
-            return callback null, results
 
 
     ################################

@@ -173,8 +173,10 @@ class Model
         if typeof(options) is 'function' and not callback
             callback = options
             options = {}
+
         unless callback
             throw 'callback is required'
+
         @db.find query, options, (err, pojos) =>
             if err
                 return callback err
@@ -189,8 +191,10 @@ class Model
         if typeof(options) is 'function' and not callback
             callback = options
             options = {}
+
         unless callback
             throw 'callback is required'
+
         options.instance = false
         @find query, options, callback
 
@@ -198,22 +202,23 @@ class Model
     # ## first
     # Like `find` but returns only the first object found
     #
-    # `first URIOrQUery, [options], (err, model) ->`
+    # `first query, [options], (err, model) ->`
     #
-    # If `URIOrQuery` is:
+    # If `query` is:
     #
-    # - an URI, fetch the related instance
+    # - an id, fetch the related instance
+    # - un array of id, then fetch all instance by their ids
     # - an object, performs a mongo-like query
-    # - a string, performs a sparql query
     #
     # `first` takes the same options than `find`
-    @first: (URIOrQuery, options, callback) ->
+    @first: (query, options, callback) ->
         if typeof(options) is 'function' and not callback
             callback = options
             options = {}
+
         unless callback
             throw 'callback is required'
-        @first query, options, (err, pojo) ->
+        @db.first query, options, (err, pojo) =>
             if err
                 return callback err
             return callback null, new @(pojo)
@@ -221,15 +226,17 @@ class Model
     # ## firstURI
     # Like `first` but returns only the first object URI
     #
-    # `firstURI URIOrQuery, [options], (err, URI) ->`
-    @firstID: (URIOrQuery, options, callback) ->
+    # `firstURI query, [options], (err, URI) ->`
+    @firstID: (query, options, callback) ->
         if typeof(options) is 'function' and not callback
             callback = options
             options = {}
+
         unless callback
             throw 'callback is required'
         options.instance = false
-        @first URIsOrQuery, options, callback
+
+        @first query, options, callback
 
 
     # ## facets
@@ -385,7 +392,6 @@ class Model
     set: (fieldName, value, options) =>
 
         @__checkFieldExistance(fieldName)
-
 
         # parse options
         checkLang = fieldName
@@ -910,7 +916,7 @@ class Model
         if @db._types[type]?
             unless @db._types[type].validate(value)
                 ok = false
-        else if @db[type]? and type isnt value.meta?.name
+        else if @db[type]? and type isnt value.meta?.name and not  _.isString type
             ok = false
         unless ok
             throw new ValueError(
