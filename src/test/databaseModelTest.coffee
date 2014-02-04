@@ -13,6 +13,8 @@ describe 'Database', ()->
             login:
                 type: 'string'
                 required: true
+            age:
+                type: 'integer'
 
     class models.Blog extends Model
         schema:
@@ -113,6 +115,39 @@ describe 'Database', ()->
                     done()
 
 
+        it 'should fetch a model with its relation as ID', (done) ->
+            blog = new db.Blog {title: 'hello world'}
+            timy = new db.Author {login: 'timy', age: 18}
+
+            blogPost = new db.BlogPost
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'author', timy
+            blogPost.set 'blog', blog
+
+            blogPost.save (err) ->
+                expect(err).to.be.null
+                db.BlogPost.first blogPost.id, (err, newBlogPost) ->
+                    expect(err).to.be.null
+                    expect(newBlogPost.get('author')).to.be.string
+                    done()
+
+        it 'should fetch and populate a model', (done) ->
+            blog = new db.Blog {title: 'hello world'}
+            timy = new db.Author {login: 'timy', age: 18}
+
+            blogPost = new db.BlogPost
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'author', timy
+            blogPost.set 'blog', blog
+
+            blogPost.save (err) ->
+                expect(err).to.be.null
+                db.BlogPost.first blogPost.id, {populate: true}, (err, newBlogPost) ->
+                    expect(err).to.be.null
+                    expect(newBlogPost.get('author').get('login')).to.be.equal 'timy'
+                    done()
+
+
     describe '.find(ids)', () ->
 
         it 'should fetch a model instances by their ids', (done) ->
@@ -136,7 +171,21 @@ describe 'Database', ()->
                         done()
 
     describe '.find(query)', () ->
-        it 'should fetch all models instances via a mongo-like query'
+        it 'should fetch all models instances via a mongo-like query', (done) ->
+            pojos = [
+                {login: 'bob', age: 20}
+                {login: 'timy', age: 16}
+                {login: 'timette', age: 22}
+                {login: 'bobette', age: 40}
+            ]
+            db.batchSync pojos, (err, results) ->
+                expect(err).to.be.null
+                db.Author.find {age: {$gt: 16}}, (err, results) ->
+                    expect(err).to.be.null
+                    expect(r.id for r in results).to.not.include undefined
+                    expect(results.length).to.be.equal 3
+                    expect(r.get('age') for r in results).to.include 20, 22, 40
+                    done()
 
 
     describe 'get()', ()->
@@ -146,8 +195,6 @@ describe 'Database', ()->
     describe 'getInstance()', () ->
         it 'should return the related populated instance'
         it 'should return the related populated instances on a multi-field'
-
-
 
     describe 'set()', ()->
         it 'should set the value of a relation field'
