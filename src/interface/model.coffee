@@ -112,9 +112,6 @@ class Model
         # the model is not yet synced with the db
         @_isNew = true
 
-        # where the pending relations are stored
-        @__pendingRelations = []
-
         # fill the model with the values passed to the constructor
         for key, value of properties
             @set key, value
@@ -160,7 +157,7 @@ class Model
     # - **order**: 1 or -1 (default null)
     # - **skip**: (default 0)
     # - **populate**: (default false) if true, fetch asynchronously all the
-    #    related instance object (if they exists). If an array of field name
+    #    related instance object (if they exists). If an array of field names
     #    is passed, fetch only those instances.
     # - **hide**: (default true) if true, hide all hidden-fields. An array can be
     #    passed to specified other fields to hide.
@@ -437,16 +434,12 @@ class Model
                         val = @__processValue(val,
                             {fieldName: fieldName, lang: lang, model: @})
 
-                        @__addPendingRelation(fieldName, val, lang)
-
                         @_properties[fieldName][lang] = val
             else
                 value = @__processValue(value, {fieldName: fieldName, model: @})
 
                 if fieldName is '_id'
                     @id = value
-
-                @__addPendingRelation(fieldName, value)
 
                 @_properties[fieldName] = value
 
@@ -500,16 +493,12 @@ class Model
             value = @__processValue(value,
                 {fieldName: fieldName, lang: lang, model: @})
 
-            @__addPendingRelation(fieldName, value, lang)
-
             @_properties[fieldName][lang].push value
 
         else
             @_properties[fieldName] = [] unless @_properties[fieldName]
 
             value = @__processValue(value, {fieldName: fieldName, model: @})
-
-            @__addPendingRelation(fieldName, value)
 
             @_properties[fieldName].push value
 
@@ -550,14 +539,10 @@ class Model
             lang = options.lang
             if @_properties[fieldName]?[lang]?
 
-                @__removePendingRelation(fieldName, value, lang)
-
                 values = _.without @_properties[fieldName][lang], value
                 @_properties[fieldName][lang] = values
         else
             if @_properties[fieldName]
-
-                @__removePendingRelation(fieldName, value)
 
                 values = _.without @_properties[fieldName], value
                 @_properties[fieldName] = values
@@ -596,11 +581,9 @@ class Model
         if @schema[fieldName].i18n
             lang = options.lang
             if @_properties[fieldName]?[lang]?
-                @__removePendingRelation(fieldName, null, lang, true)
                 delete @_properties[fieldName][lang]
 
         else
-            @__removePendingRelation(fieldName, null, null, true)
             delete @_properties[fieldName]
 
 
@@ -728,11 +711,15 @@ class Model
             return callback e.message
 
         # save all pending relations...
-        async.each @_getPendingRelations(), (model, cb) ->
-            model.save cb
-        ,  (err) =>
+        async.map @_getPendingRelations(), (model, cb) ->
+            model.save (err, obj, infos) ->
+                if err
+                    return cb err
+                return cb null, infos
+        ,  (err, results) =>
             if err
                 return callback err
+            dbTouched =  _.some(_.map(results, (obj)-> obj.dbTouched))
 
             @db.sync @toJSONObject(), (err, obj, infos) =>
                 if err
@@ -743,8 +730,9 @@ class Model
                     unless @id?
                         @set '_id', obj._id
 
+                dbTouched = infos.dbTouched or dbTouched
                 @_updateCachedProperties()
-                return callback null, @, infos
+                return callback null, @, {dbTouched: dbTouched}
 
 
     beforeSave: (next) ->
@@ -943,55 +931,24 @@ class Model
         return value
 
 
-    # ## __addPendingRelation(fieldName, value, lang)
-    #
-    # add the pending relation. if lang is undefined, use '_' for unsepecified
-    # language
-    __addPendingRelation: (fieldName, value, lang) ->
-
-        unless lang?
-            lang = '_'
-
-        if @db[@schema[fieldName].type]? and value.isNew()
-            @__pendingRelations[lang] = {} unless @__pendingRelations[lang]?
-            if @schema[fieldName].multi
-                unless @__pendingRelations[lang][fieldName]?
-                    @__pendingRelations[lang][fieldName] = []
-                @__pendingRelations[lang][fieldName].push value
-            else
-                @__pendingRelations[lang][fieldName] = [value]
-
-
-    # ## __removePendingRelation(value, lang, unset)
-    #
-    # remove the pending relation. if lang is undefined, use '_' for unsepecified
-    # language. If unset is true, just delete all relations from the field. Usefull
-    # for the `unset` method where is no value to remove
-    __removePendingRelation: (fieldName, value, lang, unset) ->
-
-        unless lang?
-            lang = '_'
-
-        if unset
-            if @__pendingRelations[lang]?[fieldName]?
-                @__pendingRelations[lang][fieldName] = []
-
-        else if @db[@schema[fieldName].type]? and value.isNew()
-            if @schema[fieldName].multi
-                @__pendingRelations[lang][fieldName] = (
-                    i for i in @__pendingRelations[lang][fieldName] when i isnt value)
-            else
-                @__pendingRelations[lang][fieldName] = []
-
-
     # ## __getPendingRelations()
     #
     # returns all the pending relations of the model
     _getPendingRelations: () ->
         pendings = []
-        for lang, field of @__pendingRelations
-            for fieldName, values of field
-                pendings = _.union(pendings, values)
+        for fieldName, value of @_properties
+            schema = @schema[fieldName]
+            if @db[schema.type]?
+                if schema.i18n
+                    for lang, val of value
+                        if schema.multi
+                            pendings = _.union(pendings, val)
+                        else
+                            pendings.push val
+                else if schema.multi
+                    pendings = _.union(pendings, value)
+                else
+                    pendings.push value
         return pendings
 
 

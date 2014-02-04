@@ -638,6 +638,52 @@ describe 'Model', ()->
                 expect(author.id).to.equal blogPost.get('author').id
                 done()
 
+
+        it 'should save all updated relations', (done) ->
+            blog = new db.Blog {title: 'My blog'}
+            author = new db.Author {login: 'nico'}
+            blogPost = new db.BlogPost
+            blogPost.set 'title', {en: 'hello world', fr: 'salut monde'}
+            blogPost.set 'content', 'first post'
+            blogPost.set 'author', author
+            blogPost.set 'blog', blog
+
+            expect(blog.isNew()).to.be.true
+            expect(author.isNew()).to.be.true
+
+            pending = blogPost._getPendingRelations()
+            expect(pending).to.include author
+            expect(pending).to.include blog
+
+            expect(blog.id).to.be.undefined
+            expect(author.id).to.be.undefined
+            expect(blogPost.id).to.be.undefined
+
+            blogPost.save (err, obj, infos) ->
+                expect(err).to.be.null
+                expect(infos.dbTouched).to.be.true
+                expect(blogPost.id).to.be.not.undefined
+                expect(blogPost.get('author').id).to.be.not.undefined
+
+                expect(blogPost.get('author').get('login')).to.be.equal 'nico'
+                expect(blogPost.get('blog').get('title')).to.be.equal 'My blog'
+
+                blogPost.get('author').set('login', 'bob')
+                blogPost.get('blog').set('title', 'the blog')
+
+                blogPost.save (err, obj, infos) ->
+                    expect(err).to.be.null
+                    expect(infos.dbTouched).to.be.true
+                    expect(obj.get('author').get('login')).to.be.equal 'bob'
+                    expect(obj.get('blog').get('title')).to.be.equal 'the blog'
+                    db.find [blog.id, author.id], (err, results) ->
+                        expect(err).to.be.null
+                        expect(r.login for r in results).to.include 'bob'
+                        expect(r.login for r in results).to.not.include 'nico'
+                        expect(r.title for r in results).to.include 'the blog'
+                        expect(r.title for r in results).to.not.include 'my blog'
+                        done()
+
         it 'should generate an id from a specified field if no id is set'
         it 'should store the values of an instance into the database'
         it "shouldn't fire a store request if there is no value changes"
