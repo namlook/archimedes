@@ -26,10 +26,14 @@ class Database extends DatabaseInterface
             return callback null, numRemoved
 
 
-    # ## length
-    # return the number of data present into the db
-    length: (callback) =>
-        @store.count {}, (err, count) ->
+    # ## count
+    # return the number of item that match the query
+    count: (query, callback) =>
+        if typeof query is 'function' and not callback
+            callback = query
+            query = {}
+
+        @store.count query, (err, count) ->
             if err
                 return callback err
             return callback null, count

@@ -16,10 +16,10 @@ class Database
         # the types used by the schema to describe, validate and compute values
         @_types = defaultTypes
 
-    # ## length
-    # return the number of data into the whole db
-    length: (callback) ->
-        callback 'not implemented'
+    # ## count
+    # return the number of documents that match the query
+    count: (query, callback) ->
+        callback 'count() is not implemented'
 
 
     # ## syncModel
@@ -35,7 +35,7 @@ class Database
     # ## clear
     # remove all data from the database
     clear: (callback) =>
-        callback 'not implemented'
+        callback 'clear() is not implemented'
 
 
     # ## find
@@ -60,13 +60,13 @@ class Database
 
 
     _findById: (query, options, callback) ->
-        callback 'not implemented'
+        callback '_findById() is not implemented'
 
     _findByIds: (query, options, callback) ->
-        callback 'not implemented'
+        callback '_findByIds() is not implemented'
 
     _find: (query, options, callback) ->
-        callback 'not implemented'
+        callback '_find() is not implemented'
 
 
     # ## first
@@ -110,20 +110,24 @@ class Database
 
         if pojo._id
             @_update pojo, changes, (err, obj) =>
+                if err
+                    return callback err
                 @_updateCache(pojo)
                 return callback null, pojo, {dbTouched: true}
         else
             @_insert pojo, (err, obj) =>
-                @_updateCache(pojo)
+                if err
+                    return callback err
+                @_updateCache(obj)
                 return callback null, obj, {dbTouched: true}
 
 
     _update: (pojo, changes, callback) ->
-        callback 'not implemented'
+        callback '_update() is not implemented'
 
 
     _insert: (pojo, callback) ->
-        callback 'not implemented'
+        callback '_insert() is not implemented'
 
     # ## batchSync
     #

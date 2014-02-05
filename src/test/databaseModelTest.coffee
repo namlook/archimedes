@@ -264,7 +264,7 @@ describe 'Database', ()->
                 expect(newBlogPost.get '_id').to.be.equal blogPost.id
                 expect(newBlogPost.id).to.be.equal blogPost.id
                 expect(blogPost.id).to.be.string
-                blogPost.db.length (err, total) ->
+                blogPost.db.count (err, total) ->
                     expect(err).to.be.null
                     expect(total).to.be.equal 1
                     done()
@@ -297,7 +297,7 @@ describe 'Database', ()->
                     expect(data[0].title.en).to.equal 'hello world'
                     expect(data[0].keyword).to.include 'hello', 'world'
                     expect(data[0].content).to.equal 'article'
-                    db.length (err, total) ->
+                    db.count (err, total) ->
                         expect(err).to.be.null
                         expect(total).to.be.equal 1
                         done()
@@ -352,12 +352,12 @@ describe 'Database', ()->
             blogPost.set 'content', 'article'
             blogPost.save (err) ->
                 expect(err).to.be.null
-                blogPost.db.length (err, total) ->
+                blogPost.db.count (err, total) ->
                     expect(err).to.be.null
                     expect(total).to.be.equal 1
                     blogPost.delete (err) ->
                         expect(err).to.be.null
-                        blogPost.db.length (err, total) ->
+                        blogPost.db.count (err, total) ->
                             expect(err).to.be.null
                             expect(total).to.be.equal 0
                             done()
