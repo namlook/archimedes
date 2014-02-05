@@ -218,10 +218,18 @@ class Model
 
         unless callback
             throw 'callback is required'
+
         @db.first query, options, (err, pojo) =>
             if err
                 return callback err
-            return callback null, new @(pojo)
+
+            obj = new @(pojo)
+
+            if options.populate
+                obj.populate options.populate, (err, populatedObj) ->
+                    return callback null, populatedObj
+            else
+                return callback null, obj
 
     # ## firstURI
     # Like `first` but returns only the first object URI
@@ -258,28 +266,49 @@ class Model
     # ## populate
     # Asyncronously populate the instance with all related object values.
     #
-    # `populate [fields], (err, model) ->`
+    # `populate [fields...], (err, model) ->`
     #
-    # `fields` can be a fieldName or an array of fieldNames
-    #
-    # **example**:
-    #
-    #     @populate [fieldname1, fieldname2],  (err, instance1, instance2...) ->
-    #
-    #
-    # if `fields` are not specified, populate all fields which values are URIs.
+    # `fields` is an array of fieldNames
     #
     # **example**:
     #
-    #     @populate (err, {fieldname1: instance1, fieldname2: instance2}) ->
+    #     @populate [fieldname1, fieldname2],  (err, model) ->
+    #
+    #
+    # if `fields` are not specified, populate all related fields.
+    #
+    # **example**:
+    #
+    #     @populate (err, model) ->
     #
     # If field values are already populated, do nothing.
-    populate: (fields, callback) =>
-        unless callback
-            if typeof(fields) isnt 'function'
-                throw 'a callback is required'
+    populate: (fields, callback) ->
+        if typeof(fields) is 'function' and not callback
             callback = fields
-        # ...
+            fields = null
+
+        unless _.isArray(fields) and fields.length > 0
+            fields = (fname for fname, val of @schema when @db[val.type]?)
+
+        # populate the related instances
+        relations = {}
+        for fieldName in fields
+                relId = @get(fieldName)
+                if _.isString relId
+                    relations[relId] = {
+                        fieldName: fieldName,
+                        model: @db[@schema[fieldName].type]
+                    }
+
+        @db.find _.keys(relations), (err, reldata) =>
+            if err
+                return callback err
+
+            for relobj in reldata
+                rinfo = relations[relobj._id]
+                @set rinfo.fieldName, new rinfo.model(relobj)
+
+            return callback null, @
 
 
     # ## Get
@@ -916,7 +945,7 @@ class Model
         if @db._types[type]?
             unless @db._types[type].validate(value)
                 ok = false
-        else if @db[type]? and type isnt value.meta?.name and not  _.isString type
+        else if @db[type]? and type isnt value.meta?.name and not  _.isString value
             ok = false
         unless ok
             throw new ValueError(

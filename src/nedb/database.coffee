@@ -76,7 +76,12 @@ class Database extends DatabaseInterface
         call = @store.find query
         if options.limit
             call.limit options.limit
-        call.exec callback
+        call.exec (err, data) =>
+            if err
+                return callback err
+
+            return callback null, data
+
 
     # ## _findByIds
     # fetch documents by their ids
@@ -85,7 +90,7 @@ class Database extends DatabaseInterface
     #   @_findByIds ids, options, (err, docs) ->
     _findByIds: (ids, options, callback) ->
         query = {$or: ({_id: id} for id in ids)}
-        @store.find query, callback
+        @_find query, options, callback
 
     # ## _findById
     # fetch a document by its id
@@ -93,64 +98,7 @@ class Database extends DatabaseInterface
     # example:
     #   @_findById id, options, (err, docs) ->
     _findById: (id, options, callback) ->
-        @store.find {_id: id}, callback
-
-
-
-    # findModel: (model, IDsOrQuery, options, callback) =>
-    #     if typeof options is 'function' and not callback
-    #         callback = options
-    #         options = {}
-
-    #     unless IDsOrQuery
-    #         return callback 'IDsOrQuery are required'
-
-    #     if _.isArray(IDsOrQuery)
-    #         query = {'$or': ({'_id': id} for id in IDsOrQuery)}
-    #     else if _.isString(IDsOrQuery)
-    #         query = {'_id': IDsOrQuery}
-    #     else
-    #         query = IDsOrQuery
-
-    #     @store.find query, (err, data) ->
-    #         if err
-    #             return callback err
-    #         results = []
-    #         for item in data
-    #             results.push new model(item)
-    #         return callback null, results
-
-
-
-    # ## syncModel
-    # synchronize a model data with the database
-    #
-    # If the model is new (never saved) the model id is genreated automatically.
-    #
-    # example:
-    #       @syncModel model, (err, modelId) ->
-    # syncModel: (model, callback) =>
-
-    #     changes = model.changes()
-
-    #     # if there is no changes, we don't need to make a server call
-    #     unless changes
-    #         return callback null, {id: model.id, dbTouched: false}
-
-    #     model.beforeSave (err) =>
-    #         if err
-    #             return callback err
-
-    #         if model.isNew()
-    #             @store.insert model.toJSONObject(), (err, newDoc) ->
-    #                 if err
-    #                     return callback err
-    #                 return callback null, {id: newDoc._id, dbTouched: true}
-    #         else
-    #             @store.update {_id: model.id}, model.toJSONObject(), (err, newDoc) ->
-    #                 if err
-    #                     return callback err
-    #                 return callback null, {id: newDoc._id, dbTouched: true}
+        @_find {_id: id}, options, callback
 
 
 
