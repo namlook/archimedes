@@ -2,9 +2,12 @@
 
 _ = require 'underscore'
 DatabaseInterface = require '../interface/database'
+async = require 'async'
+{mongo2sparql, value2rdf} = require './utils'
 
 triplestores = {
     'stardog': require './triplestores/stardog'
+    'virtuoso': require './triplestores/virtuoso'
 }
 
 class Database extends DatabaseInterface
@@ -51,6 +54,293 @@ class Database extends DatabaseInterface
             @defaultInstancesNamespace = "#{@namespace}/instances"
 
         @_propertiesIndexURI = {}
+
+
+    # ## clear
+    # empty the database
+    #
+    # example:
+    #       @clear (err, ok) ->
+    clear: (callback) =>
+        @store.clear callback
+
+
+    # ## count
+    # return the number of item that match the query
+    count: (query, callback) =>
+        if typeof query is 'function' and not callback
+            callback = query
+            query = '?s ?p ?o .'
+
+        unless callback?
+            throw "callback required"
+
+        # sparqlQuery = @_mongo2sparqlQuery(query)
+
+        sparqlQuery = """
+            select (count(distinct ?s) as ?total)
+            from <#{@graphURI}> where {#{query}}
+        """
+
+        @store.count sparqlQuery, callback
+
+
+    # ## delete
+    # Delete the item in database that match the id
+    #
+    # example:
+    #       @remove uri, (err) ->
+    delete: (uri, callback) =>
+        unless uri
+            return callback "id must not be null"
+
+        deleteQuery = """
+            delete {graph <#{@graphURI}> {<#{uri}> ?p ?o .}}
+            where {<#{uri}> ?p ?o .}
+        """
+
+        @store.update deleteQuery, (err, ok) ->
+            if err
+                return callback err
+            unless ok
+                return callback "error while deleting the data"
+            return callback null
+
+
+    # ## sync
+    # Insert or update a pojo into the database. An `_id` attribute
+    # will be added if there isn't already.
+    #
+    # example:
+    #   @sync pojo, (err, obj) ->
+    sync: (pojo, options, callback) ->
+        if typeof options is 'function' and not callback
+            callback = options
+            options = {}
+        unless callback
+            throw 'callback is required'
+
+        convertedPojo = @__fillPojoUri(pojo)
+        sparqlQuery = @_getSparqlSyncQuery(convertedPojo)
+
+        if sparqlQuery is null
+            return callback null, pojo, {dbTouched: false}
+
+        @store.update sparqlQuery, options, (err, ok) =>
+            if err
+                return callback err
+            unless ok
+                return callback "error while syncing the data"
+            @_updateCache(convertedPojo)
+            return callback null, convertedPojo, {dbTouched: true}
+
+    # ## batchSync
+    #
+    # Sync multiple pojo at a time
+    #
+    # example:
+    #   @batchSync pojos, (err, data)
+    batchSync: (pojos, options, callback) ->
+        if typeof options is 'function' and not callback
+            callback = options
+            options = {}
+        unless callback
+            throw 'callback is required'
+
+        async.map pojos, ((pojo, cb) =>
+            convertedPojo = @__fillPojoUri(pojo)
+            sparqlQuery = @_getSparqlSyncQuery(convertedPojo)
+
+            if sparqlQuery is null
+                sparqlQuery = ''
+                dbTouched = false
+            else
+                dbTouched = true
+            return cb null, {
+                pojo: convertedPojo
+                dbTouched: dbTouched
+                sparqlQuery: sparqlQuery
+            }).bind(@)
+        , (err, data) =>
+            if err
+                return callback err
+
+            sparqlQuery = []
+            results = []
+            for item in data
+                sparqlQuery.push item.sparqlQuery
+                results.push {result: item.pojo, options: {dbTouched: item.dbTouched}}
+
+            @store.update sparqlQuery.join('\n'), (err, ok) =>
+                if err
+                    return callback err
+                for item in results
+                    @_updateCache(item.result)
+                return callback null, results
+
+
+    # ## _getSparqlSyncQuery
+    # returns the sparql query in order to update the pojo
+    _getSparqlSyncQuery: (pojo) ->
+        changes = @changes pojo
+        if changes is null
+            return null
+
+        if pojo._id and changes isnt undefined
+            fillChangesTriples = (_changes) ->
+                target = []
+                for property, value of _changes
+                    if _.isArray(value)
+                        for val in value
+                            target.push "<#{pojo._id}> <#{property}> \"#{val}\""
+                    else if _.isObject(value)
+                        for lang, val of value
+                            if _.isArray val
+                                for _val in val
+                                    target.push(
+                                        "<#{pojo._id}> <#{property}> \"#{_val}\"@#{lang}")
+                            else
+                                target.push(
+                                    "<#{pojo._id}> <#{property}> \"#{val}\"@#{lang}")
+                    else
+                        target.push "<#{pojo._id}> <#{property}> \"#{value}\""
+                return target
+
+            addedNtriples = fillChangesTriples(changes.added)
+            removedNtriples = fillChangesTriples(changes.removed)
+
+            sparqlQuery = ''
+            if removedNtriples.length
+                sparqlQuery += "delete data {graph <#{@graphURI}> { #{removedNtriples.join(' .\n')} . }}; "
+            if addedNtriples.length
+                sparqlQuery += "insert data {graph <#{@graphURI}> { #{addedNtriples.join(' .\n')} . }}; "
+
+        else
+            unless pojo._id?
+                pojo._id = @__buildURI()
+            ntriples = @_pojo2nt(pojo)
+            sparqlQuery = "insert data {graph <#{@graphURI}> { #{ntriples.join(' .\n')} }};"
+
+        return sparqlQuery
+
+
+    # ## _find
+    # perform a find query against a regular query
+    #
+    # example:
+    #   @_find query, options, (err, docs) ->
+    _find: (query, options, callback) ->
+        try
+            query = @_mongo2sparqlQuery(query)
+        catch e
+            return callback e
+
+        sparqlQuery = "select ?s from <#{@graphURI}> where {#{query}}"
+
+        @store.query sparqlQuery, options, (err, data) ->
+            if err
+                return callback err
+
+            return callback null, (item.s.value for item in data)
+
+
+    # ## _findByIds
+    # fetch documents by their ids
+    #
+    # example:
+    #   @_findByIds ids, options, (err, docs) ->
+    _findByIds: (ids, options, callback) ->
+        @store.describe ids, options, (err, results) =>
+            if err
+                return callback err
+            return callback null, results
+
+
+    # ## _findById
+    # fetch a document by its id
+    #
+    # example:
+    #   @_findById id, options, (err, docs) ->
+    _findById: (id, options, callback) ->
+        @_findByIds [id], options, callback
+
+
+    # #### Query
+    #
+    # ##### Mongo-like query
+    # A mongo-like query take the following form:
+    #
+    #     {fieldName: value}
+    #
+    # we can reach relations with the doted notation
+    #
+    #     {'blogPost.comment.author.name': 'Nico'}
+    @_findViaMongo: (mongoQuery, options, callback) ->
+        # ...
+
+
+
+
+    # ##### Sparql-like query (aka Sparqlite)
+    # A Sparql-like query take the followin form:
+    #
+    #     ?this <[[fieldName]]> "value" .
+    #
+    # We can reach relations and make complex query like this
+    #
+    #     ?this <[BlogPost.comment]> ?comment .
+    #     ?comment <[Comment.author]> ?author .
+    #     ?author <[Author.name]> "Nico" .
+    #     ?this <[BlogPost.blog]>  <#{nicoblog.id}>  .
+    #
+    # `?this` should be type of the object we are calling the `find` method.
+    @_findViaSparqlite: (SparqliteQuery, options, callback) ->
+        # ...
+
+
+    _describe: (model, uris, options, callback) =>
+        @store.describe uris, options, (err, rawdata) =>
+            if err
+                return callback err
+
+            properties = {}
+            schema = model::schema
+            results = []
+            for data in rawdata
+                for uri, item of data
+                    if uri is '@id'
+                        properties._id = item
+
+                    else if uri isnt '@type'
+                        prop = @_propertiesIndexURI[uri]
+                        if schema[prop].i18n
+                            unless properties[prop]?
+                                properties[prop] = {}
+                            for _item in item
+                                lang = _item['@language']
+                                value = _item['@value']
+                                if schema[prop].multi
+                                    unless lang
+                                        throw 'something wrong'
+                                    unless properties[prop][lang]?
+                                        properties[prop][lang] = []
+                                    properties[prop][lang].push value
+                                else
+                                    properties[prop][lang] = value
+
+                        else if schema[prop].multi
+                            properties[prop] = (_item['@value'] for _item in item)
+                        else
+                            properties[prop] = item[0]['@value']
+                results.push new model(properties)
+            return callback null, results
+
+
+    #
+    #
+    # Model dealing section
+    #
+    #
 
 
     registerModels: (models) =>
@@ -106,170 +396,77 @@ class Database extends DatabaseInterface
                 "#{@defaultInstancesNamespace}/#{loweredModelName}"
 
 
-    # #### Query
     #
-    # ##### Mongo-like query
-    # A mongo-like query take the following form:
     #
-    #     {fieldName: value}
+    # Private methods
     #
-    # we can reach relations with the doted notation
     #
-    #     {'blogPost.comment.author.name': 'Nico'}
-    @_findViaMongo: (mongoQuery, options, callback) ->
-        # ...
+
+    _mongo2sparqlQuery: (mongoQuery) ->
+        return mongo2sparql(mongoQuery)
 
 
-
-
-    # ##### Sparql-like query (aka Sparqlite)
-    # A Sparql-like query take the followin form:
+    # ## __buildURI
     #
-    #     ?this <[[fieldName]]> "value" .
+    # Generate a unique URI for the model
+    __buildURI: () ->
+        return "#{@defaultInstancesNamespace}/#{@__buildId()}"
+
+
+    # ## __fillPojoUri(pojo)
     #
-    # We can reach relations and make complex query like this
-    #
-    #     ?this <[BlogPost.comment]> ?comment .
-    #     ?comment <[Comment.author]> ?author .
-    #     ?author <[Author.name]> "Nico" .
-    #     ?this <[BlogPost.blog]>  <#{nicoblog.id}>  .
-    #
-    # `?this` should be type of the object we are calling the `find` method.
-    @_findViaSparqlite: (SparqliteQuery, options, callback) ->
-        # ...
+    # replace pojo's field names by the corresponding URI if needed
+    __fillPojoUri: (pojo) ->
+        newpojo = {}
+        for fieldName, value of pojo
+            if fieldName is '_id'
+                newpojo._id = value
+            else unless _.str.startsWith(fieldName, 'http://')
+                newpojo["#{@defaultPropertiesNamespace}/#{fieldName}"] = value
+            else
+                newpojo[fieldName] = value
+        return newpojo
 
 
-    findModel: (model, URIsOrQuery, options, callback) =>
-        if typeof options is 'function' and not callback
-            callback = options
-            options = {}
+    _pojo2nt: (pojo) ->
+        ntriples = []
+        uri = pojo._id
 
-        unless URIsOrQuery
-            return callback 'URIsOrQuery are required'
+        addTriple = (value, lang) =>
+            if _.isObject(value) and value._uri?
+                triple = "<#{uri}> <#{property}> <#{value._uri}>"
+            else
+                if lang
+                    triple = "<#{uri}> <#{property}> \"#{value}\"@#{lang}"
+                else
+                    value = @_valueToRdf(value)
+                    triple = "<#{uri}> <#{property}> #{value}"
+            ntriples.push triple
 
-        if _.isArray(URIsOrQuery)
-            return @_describe model, URIsOrQuery, options, callback
-        else if (_.isString(URIsOrQuery) and  _.str.startsWith(URIsOrQuery, 'http://'))
-            return @_describe model, [URIsOrQuery], options, callback
-        else if _.isString URIsOrQuery
-            return @_findViaSparqlite model, URIsOrQuery, options, callback
-        else
-            return @_findViaMongo model, URIsOrQuery, options, callback
+        # build the n-triples
+        for property, value of pojo
 
-    _describe: (model, uris, options, callback) =>
-        @store.describe uris, options, (err, rawdata) =>
-            if err
-                return callback err
+            if property is '_id'
+                continue
 
-            properties = {}
-            schema = model::schema
+            # multi field
+            if _.isArray(value)
+                for val in value
+                    addTriple(val)
 
-            results = []
-            for data in rawdata
-                for uri, item of data
-                    if uri is '@id'
-                        properties._id = item
+            # i18n field
+            else if _.isObject(value) and not value._uri?
+                for lang, val of value
+                    if _.isArray(val) # multi-i18n field
+                        for _val of val
+                            addTriple(_val, lang)
+                    else # regular i18n field
+                        addTriple(val, lang)
 
-                    else if uri isnt '@type'
-                        prop = @_propertiesIndexURI[uri]
-                        if schema[prop].i18n
-                            unless properties[prop]?
-                                properties[prop] = {}
-                            for _item in item
-                                lang = _item['@language']
-                                value = _item['@value']
-                                if schema[prop].multi
-                                    unless lang
-                                        throw 'something wrong'
-                                    unless properties[prop][lang]?
-                                        properties[prop][lang] = []
-                                    properties[prop][lang].push value
-                                else
-                                    properties[prop][lang] = value
+            else # literal
+                addTriple(value)
 
-                        else if schema[prop].multi
-                            properties[prop] = (_item['@value'] for _item in item)
-                        else
-                            properties[prop] = item[0]['@value']
-                results.push new model(properties)
-            return callback null, results
-
-    # ## clear
-    # empty the database
-    #
-    # example:
-    #       @clear (err, ok) ->
-    clear: (callback) =>
-        @store.clear callback
-
-
-    # ## length
-    # return the number of data present into the db
-    length: (callback) =>
-        @store.length callback
-
-
-    # ## deleteModel
-    # remove a model instance from the database
-    #
-    # example:
-    #       @removeModel model, (err) ->
-    deleteModel: (model, callback) =>
-        unless model.id?
-            return callback "can't delete a non-saved model"
-        modelURI = model.id
-        deleteQuery = "delete {<#{modelURI}> ?p ?o .} where {<#{modelURI}> ?p ?o .}"
-        @store.update deleteQuery, (err, ok) =>
-            if err
-                return callback err
-            unless ok
-                return callback "error while deleting the data"
-            return callback null
-
-
-    # ## syncModel
-    # synchronize a model data with the database
-    #
-    # If the model is new (never saved) the model id is genreated automatically.
-    #
-    # example:
-    #       @syncModel model, (err, modelId) ->
-    syncModel: (model, callback) =>
-
-        changes = model.changes()
-
-        # if there is no changes, we don't need to make a server call
-        unless changes
-            return callback null, {id: model.id, dbTouched: false}
-
-        model.beforeSave (err) =>
-            if err
-                return callback err
-
-            addedTriples = []
-            removedTriples = []
-            if changes
-                addedTriples = @_fieldsToTriples(model, changes.added)
-                removedTriples = @_fieldsToTriples(model, changes.removed)
-
-            if model.isNew()
-                addedTriples.push "<#{model.id}> a  <#{model.meta.uri}>"
-
-            sparqlQuery = ''
-            if removedTriples.length
-                sparqlQuery += "DELETE DATA { #{removedTriples.join(' .\n')} } "
-
-            if addedTriples.length
-                sparqlQuery += "INSERT DATA { #{addedTriples.join(' .\n')} }"
-
-            @store.update sparqlQuery, (err, ok) =>
-                if err
-                    return callback err
-                unless ok
-                    return callback "error while syncing the data"
-
-                return callback null, {id: model.id, dbTouched: true}
-
+        return ntriples
 
 
     _fieldsToTriples: (model, fields) =>
@@ -312,21 +509,40 @@ class Database extends DatabaseInterface
                 triples.push "<#{modelURI}> <#{propertyUri}> #{rdfValue}"
         return triples
 
+    _valueToRdf: (value) =>
+        return value2rdf(value)
+    #     if value._id?
+    #         value = "<#{value._id}>"
+    #     if _.isBoolean(value)
+    #         value = "\"#{value}\"^^xsd:boolean"
+    #     else if _.isNumber(value)
+    #         if @_types.integer.validate(value)
+    #             type = 'integer'
+    #         else if @_types.float.validate(value)
+    #             type = 'float'
+    #         else
+    #             throw "unknown number's type: #{value}"
+    #         value = "\"#{value}\"^^xsd:#{type}"
+    #     else
+    #         quotedValue = value.replace(/"/g, '\\"')
+    #         value = "\"#{quotedValue}\""
+    #     return value
 
-    _valueToRdf: (value, options) =>
-        {type, lang} = options
-        if @[type]?
-            if value.id
-                return "<#{value.id}>"
-            return "<#{value}>"
-        else if type is 'string'
-            quotedValue = value.replace(/"/g, '\\"')
-            if lang
-                return "\"#{quotedValue}\"@#{lang}"
-            return "\"#{quotedValue}\""
-        else if type is 'url'
-            return "\"#{value}\"^^xsd:anyURI"
-        return "#{value}^^xsd:#{type}"
+
+    # _valueToRdfOld: (value, options) =>
+    #     {type, lang} = options
+    #     if @[type]?
+    #         if value.id
+    #             return "<#{value.id}>"
+    #         return "<#{value}>"
+    #     else if type is 'string'
+    #         quotedValue = value.replace(/"/g, '\\"')
+    #         if lang
+    #             return "\"#{quotedValue}\"@#{lang}"
+    #         return "\"#{quotedValue}\""
+    #     else if type is 'url'
+    #         return "\"#{value}\"^^xsd:anyURI"
+    #     return "#{value}^^xsd:#{type}"
 
 
 module.exports = Database

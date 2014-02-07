@@ -21,6 +21,20 @@ Stardog = () ->
         nsprop: 'http://onto.example.org/properties/'
     }
 
+Virtuoso = () ->
+    Database = require('../rdf/database')
+    return {
+        Database: () ->
+            new Database {
+                store: 'virtuoso'
+                namespace: 'http://onto.example.org'
+                defaultInstancesNamespace: 'http://data.example.org'
+                graphURI: 'http://example.org'
+            }
+        nsprop: 'http://onto.example.org/properties/'
+    }
+
 
 module.exports = NeDB()
 # module.exports = Stardog()
+# module.exports = Virtuoso()

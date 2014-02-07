@@ -5,7 +5,7 @@ expect = chai.expect
 StardogDB = require('../rdf').Database
 Model = require('../rdf').Model
 
-describe 'StardogDatabase', ()->
+describe.skip 'StardogDatabase', ()->
 
     models = {}
 

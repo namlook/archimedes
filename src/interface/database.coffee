@@ -78,6 +78,10 @@ class Database
         if typeof options is 'function' and not callback
             callback = options
             options = {}
+
+        unless callback
+            throw 'callback is required'
+
         options.limit = 1
 
         @find query, options, (err, results) ->
@@ -97,8 +101,10 @@ class Database
     #
     # example:
     #   @sync pojo, (err, obj) ->
-    sync: (pojo, callback) ->
-
+    sync: (pojo, options, callback) ->
+        if typeof options is 'function' and not callback
+            callback = options
+            options = {}
         unless callback
             throw 'callback is required'
 
@@ -109,24 +115,25 @@ class Database
             return callback null, pojo, {dbTouched: false}
 
         if pojo._id
-            @_update pojo, changes, (err, obj) =>
+            options.changes = changes
+            @_update pojo, options, (err, obj) =>
                 if err
                     return callback err
                 @_updateCache(pojo)
                 return callback null, pojo, {dbTouched: true}
         else
-            @_insert pojo, (err, obj) =>
+            @_insert pojo, options, (err, obj) =>
                 if err
                     return callback err
                 @_updateCache(obj)
                 return callback null, obj, {dbTouched: true}
 
 
-    _update: (pojo, changes, callback) ->
+    _update: (pojo, options, callback) ->
         callback '_update() is not implemented'
 
 
-    _insert: (pojo, callback) ->
+    _insert: (pojo, options, callback) ->
         callback '_insert() is not implemented'
 
     # ## batchSync
@@ -135,14 +142,18 @@ class Database
     #
     # example:
     #   @batchSync pojos, (err, data)
-    batchSync: (pojos, callback) ->
-
+    batchSync: (pojos, options, callback) ->
+        if typeof options is 'function' and not callback
+            callback = options
+            options = {}
         unless callback
             throw 'callback is required'
 
         async.map pojos, (pojo, cb) =>
-            @sync pojo, (err, result, options) ->
-                cb err, {result: result, options: options}
+            @sync pojo, options, (err, result, options) ->
+                if err
+                    return cb err
+                return cb null, {result: result, options: options}
         , (err, results, options) ->
             if err
                 return callback err
@@ -153,7 +164,6 @@ class Database
     # Returns null if nothing has changed
     # Return undefined if the pojo is not yet saved into the db
     changes: (pojo) ->
-
         if @_cache[pojo._id] is undefined
             return undefined
 
@@ -198,12 +208,12 @@ class Database
                                         added[fieldName][lang] = [] unless added[fieldName][lang]
                                         removed[fieldName][lang] = [] unless removed[fieldName][lang]
                                         if __infos.changed is 'added'
-                                            added[fieldName][lang] = __infos.value
+                                            added[fieldName][lang].push __infos.value
                                         else if __infos.changed is 'removed'
-                                            removed[fieldName][lang] = __infos.value
+                                            removed[fieldName][lang].push __infos.value
                                         else if __infos.changed is 'primitive change'
-                                            added[fieldName][lang] = __infos.added
-                                            removed[fieldName][lang] = __infos.removed
+                                            added[fieldName][lang].push __infos.added
+                                            removed[fieldName][lang].push __infos.removed
 
                 else # this is a regular field
                     if infos.changed is 'added'
@@ -317,8 +327,8 @@ class Database
     # Generate a unique ID for the model
     __buildId: () ->
         now = new Date()
-        rand = Math.floor(Math.random() * 10)
-        return rand + parseInt(now.getTime()).toString(36)
+        rand = Math.floor(Math.random() * 10000)
+        return parseInt(rand).toString(36) + parseInt(now.getTime()).toString(36)
 
 
 module.exports = Database

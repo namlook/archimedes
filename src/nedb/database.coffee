@@ -41,7 +41,7 @@ class Database extends DatabaseInterface
 
     # ## _update
     # update a pojo into the database
-    _update: (pojo, changes, callback) ->
+    _update: (pojo, options, callback) ->
         @store.update {_id: pojo._id}, pojo, (err, obj) =>
             if err
                 return callback err
@@ -50,7 +50,7 @@ class Database extends DatabaseInterface
 
     # ## _insert
     # insert a pojo into the database
-    _insert: (pojo, callback) ->
+    _insert: (pojo, options, callback) ->
         @store.insert pojo, (err, obj) =>
             if err
                 return callback err
