@@ -7,6 +7,9 @@ Datastore = require 'nedb'
 
 class Database extends DatabaseInterface
 
+    dbtype: 'nedb'
+
+
     # options:
     #
     constructor: (options) ->
@@ -77,6 +80,12 @@ class Database extends DatabaseInterface
     # example:
     #   @_find query, options, (err, docs) ->
     _find: (query, options, callback) ->
+        newQuery = {}
+        for key, value of query
+            if '@' in key
+                newkey = key.replace('@', '.')
+                query[newkey] = value
+                delete query[key]
         call = @store.find query
         if options.limit
             call.limit options.limit

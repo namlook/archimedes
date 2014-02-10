@@ -12,6 +12,8 @@ triplestores = {
 
 class Database extends DatabaseInterface
 
+    dbtype: 'rdf'
+
     # options:
     #
     #   * store: the triple store name (default: stardog)
@@ -148,8 +150,11 @@ class Database extends DatabaseInterface
             throw 'callback is required'
 
         async.map pojos, ((pojo, cb) =>
-            convertedPojo = @__fillPojoUri(pojo)
-            sparqlQuery = @_getSparqlSyncQuery(convertedPojo)
+            try
+                convertedPojo = @__fillPojoUri(pojo)
+                sparqlQuery = @_getSparqlSyncQuery(convertedPojo)
+            catch e
+                return cb e
 
             if sparqlQuery is null
                 sparqlQuery = ''
@@ -206,8 +211,8 @@ class Database extends DatabaseInterface
                         target.push "<#{pojo._id}> <#{property}> \"#{value}\""
                 return target
 
-            addedNtriples = fillChangesTriples(changes.added)
-            removedNtriples = fillChangesTriples(changes.removed)
+            addedNtriples = @_pojo2nt(pojo._id, changes.added)
+            removedNtriples = @_pojo2nt(pojo._id, changes.removed)
 
             sparqlQuery = ''
             if removedNtriples.length
@@ -218,7 +223,7 @@ class Database extends DatabaseInterface
         else
             unless pojo._id?
                 pojo._id = @__buildURI()
-            ntriples = @_pojo2nt(pojo)
+            ntriples = @_pojo2nt(pojo._id, pojo)
             sparqlQuery = "insert data {graph <#{@graphURI}> { #{ntriples.join(' .\n')} }};"
 
         return sparqlQuery
@@ -235,13 +240,17 @@ class Database extends DatabaseInterface
         catch e
             return callback e
 
-        sparqlQuery = "select ?s from <#{@graphURI}> where {#{query}}"
+        sparqlQuery = "select distinct ?s from <#{@graphURI}> where {#{query}}"
 
-        @store.query sparqlQuery, options, (err, data) ->
+        @store.query sparqlQuery, options, (err, data) =>
             if err
                 return callback err
 
-            return callback null, (item.s.value for item in data)
+            ids = (item.s.value for item in data)
+            unless options.instances
+                return callback null, ids
+            else
+                return @_findByIds ids, options, callback
 
 
     # ## _findByIds
@@ -428,24 +437,19 @@ class Database extends DatabaseInterface
         return newpojo
 
 
-    _pojo2nt: (pojo) ->
+    _pojo2nt: (uri, changes) ->
         ntriples = []
-        uri = pojo._id
 
         addTriple = (value, lang) =>
             if _.isObject(value) and value._uri?
                 triple = "<#{uri}> <#{property}> <#{value._uri}>"
             else
-                if lang
-                    triple = "<#{uri}> <#{property}> \"#{value}\"@#{lang}"
-                else
-                    value = @_valueToRdf(value)
-                    triple = "<#{uri}> <#{property}> #{value}"
+                value = @_valueToRdf(value, lang)
+                triple = "<#{uri}> <#{property}> #{value}"
             ntriples.push triple
 
         # build the n-triples
-        for property, value of pojo
-
+        for property, value of changes
             if property is '_id'
                 continue
 
@@ -455,10 +459,10 @@ class Database extends DatabaseInterface
                     addTriple(val)
 
             # i18n field
-            else if _.isObject(value) and not value._uri?
+            else if _.isObject(value) and not value._uri? and not _.isDate(value)
                 for lang, val of value
                     if _.isArray(val) # multi-i18n field
-                        for _val of val
+                        for _val in val
                             addTriple(_val, lang)
                     else # regular i18n field
                         addTriple(val, lang)
@@ -469,48 +473,48 @@ class Database extends DatabaseInterface
         return ntriples
 
 
-    _fieldsToTriples: (model, fields) =>
-        schema = model.schema
-        triples = []
-        unless model.id?
-            throw "'#{model.meta.name}' has no id"
-        modelURI = model.id
+    # _fieldsToTriples: (model, fields) =>
+    #     schema = model.schema
+    #     triples = []
+    #     unless model.id?
+    #         throw "'#{model.meta.name}' has no id"
+    #     modelURI = model.id
 
-        for fieldName, value of fields
-            # get the property uri
-            propertyUri = schema[fieldName].uri
-            unless propertyUri
-                propertyUri = "#{model.meta.propertiesNamespace}/#{fieldName}"
+    #     for fieldName, value of fields
+    #         # get the property uri
+    #         propertyUri = schema[fieldName].uri
+    #         unless propertyUri
+    #             propertyUri = "#{model.meta.propertiesNamespace}/#{fieldName}"
 
-            # get the property type
-            fieldType = schema[fieldName].type
+    #         # get the property type
+    #         fieldType = schema[fieldName].type
 
-            if schema[fieldName].i18n
-                for lang, val of value
-                    if schema[fieldName].multi
-                        for vl in val
-                            rdfValue = @_valueToRdf(vl, {
-                                'type': fieldType
-                                'lang': lang
-                            })
-                            triples.push "<#{modelURI}> <#{propertyUri}> #{rdfValue}"
-                    else
-                        rdfValue = @_valueToRdf(val, {
-                            'type': fieldType
-                            'lang': lang
-                        })
-                        triples.push "<#{modelURI}> <#{propertyUri}> #{rdfValue}"
-            else if schema[fieldName].multi
-                for val in value
-                    rdfValue = @_valueToRdf(val, {'type': fieldType})
-                    triples.push "<#{modelURI}> <#{propertyUri}> #{rdfValue}"
-            else
-                rdfValue = @_valueToRdf(value, {'type': fieldType})
-                triples.push "<#{modelURI}> <#{propertyUri}> #{rdfValue}"
-        return triples
+    #         if schema[fieldName].i18n
+    #             for lang, val of value
+    #                 if schema[fieldName].multi
+    #                     for vl in val
+    #                         rdfValue = @_valueToRdf(vl, {
+    #                             'type': fieldType
+    #                             'lang': lang
+    #                         })
+    #                         triples.push "<#{modelURI}> <#{propertyUri}> #{rdfValue}"
+    #                 else
+    #                     rdfValue = @_valueToRdf(val, {
+    #                         'type': fieldType
+    #                         'lang': lang
+    #                     })
+    #                     triples.push "<#{modelURI}> <#{propertyUri}> #{rdfValue}"
+    #         else if schema[fieldName].multi
+    #             for val in value
+    #                 rdfValue = @_valueToRdf(val, {'type': fieldType})
+    #                 triples.push "<#{modelURI}> <#{propertyUri}> #{rdfValue}"
+    #         else
+    #             rdfValue = @_valueToRdf(value, {'type': fieldType})
+    #             triples.push "<#{modelURI}> <#{propertyUri}> #{rdfValue}"
+    #     return triples
 
-    _valueToRdf: (value) =>
-        return value2rdf(value)
+    _valueToRdf: (value, lang) =>
+        return value2rdf(value, lang)
     #     if value._id?
     #         value = "<#{value._id}>"
     #     if _.isBoolean(value)
