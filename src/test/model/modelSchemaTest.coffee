@@ -6,15 +6,13 @@ chai = require('chai')
 chai.Assertion.includeStack = true;
 expect = chai.expect
 
-Model = require('../interface').Model
-# Database = require('../interface').Database
-Database = require('./config').Database
+config = require('../config')
 
 describe 'Model.schema', ()->
 
     models = {}
 
-    class models.A extends Model
+    class models.A extends config.Model
         schema:
             defaultValue:
                 type: 'string'
@@ -72,7 +70,7 @@ describe 'Model.schema', ()->
     db = null
 
     beforeEach (next) ->
-        db = Database()
+        db = config.Database()
         db.registerModels models
         next()
 
@@ -457,7 +455,7 @@ describe 'Model.schema', ()->
                         return ok
             }
 
-            class B extends Model
+            class B extends config.Model
                 schema:
                     thefoo:
                         type: 'foo'
@@ -480,7 +478,7 @@ describe 'Model.schema', ()->
                         value.split('-')[1][0] isnt '5'
             }
 
-            class B extends Model
+            class B extends config.Model
                 schema:
                     theslug:
                         type: 'slug'

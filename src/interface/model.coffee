@@ -135,6 +135,10 @@ class Model
         @_updateCachedProperties()
 
 
+    @beforeQuery: (query, options, callback) ->
+        return callback null, query, options
+
+
     # # Static methods
 
     # ## find
@@ -170,17 +174,22 @@ class Model
     #    the db. If `prefixes` is an object, the key is the prefix and the value
     #    the full URL.
     @find: (query, options, callback) ->
-        if typeof(options) is 'function' and not callback
+        if typeof(query) is 'function'
+            callback = query
+            query = {}
+            options = {}
+        else if typeof(options) is 'function' and not callback
             callback = options
             options = {}
 
         unless callback
             throw 'callback is required'
 
-        @db.find query, options, (err, pojos) =>
-            if err
-                return callback err
-            return callback null, (new @(pojo) for pojo in pojos)
+        @beforeQuery query, options, (err, query, options) =>
+            @db.find query, options, (err, pojos) =>
+                if err
+                    return callback err
+                return callback null, (new @(pojo) for pojo in pojos)
 
 
     # ## findURIs
@@ -779,13 +788,13 @@ class Model
         @_properties = {}
         for key, value of @_cachedProperties
             if _.isArray value
-                @_properties[key] = (_.clone(val) for val in value)
+                @_properties[key] = _.clone(value)
             else if _.isObject(value) and not _.isArray(value)
                 @_properties[key] = {} unless @_properties[key]
                 for lang, val of value
-                    @_properties[key][lang] = _.clone(val)
+                    @_properties[key][lang] = val
             else
-                @_properties[key] = _.clone(value)
+                @_properties[key] = value
 
 
     # ## delete
@@ -847,8 +856,8 @@ class Model
                         else
                             jsonObject[key].push val.id
                     else
-                        jsonObject[key].push _.clone(val)
-            else if _.isObject(value) and not _.isArray(value)
+                        jsonObject[key].push val
+            else if _.isObject(value) and not _.isArray(value) and not _.isDate(value)
                 jsonObject[key] = {} unless jsonObject[key]?
                 if value.meta?.name and value.toJSONObject?
                     if options.embed
@@ -857,9 +866,9 @@ class Model
                         jsonObject[key] = value.id
                 else
                     for lang, val of value
-                        jsonObject[key][lang] = _.clone(val)
+                        jsonObject[key][lang] = val
             else
-                jsonObject[key] = _.clone(value)
+                jsonObject[key] = value
         return jsonObject
 
 
@@ -994,12 +1003,12 @@ class Model
         @_cachedProperties = {}
         for key, value of @_properties
             if _.isArray value
-                @_cachedProperties[key] = (_.clone(val) for val in value)
+                @_cachedProperties[key] = _.clone(value)
             else if _.isObject(value) and not _.isArray(value)
                 @_cachedProperties[key] = {} unless @_cachedProperties[key]
                 for lang, val of value
-                    @_cachedProperties[key][lang] = _.clone(val)
+                    @_cachedProperties[key][lang] = val
             else
-                @_cachedProperties[key] = _.clone(value)
+                @_cachedProperties[key] = value
 
 module.exports = Model

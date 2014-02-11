@@ -79,6 +79,24 @@ describe 'Database.find()', ()->
                 db.find query, (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 1
+                    expect(results[0][f.title]).to.be.equal 2
+                    done()
+
+
+        it 'should handle date', (done) ->
+            pojo = {}
+            pojo[f.title] = 12
+            pojo[f.index] = new Date(2014, 1, 1).toISOString()
+            db.sync pojo, (err, obj, infos) ->
+                expect(err).to.be.null
+                expect(infos.dbTouched).to.be.true
+                expect(obj._id).to.be.not.null
+                db.find obj._id, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 1
+                    expect(results[0][f.title]).to.be.equal pojo[f.title]
+                    expect(results[0][f.index]).to.be.equal(pojo[f.index])
+                    expect(results[0]._id).to.be.equal obj._id
                     done()
 
 
@@ -97,6 +115,8 @@ describe 'Database.find()', ()->
                 db.find query, (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 2
+                    expect(Boolean(r[f.index]) for r in results).to.include true
+                    expect(Boolean(r[f.index]) for r in results).to.not.include false
                     done()
 
         it 'should handle date', (done) ->
@@ -179,7 +199,7 @@ describe 'Database.find()', ()->
                 expect(err).to.be.null
                 query = {}
                 query[f.title] = {$gte: 2}
-                db.find query, {instances: true}, (err, results) ->
+                db.find query, (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 4
                     done()
@@ -384,6 +404,9 @@ describe 'Database.find()', ()->
                 db.find query, (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 1
+                    expect(results[0][f.title]).to.be.equal 1
+                    expect(new Date(i).toISOString() for i in results[0][f.index])
+                      .to.include new Date(2014, 1, 1).toISOString()
                     done()
 
         it 'should handle date [$ne]', (done) ->
@@ -416,6 +439,8 @@ describe 'Database.find()', ()->
                 db.find query, (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 1
+                    expect(results[0][f.title].en).to.be.equal '4'
+                    expect(results[0][f.title].fr).to.be.equal '12'
                     done()
 
         it 'should return an error if the value is not a string', (done) ->
@@ -485,24 +510,23 @@ describe 'Database.find()', ()->
                 db.sync obj, (err, newobj, infos) ->
                     expect(err).to.be.null
 
-                    console.log '....', newobj
-
                     expect(infos.dbTouched).to.be.true
                     expect(newobj[f.title].fr).to.be.equal 'toto'
                     expect(newobj[f.title].en).to.be.equal 'changed'
                     expect(newobj[f.index]).to.include 1, 2, 3, 'changed'
-                    expect(newobj[f.foo].en[0]).to.be.equal 'changed'
-                    expect(newobj[f.foo].fr[0]).to.be.equal 'bonjour'
+                    expect(newobj[f.foo].en).to.include 'changed', 'hi'
+                    expect(newobj[f.foo].en).to.not.include 'hello'
+                    expect(newobj[f.foo].fr).to.include 'bonjour', 'salut'
                     expect(newobj._id).to.be.equal obj._id
 
                     db.first newobj._id, (err, obj3) ->
                         expect(err).to.be.null
-                        console.log '=====', obj3 # TODO insert @en lang
                         expect(obj3[f.title].fr).to.be.equal 'toto'
                         expect(obj3[f.title].en).to.be.equal 'changed'
                         expect(obj3[f.index]).to.include 1, 2, 3, 'changed'
-                        expect(obj3[f.foo].en[0]).to.be.equal 'changed'
-                        expect(obj3[f.foo].fr[0]).to.be.equal 'bonjour'
+                        expect(obj3[f.foo].en).to.include 'changed', 'hi'
+                        expect(newobj[f.foo].en).to.not.include 'hello'
+                        expect(obj3[f.foo].fr).to.include 'bonjour', 'salut'
                         expect(obj3._id).to.be.equal newobj._id
 
                         db.count (err, count) ->
@@ -541,7 +565,7 @@ describe 'Database.find()', ()->
                 expect(err).to.be.null
                 query = {}
                 query[f.title] = {'$gt': 2}
-                db.first query, {instances: true}, (err, doc) ->
+                db.first query, (err, doc) ->
                     expect(err).to.be.null
                     expect(doc[f.title]).to.be.gt 2
                     expect(doc[f.index]).to.be.gt 20

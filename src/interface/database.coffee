@@ -44,9 +44,16 @@ class Database
     # example
     #   @find {title: foo, age: {$gt: 1}}, options, (err, docs) ->
     find: (query, options, callback) ->
-        if typeof options is 'function' and not callback
+        if typeof(query) is 'function'
+            callback = query
+            query = {}
+            options = {}
+        else if typeof(options) is 'function' and not callback
             callback = options
             options = {}
+
+        unless options.instances?
+            options.instances = true
 
         unless callback
             throw 'callback is required'
@@ -75,7 +82,7 @@ class Database
     # example:
     #   @first query, options, (err, doc) ->
     first: (query, options, callback) ->
-        if typeof options is 'function' and not callback
+        if typeof(options) is 'function' and not callback
             callback = options
             options = {}
 
@@ -102,7 +109,7 @@ class Database
     # example:
     #   @sync pojo, (err, obj) ->
     sync: (pojo, options, callback) ->
-        if typeof options is 'function' and not callback
+        if typeof(options) is 'function' and not callback
             callback = options
             options = {}
         unless callback
@@ -143,7 +150,7 @@ class Database
     # example:
     #   @batchSync pojos, (err, data)
     batchSync: (pojos, options, callback) ->
-        if typeof options is 'function' and not callback
+        if typeof(options) is 'function' and not callback
             callback = options
             options = {}
         unless callback
@@ -288,6 +295,10 @@ class Database
 
         unless model::schema?
             throw "#{modelName} has not schema"
+
+        for fieldName, field of model::schema
+            if field.i18n and field.type isnt 'string'
+                throw "#{modelName}.#{fieldName} is i18n and must be of type string"
 
         # if the model doesn't specify default language, we set it
         unless model::meta.defaultLang

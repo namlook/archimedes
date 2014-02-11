@@ -3,16 +3,14 @@ chai = require('chai')
 chai.Assertion.includeStack = true;
 expect = chai.expect
 
-Model = require('../interface').Model
-# Database = require('../interface').Database
-Database = require('./config').Database
+config = require('../config')
 
 
 describe "Model's inheritance:", ()->
 
     models = {}
 
-    class models.A extends Model
+    class models.A extends config.Model
         schema:
             afield:
                 readOnly: true
@@ -39,7 +37,7 @@ describe "Model's inheritance:", ()->
             cfield:
                 type: 'string'
 
-    db = Database()
+    db = config.Database()
 
     db.registerModels models
 

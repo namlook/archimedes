@@ -76,23 +76,33 @@ class Database extends DatabaseInterface
 
     # ## _find
     # perform a find query against a regular query
+    # The query is a mongo-like query which take the following form:
+    #
+    #     {fieldName: value, 'i18nfield@en': 'english content'}
+    #
+    # we can reach relations with the doted notation
+    #
+    #     {'blogPost.comment.author.name': 'Nico'}
     #
     # example:
     #   @_find query, options, (err, docs) ->
     _find: (query, options, callback) ->
-        newQuery = {}
+
+        # handle i18n query
         for key, value of query
             if '@' in key
                 newkey = key.replace('@', '.')
                 query[newkey] = value
                 delete query[key]
+
         call = @store.find query
+
         if options.limit
             call.limit options.limit
+
         call.exec (err, data) =>
             if err
                 return callback err
-
             return callback null, data
 
 

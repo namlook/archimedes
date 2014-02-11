@@ -70,7 +70,7 @@ class Database extends DatabaseInterface
     # ## count
     # return the number of item that match the query
     count: (query, callback) =>
-        if typeof query is 'function' and not callback
+        if typeof(query) is 'function' and not callback
             callback = query
             query = '?s ?p ?o .'
 
@@ -116,7 +116,7 @@ class Database extends DatabaseInterface
     # example:
     #   @sync pojo, (err, obj) ->
     sync: (pojo, options, callback) ->
-        if typeof options is 'function' and not callback
+        if typeof(options) is 'function' and not callback
             callback = options
             options = {}
         unless callback
@@ -143,7 +143,7 @@ class Database extends DatabaseInterface
     # example:
     #   @batchSync pojos, (err, data)
     batchSync: (pojos, options, callback) ->
-        if typeof options is 'function' and not callback
+        if typeof(options) is 'function' and not callback
             callback = options
             options = {}
         unless callback
@@ -230,7 +230,14 @@ class Database extends DatabaseInterface
 
 
     # ## _find
-    # perform a find query against a regular query
+    # Perform a find query against a regular query.
+    # The query is a mongo-like query which take the following form:
+    #
+    #     {fieldName: value, 'i18nfield@en': 'english content'}
+    #
+    # we can reach relations with the doted notation
+    #
+    #     {'blogPost.comment.author.name': 'Nico'}
     #
     # example:
     #   @_find query, options, (err, docs) ->
@@ -250,7 +257,7 @@ class Database extends DatabaseInterface
             unless options.instances
                 return callback null, ids
             else
-                return @_findByIds ids, options, callback
+                return @_findByIds ids, callback
 
 
     # ## _findByIds
@@ -274,22 +281,6 @@ class Database extends DatabaseInterface
         @_findByIds [id], options, callback
 
 
-    # #### Query
-    #
-    # ##### Mongo-like query
-    # A mongo-like query take the following form:
-    #
-    #     {fieldName: value}
-    #
-    # we can reach relations with the doted notation
-    #
-    #     {'blogPost.comment.author.name': 'Nico'}
-    @_findViaMongo: (mongoQuery, options, callback) ->
-        # ...
-
-
-
-
     # ##### Sparql-like query (aka Sparqlite)
     # A Sparql-like query take the followin form:
     #
@@ -307,42 +298,42 @@ class Database extends DatabaseInterface
         # ...
 
 
-    _describe: (model, uris, options, callback) =>
-        @store.describe uris, options, (err, rawdata) =>
-            if err
-                return callback err
+    # _describe: (model, uris, options, callback) =>
+    #     @store.describe uris, options, (err, rawdata) =>
+    #         if err
+    #             return callback err
 
-            properties = {}
-            schema = model::schema
-            results = []
-            for data in rawdata
-                for uri, item of data
-                    if uri is '@id'
-                        properties._id = item
+    #         properties = {}
+    #         schema = model::schema
+    #         results = []
+    #         for data in rawdata
+    #             for uri, item of data
+    #                 if uri is '@id'
+    #                     properties._id = item
 
-                    else if uri isnt '@type'
-                        prop = @_propertiesIndexURI[uri]
-                        if schema[prop].i18n
-                            unless properties[prop]?
-                                properties[prop] = {}
-                            for _item in item
-                                lang = _item['@language']
-                                value = _item['@value']
-                                if schema[prop].multi
-                                    unless lang
-                                        throw 'something wrong'
-                                    unless properties[prop][lang]?
-                                        properties[prop][lang] = []
-                                    properties[prop][lang].push value
-                                else
-                                    properties[prop][lang] = value
+    #                 else if uri isnt '@type'
+    #                     prop = @_propertiesIndexURI[uri]
+    #                     if schema[prop].i18n
+    #                         unless properties[prop]?
+    #                             properties[prop] = {}
+    #                         for _item in item
+    #                             lang = _item['@language']
+    #                             value = _item['@value']
+    #                             if schema[prop].multi
+    #                                 unless lang
+    #                                     throw 'something wrong'
+    #                                 unless properties[prop][lang]?
+    #                                     properties[prop][lang] = []
+    #                                 properties[prop][lang].push value
+    #                             else
+    #                                 properties[prop][lang] = value
 
-                        else if schema[prop].multi
-                            properties[prop] = (_item['@value'] for _item in item)
-                        else
-                            properties[prop] = item[0]['@value']
-                results.push new model(properties)
-            return callback null, results
+    #                     else if schema[prop].multi
+    #                         properties[prop] = (_item['@value'] for _item in item)
+    #                     else
+    #                         properties[prop] = item[0]['@value']
+    #             results.push new model(properties)
+    #         return callback null, results
 
 
     #
@@ -444,7 +435,7 @@ class Database extends DatabaseInterface
             if _.isObject(value) and value._uri?
                 triple = "<#{uri}> <#{property}> <#{value._uri}>"
             else
-                value = @_valueToRdf(value, lang)
+                value = value2rdf(value, lang)
                 triple = "<#{uri}> <#{property}> #{value}"
             ntriples.push triple
 
@@ -472,81 +463,6 @@ class Database extends DatabaseInterface
 
         return ntriples
 
-
-    # _fieldsToTriples: (model, fields) =>
-    #     schema = model.schema
-    #     triples = []
-    #     unless model.id?
-    #         throw "'#{model.meta.name}' has no id"
-    #     modelURI = model.id
-
-    #     for fieldName, value of fields
-    #         # get the property uri
-    #         propertyUri = schema[fieldName].uri
-    #         unless propertyUri
-    #             propertyUri = "#{model.meta.propertiesNamespace}/#{fieldName}"
-
-    #         # get the property type
-    #         fieldType = schema[fieldName].type
-
-    #         if schema[fieldName].i18n
-    #             for lang, val of value
-    #                 if schema[fieldName].multi
-    #                     for vl in val
-    #                         rdfValue = @_valueToRdf(vl, {
-    #                             'type': fieldType
-    #                             'lang': lang
-    #                         })
-    #                         triples.push "<#{modelURI}> <#{propertyUri}> #{rdfValue}"
-    #                 else
-    #                     rdfValue = @_valueToRdf(val, {
-    #                         'type': fieldType
-    #                         'lang': lang
-    #                     })
-    #                     triples.push "<#{modelURI}> <#{propertyUri}> #{rdfValue}"
-    #         else if schema[fieldName].multi
-    #             for val in value
-    #                 rdfValue = @_valueToRdf(val, {'type': fieldType})
-    #                 triples.push "<#{modelURI}> <#{propertyUri}> #{rdfValue}"
-    #         else
-    #             rdfValue = @_valueToRdf(value, {'type': fieldType})
-    #             triples.push "<#{modelURI}> <#{propertyUri}> #{rdfValue}"
-    #     return triples
-
-    _valueToRdf: (value, lang) =>
-        return value2rdf(value, lang)
-    #     if value._id?
-    #         value = "<#{value._id}>"
-    #     if _.isBoolean(value)
-    #         value = "\"#{value}\"^^xsd:boolean"
-    #     else if _.isNumber(value)
-    #         if @_types.integer.validate(value)
-    #             type = 'integer'
-    #         else if @_types.float.validate(value)
-    #             type = 'float'
-    #         else
-    #             throw "unknown number's type: #{value}"
-    #         value = "\"#{value}\"^^xsd:#{type}"
-    #     else
-    #         quotedValue = value.replace(/"/g, '\\"')
-    #         value = "\"#{quotedValue}\""
-    #     return value
-
-
-    # _valueToRdfOld: (value, options) =>
-    #     {type, lang} = options
-    #     if @[type]?
-    #         if value.id
-    #             return "<#{value.id}>"
-    #         return "<#{value}>"
-    #     else if type is 'string'
-    #         quotedValue = value.replace(/"/g, '\\"')
-    #         if lang
-    #             return "\"#{quotedValue}\"@#{lang}"
-    #         return "\"#{quotedValue}\""
-    #     else if type is 'url'
-    #         return "\"#{value}\"^^xsd:anyURI"
-    #     return "#{value}^^xsd:#{type}"
 
 
 module.exports = Database

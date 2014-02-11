@@ -131,7 +131,7 @@ describe 'Database', ()->
 
         it 'should return the changes of a multi-i18n object', (done) ->
             pojo = {}
-            pojo[f.index] = {en: [1, 3, 5], fr: [2, 4, 6]}
+            pojo[f.index] = {en: ['1', '3', '5'], fr: ['2', '4', '6']}
             db.sync pojo, (err, obj, infos) ->
                 expect(err).to.be.null
                 expect(infos.dbTouched).to.be.true
@@ -139,17 +139,17 @@ describe 'Database', ()->
 
                 # multi i18n field
                 delete obj[f.index].en[1]
-                obj[f.index].en[0] = -1
-                obj[f.index].en.push 7
-                obj[f.index].es = [10, 11, 12]
+                obj[f.index].en[0] = '-1'
+                obj[f.index].en.push '7'
+                obj[f.index].es = ['10', '11', '12']
 
                 changes = db.changes(obj)
 
                 # multi i18n field
-                expect(changes.added[f.index].en).to.include -1, 5, 7
-                expect(changes.added[f.index].en).to.not.include 1, 3
-                expect(changes.removed[f.index].en).to.include 1, 3
+                expect(changes.added[f.index].en).to.include '-1', '5', '7'
+                expect(changes.added[f.index].en).to.not.include '1', '3'
+                expect(changes.removed[f.index].en).to.include '1', '3'
                 expect(changes.added[f.index].fr).to.be.undefined
-                expect(changes.added[f.index].es).to.include 10, 11, 12
+                expect(changes.added[f.index].es).to.include '10', '11', '12'
                 done()
 

@@ -3,6 +3,7 @@
 NeDB = () ->
     Database = require('../nedb/database')
     return {
+        Model: require('../interface/model')
         Database: () -> new Database()
         nsprop: ''
     }
@@ -10,6 +11,7 @@ NeDB = () ->
 Stardog = () ->
     Database = require('../rdf/database')
     return {
+        Model: require('../rdf/model')
         Database: () ->
             new Database {
                 store: 'stardog'
@@ -24,6 +26,7 @@ Stardog = () ->
 Virtuoso = () ->
     Database = require('../rdf/database')
     return {
+        Model: require('../rdf/model')
         Database: () ->
             new Database {
                 store: 'virtuoso'

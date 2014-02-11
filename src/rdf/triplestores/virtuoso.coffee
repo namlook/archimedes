@@ -106,10 +106,25 @@ module.exports = class Virtuoso
                 return callback err
 
             result = {}
-
             for item in data
                 result._id = item.s.value
-                result[item.p.value] = item.o.value
+                prop = item.p.value
+                lang = item.o.lang
+                if lang?
+                    result[prop] = {} unless result[prop]?
+                    result[prop][lang] = [] unless result[prop][lang]?
+                    result[prop][lang].push item.o.value
+                else
+                    result[prop] = [] unless result[prop]?
+                    result[prop].push item.o.value
+
+            for key, value of result
+                if _.isArray(value) and value.length is 1
+                    result[key] = value[0]
+                else if _.isObject(value) and not _.isArray(value)
+                    for lang, val of value
+                        if _.isArray(val) and val.length is 1
+                            result[key][lang] = val[0]
 
             if _.isEmpty result
                 result = null
