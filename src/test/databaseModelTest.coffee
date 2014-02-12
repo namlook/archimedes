@@ -4,7 +4,7 @@ expect = chai.expect
 Model = require('../interface').Model
 Database = require('./config').Database
 
-describe 'Database', ()->
+describe.skip 'Database', ()->
 
     models = {}
 

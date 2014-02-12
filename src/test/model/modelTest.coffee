@@ -676,12 +676,10 @@ describe 'Model', ()->
                     expect(infos.dbTouched).to.be.true
                     expect(obj.get('author').get('login')).to.be.equal 'bob'
                     expect(obj.get('blog').get('title')).to.be.equal 'the blog'
-                    db.first blog.id, (err, blog) ->
+                    db.Blog.first blog.id, (err, blog) ->
                         expect(err).to.be.null
-                        console.log '*********************', blog
                         expect(blog.get('title')).to.be.equal 'the blog'
-                        console.log '$$$$$$$$$$$$$$'
-                        db.Author.first blog.id, (err, author) ->
+                        db.Author.first author.id, (err, author) ->
                             expect(err).to.be.null
                             expect(author.get('login')).to.be.equal 'bob'
                             db.BlogPost.first obj.id, (err, blogPost) ->

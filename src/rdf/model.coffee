@@ -41,13 +41,14 @@ class RdfModel extends ModelInterface
                 key = @db._propertiesIndexURI[key]
                 delete properties[propURI]
                 properties[key] = value
-
+            if value._uri?
+                properties[key] = value._uri
         super properties
 
 
     # convert query's key into uris
     @beforeQuery: (query, options, callback) ->
-        unless _.isString(query)
+        if not _.isString(query) and not _.isArray(query)
             @_convertQueryUri(query)
         return callback null, query, options
 
@@ -60,7 +61,10 @@ class RdfModel extends ModelInterface
             if key in ['_id', '_type']
                 result[key] = value
             else
-                result[@getURI(key)] = value
+                if @db[@schema[key].type]?
+                    result[@getURI(key)] = {_uri: value}
+                else
+                    result[@getURI(key)] = value
         return result
 
 

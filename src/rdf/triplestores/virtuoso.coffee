@@ -101,25 +101,24 @@ module.exports = class Virtuoso
           <#{uri}> ?p ?o .
         }"""
 
-        console.log '°°°°°', sparqlQuery
-
-
         @sparql sparqlQuery, options, (err, data) ->
             if err
                 return callback err
-
             result = {}
             for item in data
                 result._id = item.s.value
                 prop = item.p.value
                 lang = item.o.lang
+                value = item.o.value
+                if item.o.type is 'uri'
+                    value = {_uri: value}
                 if lang?
                     result[prop] = {} unless result[prop]?
                     result[prop][lang] = [] unless result[prop][lang]?
-                    result[prop][lang].push item.o.value
+                    result[prop][lang].push value
                 else
                     result[prop] = [] unless result[prop]?
-                    result[prop].push item.o.value
+                    result[prop].push value
 
             for key, value of result
                 if _.isArray(value) and value.length is 1

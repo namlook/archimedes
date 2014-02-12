@@ -55,7 +55,7 @@ describe 'RdfModel', ()->
 
     db.registerModels models
 
-    afterEach (done) ->
+    beforeEach (done) ->
         db.clear done
 
     describe 'constructor()', () ->
@@ -83,32 +83,39 @@ describe 'RdfModel', ()->
             }
 
             propertiesNS = 'http://props.example.org/properties'
-            new GoodClass().meta.propertiesNamespace.should.equal propertiesNS
+            goodClass = new GoodClass()
+            expect(goodClass.meta.propertiesNamespace).to.be.equal propertiesNS
 
             uri = 'http://example.org/type/GoodClass2'
-            new GoodClass2().meta.uri.should.equal uri
+            goodClass = new GoodClass2()
+            expect(goodClass.meta.uri).to.be.equal uri
 
             instancesNS = 'http://example.org/data'
-            new GoodClass3().meta.instancesNamespace.should.equal instancesNS
+            goodClass = new GoodClass3()
+            expect(goodClass.meta.instancesNamespace).to.be.equal instancesNS
 
         it 'should have @meta.graphURI', () ->
             graphURI = 'http://example.org'
-            new db.Author().meta.graphURI.should.equal graphURI
+            author = new db.Author()
+            expect(author.meta.graphURI).to.be.equal graphURI
 
 
         it 'should have @meta.uri', () ->
             uri = 'http://onto.example.org/classes/Author'
-            new db.Author().meta.uri.should.equal uri
+            author = new db.Author()
+            expect(author.meta.uri).to.be.equal uri
 
 
         it 'should have @meta.propertiesNamespace', () ->
             propertiesNS = 'http://onto.example.org/properties'
-            new db.Author().meta.propertiesNamespace.should.equal propertiesNS
+            author = new db.Author()
+            expect(author.meta.propertiesNamespace).to.be.equal propertiesNS
 
 
         it 'should have @meta.instancesNamespace', () ->
             instancesNS = 'http://data.example.org/author'
-            new db.Author().meta.instancesNamespace.should.equal instancesNS
+            author = new db.Author()
+            expect(author.meta.instancesNamespace).to.be.equal instancesNS
 
         it 'should generate an URI as id when the is is passed to the constructor', () ->
             blog = new db.Blog {_id: 'test', 'title': 'test'}
@@ -223,7 +230,7 @@ describe 'RdfModel', ()->
             blogPost = new db.BlogPost
             blogPost.push 'keyword', 'foo'
             blogPost.push 'keyword', 'bar'
-            blogPost.get('keyword').should.include 'foo', 'bar'
+            expect(blogPost.get('keyword')).to.include 'foo', 'bar'
             blogPost.unset 'keyword'
             expect(blogPost.get 'keyword' ).to.be.undefined
 
@@ -326,34 +333,6 @@ describe 'RdfModel', ()->
                         expect(total).to.be.equal 5
                         done()
 
-        it 'should fire a store request only once if there is changes', (done) ->
-            store = db.store
-            spy = sinon.spy(store, 'update')
-            blogPost = new db.BlogPost()
-            blogPost.set 'title', 'hello world', 'en'
-            blogPost.set 'keyword', ['hello', 'world']
-            blogPost.set 'content', 'article'
-            blogPost.save (err) ->
-                expect(spy.calledOnce).to.be.true
-                spy.restore()
-                done()
-
-        it "shouldn't fire a store request if there is no value changes", (done) ->
-            store = db.store
-            spy = sinon.spy(store, 'update')
-            blogPost = new db.BlogPost()
-            blogPost.set 'title', 'hello world', 'en'
-            blogPost.set 'keyword', ['hello', 'world']
-            blogPost.set 'content', 'article'
-            blogPost.save (err) ->
-                blogPost.set 'title', 'salut monde', 'fr'
-                blogPost.rollback()
-                expect(blogPost.hasChanged()).to.be.false
-                blogPost.save (err) ->
-                    expect(spy.calledOnce).to.be.true
-                    spy.restore()
-                    done()
-
     describe '.delete()', ()->
         it 'should remove a saved instance from the database', (done) ->
             blogPost = new db.BlogPost()
@@ -380,7 +359,7 @@ describe 'RdfModel', ()->
                 expect(err).to.be.equal "can't delete a non-saved model"
                 done()
 
-    describe.only '.getSerializableObject()', () ->
+    describe '.getSerializableObject()', () ->
         it 'should convert the uri _id to the regular _id', (done) ->
             blogPost = new db.BlogPost
             blogPost.set 'title', 'hello world', 'en'
@@ -392,6 +371,23 @@ describe 'RdfModel', ()->
                 expect(serializedModel._id).to.be.equal model.id
                 expect(serializedModel['http://onto.example.org/properties/_id']).to.be.undefined
                 done()
+
+    describe 'relationship', () ->
+        it 'should store relations uri into the db', (done) ->
+            blog = new db.Blog {title: 'My blog'}
+            author = new db.Author {login: 'nico'}
+            blogPost = new db.BlogPost
+            blogPost.set 'title', {en: 'hello world', fr: 'salut monde'}
+            blogPost.set 'content', 'first post'
+            blogPost.set 'author', author
+            blogPost.set 'blog', blog
+            blogPost.save (err, model, dbtouched) ->
+                expect(err).to.be.null
+                db.first  model.id, (err, rawBloPost) ->
+                    expect(rawBloPost['http://onto.example.org/properties/blog']).to.have.property '_uri'
+                    expect(rawBloPost['http://onto.example.org/properties/author']).to.have.property '_uri'
+                    expect(rawBloPost['http://onto.example.org/properties/title']).to.not.have.property '_uri'
+                    done()
 
     describe '.getJSONObject()', () ->
         it 'should return a jsonable object with related instance ids'

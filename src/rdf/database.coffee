@@ -128,9 +128,6 @@ class Database extends DatabaseInterface
         if sparqlQuery is null
             return callback null, pojo, {dbTouched: false}
 
-
-        console.log '>>>', sparqlQuery
-
         @store.update sparqlQuery, options, (err, ok) =>
             if err
                 return callback err
