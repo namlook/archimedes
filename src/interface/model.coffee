@@ -94,6 +94,11 @@ class Model
         _id:
             readOnly: true
             type: 'string'
+        _type:
+            protected: true
+            type: 'string'
+            default: (model) ->
+                model.meta.name
     })
 
 
@@ -643,9 +648,14 @@ class Model
     #
     # If `options` is a string, it is taken as a lang code
     has: (fieldName, options) =>
-        @__checkFieldExistance(fieldName)
+        unless @schema[fieldName]?
+            return false
 
-        options = @__parseOptions(options, {}, fieldName)
+        options = @__parseOptions(options, {validate: true }, fieldName)
+
+        if _.isString options
+            if @schema[fieldName].i18n
+                options = {lang: options}
 
         if @schema[fieldName].i18n
             lang = options.lang
@@ -765,7 +775,7 @@ class Model
                 return callback err
             dbTouched =  _.some(_.map(results, (obj)-> obj.dbTouched))
 
-            @db.sync @toJSONObject(), (err, obj, infos) =>
+            @db.sync @toSerializableObject(), (err, obj, infos) =>
                 if err
                     return callback err
 
@@ -775,7 +785,9 @@ class Model
                         @set '_id', obj._id
 
                 dbTouched = infos.dbTouched or dbTouched
+
                 @_updateCachedProperties()
+
                 return callback null, @, {dbTouched: dbTouched}
 
 
@@ -826,7 +838,10 @@ class Model
     clone: () ->
         props = @toJSONObject()
         delete props._id
-        return new @constructor(props)
+        clonedObj = new @db[@meta.name](@toJSONObject())
+        delete clonedObj._properties._id
+        delete clonedObj.id
+        return clonedObj
 
 
     # ## isNew
@@ -870,6 +885,16 @@ class Model
             else
                 jsonObject[key] = value
         return jsonObject
+
+
+
+    # ## toSerializableObject
+    # convert the model into a simple pojo which will be passed to the database
+    # The implementation of this method may be different that toJSONObject
+    # because of some database specificity. For instance, triples stores are
+    # using uri for identifing fields.
+    toSerializableObject: (options) ->
+        return @toJSONObject(options)
 
 
     # ## toJSON

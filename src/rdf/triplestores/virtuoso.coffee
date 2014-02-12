@@ -101,6 +101,9 @@ module.exports = class Virtuoso
           <#{uri}> ?p ?o .
         }"""
 
+        console.log '°°°°°', sparqlQuery
+
+
         @sparql sparqlQuery, options, (err, data) ->
             if err
                 return callback err

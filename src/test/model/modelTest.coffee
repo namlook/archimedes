@@ -67,7 +67,7 @@ describe 'Model', ()->
 
     db.registerModels models
 
-    afterEach (done) ->
+    beforeEach (done) ->
         db.clear done
 
     describe '.constructor()', () ->
@@ -575,7 +575,7 @@ describe 'Model', ()->
 
 
     describe '.save()', ()->
-        it 'should generate a generic id if no id is set', () ->
+        it 'should generate a generic id if no id is set', (done) ->
             blogPost = new db.BlogPost
             blogPost.set 'title', 'hello world', 'en'
             blogPost.set 'keyword', ['foo', 'bar']
@@ -587,6 +587,7 @@ describe 'Model', ()->
                 expect(model.id).to.be.equal blogPost.id
                 expect(blogPost.id).to.be.not.undefined
                 expect(blogPost.id).to.be.string
+                done()
 
         it "shouldn't generate an id if the id is set", (done) ->
             blogPost = new db.BlogPost
@@ -675,13 +676,23 @@ describe 'Model', ()->
                     expect(infos.dbTouched).to.be.true
                     expect(obj.get('author').get('login')).to.be.equal 'bob'
                     expect(obj.get('blog').get('title')).to.be.equal 'the blog'
-                    db.BlogPost.find [blog.id, author.id], (err, results) ->
+                    db.first blog.id, (err, blog) ->
                         expect(err).to.be.null
-                        expect(r.login for r in results).to.include 'bob'
-                        expect(r.login for r in results).to.not.include 'nico'
-                        expect(r.title for r in results).to.include 'the blog'
-                        expect(r.title for r in results).to.not.include 'my blog'
-                        done()
+                        console.log '*********************', blog
+                        expect(blog.get('title')).to.be.equal 'the blog'
+                        console.log '$$$$$$$$$$$$$$'
+                        db.Author.first blog.id, (err, author) ->
+                            expect(err).to.be.null
+                            expect(author.get('login')).to.be.equal 'bob'
+                            db.BlogPost.first obj.id, (err, blogPost) ->
+                                expect(err).to.be.null
+                                expect(obj.get('author').get('login')).to.be.equal(
+                                    'bob')
+                                expect(obj.get('blog').get('title')).to.be.equal(
+                                    'the blog')
+                                expect(obj.get('title', 'en')).to.be.equal(
+                                    'hello world')
+                                done()
 
         it 'should generate an id from a specified field if no id is set'
         it 'should store the values of an instance into the database'
@@ -710,13 +721,8 @@ describe 'Model', ()->
             blogPost.set 'title', 'hello world', 'en'
             blogPost.set 'keyword', ['foo', 'bar']
             jsonBlogPost = blogPost.toJSONObject()
-            jsonBlogPost.title.en.should.be.equal 'hello world'
-            jsonBlogPost.keyword.should.include 'foo', 'bar'
-            jsonObj = {
-                "title":{"en":"hello world"},
-                "keyword":["foo","bar"]
-            }
-            JSON.stringify(jsonBlogPost).should.be.equal json
+            expect(jsonBlogPost.title.en).to.be.equal 'hello world'
+            expect(jsonBlogPost.keyword).to.include 'foo', 'bar'
 
         it 'should include the id', () ->
             blogPost = new db.BlogPost
@@ -740,8 +746,12 @@ describe 'Model', ()->
             blogPost = new db.BlogPost
             blogPost.set 'title', 'hello world', 'en'
             blogPost.set 'keyword', ['foo', 'bar']
-            json = '{"title":{"en":"hello world"},"keyword":["foo","bar"]}'
-            blogPost.toJSON().should.be.equal json
+            jsonObject = {
+                "_type": blogPost.get('_type')
+                "title":{"en":"hello world"}
+                "keyword":["foo","bar"]
+            }
+            expect(blogPost.toJSON()).to.be.equal JSON.stringify jsonObject
 
         it 'should include the id', () ->
             blogPost = new db.BlogPost

@@ -1,14 +1,12 @@
 
 chai = require('chai')
 expect = chai.expect
-sinon = require 'sinon'
-should = chai.should()
 
 config = require('../config')
 RdfModel = config.Model
 RdfDatabase = config.Database
 
-describe.skip 'RdfModel', ()->
+describe 'RdfModel', ()->
 
     models = {}
 
@@ -382,6 +380,18 @@ describe.skip 'RdfModel', ()->
                 expect(err).to.be.equal "can't delete a non-saved model"
                 done()
 
+    describe.only '.getSerializableObject()', () ->
+        it 'should convert the uri _id to the regular _id', (done) ->
+            blogPost = new db.BlogPost
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'keyword', ['foo', 'bar']
+            expect(blogPost.id).to.be.undefined
+            blogPost.save (err, model, dbtouched) ->
+                expect(err).to.be.null
+                serializedModel = model.toSerializableObject()
+                expect(serializedModel._id).to.be.equal model.id
+                expect(serializedModel['http://onto.example.org/properties/_id']).to.be.undefined
+                done()
 
     describe '.getJSONObject()', () ->
         it 'should return a jsonable object with related instance ids'

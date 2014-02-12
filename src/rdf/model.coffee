@@ -52,13 +52,17 @@ class RdfModel extends ModelInterface
         return callback null, query, options
 
 
-    # convert the jsonObject'keys into uris
-    toJSONObject: (options) ->
+    # convert the model into an object which will be passed to the database
+    toSerializableObject: (options) ->
         jsonObj = super(options)
         result = {}
         for key, value of jsonObj
-            result[@getURI(key)] = value
+            if key in ['_id', '_type']
+                result[key] = value
+            else
+                result[@getURI(key)] = value
         return result
+
 
     # convert query's key into uri
     @_convertQueryUri: (query) ->

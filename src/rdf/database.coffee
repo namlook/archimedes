@@ -128,6 +128,9 @@ class Database extends DatabaseInterface
         if sparqlQuery is null
             return callback null, pojo, {dbTouched: false}
 
+
+        console.log '>>>', sparqlQuery
+
         @store.update sparqlQuery, options, (err, ok) =>
             if err
                 return callback err
@@ -419,8 +422,8 @@ class Database extends DatabaseInterface
     __fillPojoUri: (pojo) ->
         newpojo = {}
         for fieldName, value of pojo
-            if fieldName is '_id'
-                newpojo._id = value
+            if fieldName in ['_id', '_type']
+                newpojo[fieldName] = value
             else unless _.str.startsWith(fieldName, 'http://')
                 newpojo["#{@defaultPropertiesNamespace}/#{fieldName}"] = value
             else
@@ -441,7 +444,7 @@ class Database extends DatabaseInterface
 
         # build the n-triples
         for property, value of changes
-            if property is '_id'
+            if property in ['_id', '_type']
                 continue
 
             # multi field
