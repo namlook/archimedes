@@ -234,11 +234,11 @@ describe 'model.find', ()->
             db.batchSync [obj.toJSONObject(), obj2.toJSONObject()], (err, data) ->
                 expect(err).to.be.null
                 expect(_.every(i.options.dbTouched for i in data)).to.be.true
-                db.Literal.find {integer: {$nin: [1, 4]}}, (err, results) ->
+                db.Literal.find {integer: {$nin: [2, 4]}}, (err, results) ->
                     expect(err).to.be.null
-                    expect(results.length).to.be.equal 2
+                    expect(results.length).to.be.equal 1
                     strings = (i.get('string') for i in results)
-                    expect(strings).to.include.members ['hello', 'salut']
+                    expect(strings).to.include.members ['salut']
                     db.Literal.find {integer: {$nin: [2, 3]}}, (err, results) ->
                         expect(err).to.be.null
                         expect(results.length).to.be.equal 0
@@ -608,6 +608,7 @@ describe 'model.find', ()->
                     ]
                     done()
 
+
         it 'should query the docs ($nin)', (done) ->
             obj = new db.Multi
             obj.push 'string', 'hello'
@@ -615,32 +616,40 @@ describe 'model.find', ()->
             obj.set 'integer', [1, 2, 3]
             obj.push 'date', new Date(2014, 1, 1)
             obj.push 'date', new Date(2014, 2, 1)
+
             obj2 = new db.Multi
             obj2.push 'string', 'hi'
             obj2.push 'string', 'salut'
             obj2.set 'integer', [3, 4, 5]
             obj2.push 'date', new Date(2014, 2, 1)
             obj2.push 'date', new Date(2014, 3, 1)
+
             db.batchSync [obj.toJSONObject(), obj2.toJSONObject()], (err, data) ->
                 expect(err).to.be.null
                 expect(_.every(i.options.dbTouched for i in data)).to.be.true
-                db.Multi.find {integer: {$nin: [0, 6, 7]}}, (err, results) ->
+
+                db.Multi.find {integer: {$nin: [1, 6, 7]}}, (err, results) ->
                     expect(err).to.be.null
-                    expect(results.length).to.be.equal 2
+                    expect(results.length).to.be.equal 1
                     strings = _.flatten(i.get('string') for i in results)
-                    expect(strings).to.include.members ['hello', 'salut', 'hi']
+                    expect(strings).to.include.members ['salut', 'hi']
                     integers = _.flatten(i.get('integer') for i in results)
-                    expect(integers).to.include.members [1, 2, 3, 4, 5]
+                    expect(integers).to.include.members [3, 4, 5]
                     dates = _.flatten(i.get('date') for i in results)
                     expect(j.toISOString() for j in dates).to.include.members [
-                        new Date(2014, 1, 1).toISOString()
                         new Date(2014, 2, 1).toISOString()
                         new Date(2014, 3, 1).toISOString()
                     ]
-                    db.Multi.find {string: {$nin: ['hello', 'hi']}}, (err, results) ->
+
+                    query = {
+                        string: {$nin: ['hello', 'hi']}
+                        integer: {$nin: [0, 6, 7]}
+                    }
+                    db.Multi.find query, (err, results) ->
                         expect(err).to.be.null
                         expect(results.length).to.be.equal 0
                         done()
+
 
         it 'should query the docs ($and)', (done) ->
             obj = new db.Multi
@@ -674,7 +683,7 @@ describe 'model.find', ()->
                     done()
 
 
-        it.only 'should query the docs ($ne)', (done) ->
+        it 'should query the docs ($ne)', (done) ->
             obj = new db.Multi
             obj.push 'string', 'hello'
             obj.push 'string', 'salut'
@@ -702,10 +711,11 @@ describe 'model.find', ()->
                         new Date(2014, 2, 1).toISOString()
                         new Date(2014, 3, 1).toISOString()
                     ]
-                   db.Multi.find {string: {$ne: 'salut'}}, (err, results) ->
+                    db.Multi.find {string: {$ne: 'salut'}}, (err, results) ->
                         expect(err).to.be.null
                         expect(results.length).to.be.equal 0
                         done()
+
 
 
     describe '[i18n]', () ->

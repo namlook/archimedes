@@ -88,12 +88,7 @@ class Database extends DatabaseInterface
     #   @_find query, options, (err, docs) ->
     _find: (query, options, callback) ->
 
-        # handle i18n query
-        for key, value of query
-            if '@' in key
-                newkey = key.replace('@', '.')
-                query[newkey] = value
-                delete query[key]
+        query = @_convertQuery(query)
 
         call = @store.find query
 
@@ -124,6 +119,40 @@ class Database extends DatabaseInterface
         @_find {_id: id}, options, callback
 
 
+    _convertQuery: (query) ->
+        newquery = {}
+        whereFn = []
+
+        # handle special opertors
+        for key, value of query
+            if value['$ne']
+                newquery['$not'] = {} unless newquery['$not']
+                newquery['$not'][key] = value['$ne']
+            if value['$nin']
+                whereFn.push {
+                    fieldName: key
+                    query: value
+                    fn: (obj, fname, query) ->
+                        # handle i18n query (ie {'field@en': {$nin: ['foo']}})
+                        if '@' in fname
+                            [name, lang] = fname.split('@')
+                            value = obj[name][lang]
+                        else
+                            value = obj[fname]
+                        unless _.isArray value
+                            value = [value]
+                        _.intersection(value, query['$nin']).length is 0
+                    }
+            else
+                if '@' in key # handle i18n query
+                    key = key.replace('@', '.')
+                newquery[key] = value
+
+
+        if whereFn.length
+            newquery['$where'] = () ->
+                _.every(w.fn(@, w.fieldName, w.query) for w in whereFn)
+        return newquery
 
 module.exports = Database
 
