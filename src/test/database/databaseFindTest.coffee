@@ -57,11 +57,11 @@ describe 'Database.find()', ()->
                         expect(err).to.be.null
                         expect(results.length).to.be.equal 2
                         titles = (o[f.title] for o in results)
-                        expect(titles).to.include 'bar', 'foo'
+                        expect(titles).to.include.members ['bar', 'foo']
                         indexes = (o[f.index] for o in results)
-                        expect(indexes).to.include 2, 3
+                        expect(indexes).to.include.members [2, 3]
                         foos = (Boolean(o[f.foo]) for o in results)
-                        expect(foos).to.include false, true
+                        expect(foos).to.include.members [false, true]
                         done()
 
     describe '.find(query)', () ->
@@ -500,7 +500,7 @@ describe 'Database.find()', ()->
                 expect(infos.dbTouched).to.be.true
                 expect(obj[f.title].en).to.be.equal 'foo'
                 expect(obj[f.title].fr).to.be.equal 'toto'
-                expect(obj[f.index]).to.include 1, 2, 3
+                expect(obj[f.index]).to.include.members [1, 2, 3]
                 expect(obj._id).to.be.not.null
 
                 obj[f.title].en = 'changed'
@@ -513,20 +513,20 @@ describe 'Database.find()', ()->
                     expect(infos.dbTouched).to.be.true
                     expect(newobj[f.title].fr).to.be.equal 'toto'
                     expect(newobj[f.title].en).to.be.equal 'changed'
-                    expect(newobj[f.index]).to.include 1, 2, 3, 'changed'
-                    expect(newobj[f.foo].en).to.include 'changed', 'hi'
+                    expect(newobj[f.index]).to.include.members [1, 2, 3, 'changed']
+                    expect(newobj[f.foo].en).to.include.members ['changed', 'hi']
                     expect(newobj[f.foo].en).to.not.include 'hello'
-                    expect(newobj[f.foo].fr).to.include 'bonjour', 'salut'
+                    expect(newobj[f.foo].fr).to.include.members ['bonjour', 'salut']
                     expect(newobj._id).to.be.equal obj._id
 
                     db.first newobj._id, (err, obj3) ->
                         expect(err).to.be.null
                         expect(obj3[f.title].fr).to.be.equal 'toto'
                         expect(obj3[f.title].en).to.be.equal 'changed'
-                        expect(obj3[f.index]).to.include 1, 2, 3, 'changed'
-                        expect(obj3[f.foo].en).to.include 'changed', 'hi'
+                        expect(obj3[f.index]).to.include.members [1, 2, 3, 'changed']
+                        expect(obj3[f.foo].en).to.include.members ['changed', 'hi']
                         expect(newobj[f.foo].en).to.not.include 'hello'
-                        expect(obj3[f.foo].fr).to.include 'bonjour', 'salut'
+                        expect(obj3[f.foo].fr).to.include.members ['bonjour', 'salut']
                         expect(obj3._id).to.be.equal newobj._id
 
                         db.count (err, count) ->

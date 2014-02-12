@@ -125,8 +125,8 @@ describe 'Database', ()->
                 changes = db.changes(obj)
 
                 # multi field
-                expect(changes.added[f.index]).to.include -1, 'changed'
-                expect(changes.removed[f.index]).to.include 2, 1
+                expect(changes.added[f.index]).to.include.members [-1, 'changed']
+                expect(changes.removed[f.index]).to.include.members [2, 1]
                 done()
 
         it 'should return the changes of a multi-i18n object', (done) ->
@@ -146,10 +146,10 @@ describe 'Database', ()->
                 changes = db.changes(obj)
 
                 # multi i18n field
-                expect(changes.added[f.index].en).to.include '-1', '5', '7'
-                expect(changes.added[f.index].en).to.not.include '1', '3'
-                expect(changes.removed[f.index].en).to.include '1', '3'
+                expect(changes.added[f.index].en).to.include.members ['-1', '7']
+                expect(changes.added[f.index].en).to.not.include.members ['1', '3']
+                expect(changes.removed[f.index].en).to.include.members ['1', '3']
                 expect(changes.added[f.index].fr).to.be.undefined
-                expect(changes.added[f.index].es).to.include '10', '11', '12'
+                expect(changes.added[f.index].es).to.include.members ['10', '11', '12']
                 done()
 

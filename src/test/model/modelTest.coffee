@@ -375,7 +375,7 @@ describe 'Model', ()->
             blogPost.rollback()
             expect(blogPost.get('title', 'fr')).to.be.undefined
             expect(blogPost.get('title', 'en')).to.be.equal 'hello world'
-            expect(blogPost.get('keyword')).to.include 'foo', 'bar'
+            expect(blogPost.get('keyword')).to.include.members ['foo', 'bar']
 
 
         it 'should return the model into its previous state (saved)', (done) ->
@@ -390,7 +390,7 @@ describe 'Model', ()->
                 blogPost.rollback()
                 expect(blogPost.get('title', 'fr')).to.be.undefined
                 expect(blogPost.get('title', 'en')).to.be.equal 'hello world'
-                expect(blogPost.get('keyword')).to.include 'foo', 'bar'
+                expect(blogPost.get('keyword')).to.include.members ['foo', 'bar']
                 done()
 
     describe '.clone()', ()->
@@ -494,7 +494,7 @@ describe 'Model', ()->
             expect(blogPost.changes().added.title.fr).to.be.equal 'salut'
             blogPost.push 'keyword', 'foo'
             blogPost.push 'keyword', 'bar'
-            expect(blogPost.changes().added.keyword).to.include 'foo', 'bar'
+            expect(blogPost.changes().added.keyword).to.include.members ['foo', 'bar']
 
         it 'should return removed i18n properties', () ->
             blogPost = new db.BlogPost {
@@ -529,8 +529,8 @@ describe 'Model', ()->
             expect(changes.removed.content).to.be.equal 'hello world'
             expect(changes.added.content).to.be.equal 'hi world'
 
-            expect(changes.removed.keyword).to.include 'foo', 'bar'
-            expect(changes.added.keyword).to.include 'toto', 'tata'
+            expect(changes.removed.keyword).to.include.members ['foo', 'bar']
+            expect(changes.added.keyword).to.include.members ['toto', 'tata']
 
         it 'should return the added multi-i18n properties', () ->
             blog = new db.Blog
@@ -540,8 +540,8 @@ describe 'Model', ()->
             blog.push 'i18ntags', 'monde', 'fr'
 
             changes = blog.changes()
-            expect(changes.added.i18ntags.en).to.include 'hello', 'world'
-            expect(changes.added.i18ntags.fr).to.include 'salut', 'monde'
+            expect(changes.added.i18ntags.en).to.include.members ['hello', 'world']
+            expect(changes.added.i18ntags.fr).to.include.members ['salut', 'monde']
 
         it 'should return the removed multi-i18n properties', () ->
             blog = new db.Blog {
@@ -556,8 +556,8 @@ describe 'Model', ()->
             blog.pull 'i18ntags', 'monde', 'fr'
 
             changes = blog.changes()
-            expect(changes.removed.i18ntags.en).to.include 'hello', 'world'
-            expect(changes.removed.i18ntags.fr).to.include 'salut', 'monde'
+            expect(changes.removed.i18ntags.en).to.include.members ['hello', 'world']
+            expect(changes.removed.i18ntags.fr).to.include.members ['salut', 'monde']
 
         it 'should return the modified multi-i18n properties', () ->
             blog = new db.Blog {
@@ -571,9 +571,9 @@ describe 'Model', ()->
 
             changes = blog.changes()
 
-            expect(changes.removed.i18ntags.en).to.include 'hello', 'world'
+            expect(changes.removed.i18ntags.en).to.include.members ['hello', 'world']
             expect(changes.added.i18ntags.en).to.include 'bar'
-            expect(changes.removed.i18ntags.fr).to.include 'salut', 'monde'
+            expect(changes.removed.i18ntags.fr).to.include.members ['salut', 'monde']
             expect(changes.added.i18ntags.fr).to.include 'tata'
 
 
@@ -723,7 +723,7 @@ describe 'Model', ()->
             blogPost.set 'keyword', ['foo', 'bar']
             jsonBlogPost = blogPost.toJSONObject()
             expect(jsonBlogPost.title.en).to.be.equal 'hello world'
-            expect(jsonBlogPost.keyword).to.include 'foo', 'bar'
+            expect(jsonBlogPost.keyword).to.include.members ['foo', 'bar']
 
         it 'should include the id', () ->
             blogPost = new db.BlogPost

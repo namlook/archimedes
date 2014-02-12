@@ -233,7 +233,7 @@ describe 'RdfModel', ()->
             blogPost = new db.BlogPost
             blogPost.push 'keyword', 'foo'
             blogPost.push 'keyword', 'bar'
-            expect(blogPost.get('keyword')).to.include 'foo', 'bar'
+            expect(blogPost.get('keyword')).to.include.members ['foo', 'bar']
             blogPost.unset 'keyword'
             expect(blogPost.get 'keyword' ).to.be.undefined
 

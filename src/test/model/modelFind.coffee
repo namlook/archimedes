@@ -106,7 +106,7 @@ describe 'model.find', ()->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 2
                     strings = (i.get('string') for i in results)
-                    expect(strings).to.include 'hello', 'salut'
+                    expect(strings).to.include.members ['hello', 'salut']
                     done()
 
         it 'should query the docs (equal op)', (done) ->
@@ -162,7 +162,7 @@ describe 'model.find', ()->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 2
                     strings = (i.get('string') for i in results)
-                    expect(strings).to.include 'hello', 'salut'
+                    expect(strings).to.include.members ['hello', 'salut']
                     done()
 
         it 'should query the docs ($lt)', (done) ->
@@ -200,7 +200,7 @@ describe 'model.find', ()->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 2
                     strings = (i.get('string') for i in results)
-                    expect(strings).to.include 'hello', 'salut'
+                    expect(strings).to.include.members ['hello', 'salut']
                     done()
 
         it 'should query the docs ($in)', (done) ->
@@ -219,7 +219,7 @@ describe 'model.find', ()->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 2
                     strings = (i.get('string') for i in results)
-                    expect(strings).to.include 'hello', 'salut'
+                    expect(strings).to.include.members ['hello', 'salut']
                     done()
 
         it 'should query the docs ($nin)', (done) ->
@@ -238,7 +238,7 @@ describe 'model.find', ()->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 2
                     strings = (i.get('string') for i in results)
-                    expect(strings).to.include 'hello', 'salut'
+                    expect(strings).to.include.members ['hello', 'salut']
                     db.Literal.find {integer: {$nin: [2, 3]}}, (err, results) ->
                         expect(err).to.be.null
                         expect(results.length).to.be.equal 0
@@ -300,12 +300,12 @@ describe 'model.find', ()->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 1
                     result = results[0]
-                    expect(result.get 'string').to.include 'hello', 'salut'
-                    expect(result.get 'integer').to.include 1, 2, 3
-                    expect(d.toISOString() for d in result.get('date')).to.include(
+                    expect(result.get 'string').to.include.members ['hello', 'salut']
+                    expect(result.get 'integer').to.include.members [1, 2, 3]
+                    expect(d.toISOString() for d in result.get('date')).to.include.members [
                         new Date(2014, 1, 1).toISOString()
                         new Date(2014, 2, 1).toISOString()
-                    )
+                    ]
                     done()
 
         it 'should return the first doc that match the id', (done) ->
@@ -321,12 +321,12 @@ describe 'model.find', ()->
                 expect(obj.id).to.be.not.null
                 db.Multi.first savedObj.id, (err, result) ->
                     expect(err).to.be.null
-                    expect(result.get 'string').to.include 'hello', 'salut'
-                    expect(result.get 'integer').to.include 1, 2, 3
-                    expect(d.toISOString() for d in result.get('date')).to.include(
+                    expect(result.get 'string').to.include.members ['hello', 'salut']
+                    expect(result.get 'integer').to.include.members [1, 2, 3]
+                    expect(d.toISOString() for d in result.get('date')).to.include.members [
                         new Date(2014, 1, 1).toISOString()
                         new Date(2014, 2, 1).toISOString()
-                    )
+                    ]
                     done()
 
 
@@ -350,15 +350,15 @@ describe 'model.find', ()->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 2
                     strings = _.flatten(i.get('string') for i in results)
-                    expect(strings).to.include 'hello', 'salut', 'hi'
+                    expect(strings).to.include.members ['hello', 'salut', 'hi']
                     integers = _.flatten(i.get('integer') for i in results)
-                    expect(integers).to.include 1, 2, 3, 4, 5
+                    expect(integers).to.include.members [1, 2, 3, 4, 5]
                     dates = _.flatten(i.get('date') for i in results)
-                    expect(j.toISOString() for j in dates).to.include(
+                    expect(j.toISOString() for j in dates).to.include.members [
                         new Date(2014, 1, 1).toISOString()
                         new Date(2014, 2, 1).toISOString()
                         new Date(2014, 3, 1).toISOString()
-                    )
+                    ]
                     done()
 
 
@@ -382,14 +382,14 @@ describe 'model.find', ()->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 1
                     strings = _.flatten(i.get('string') for i in results)
-                    expect(strings).to.include 'salut', 'hi'
+                    expect(strings).to.include.members ['salut', 'hi']
                     integers = _.flatten(i.get('integer') for i in results)
-                    expect(integers).to.include 3, 4, 5
+                    expect(integers).to.include.members [3, 4, 5]
                     dates = _.flatten(i.get('date') for i in results)
-                    expect(j.toISOString() for j in dates).to.include(
+                    expect(j.toISOString() for j in dates).to.include.members [
                         new Date(2014, 2, 1).toISOString()
                         new Date(2014, 3, 1).toISOString()
-                    )
+                    ]
                     done()
 
         it 'should query the docs (2) (equal op)', (done) ->
@@ -412,15 +412,15 @@ describe 'model.find', ()->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 2
                     strings = _.flatten(i.get('string') for i in results)
-                    expect(strings).to.include 'hello', 'salut', 'hi'
+                    expect(strings).to.include.members ['hello', 'salut', 'hi']
                     integers = _.flatten(i.get('integer') for i in results)
-                    expect(integers).to.include 1, 2, 3, 4, 5
+                    expect(integers).to.include.members [1, 2, 3, 4, 5]
                     dates = _.flatten(i.get('date') for i in results)
-                    expect(j.toISOString() for j in dates).to.include(
+                    expect(j.toISOString() for j in dates).to.include.members [
                         new Date(2014, 1, 1).toISOString()
                         new Date(2014, 2, 1).toISOString()
                         new Date(2014, 3, 1).toISOString()
-                    )
+                    ]
                     done()
 
         it 'should query the docs ($gt)', (done) ->
@@ -443,14 +443,14 @@ describe 'model.find', ()->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 1
                     strings = _.flatten(i.get('string') for i in results)
-                    expect(strings).to.include 'salut', 'hi'
+                    expect(strings).to.include.members ['salut', 'hi']
                     integers = _.flatten(i.get('integer') for i in results)
-                    expect(integers).to.include 3, 4, 5
+                    expect(integers).to.include.members [3, 4, 5]
                     dates = _.flatten(i.get('date') for i in results)
-                    expect(j.toISOString() for j in dates).to.include(
+                    expect(j.toISOString() for j in dates).to.include.members [
                         new Date(2014, 2, 1).toISOString()
                         new Date(2014, 3, 1).toISOString()
-                    )
+                    ]
                     done()
 
         it 'should query the docs ($gte)', (done) ->
@@ -473,15 +473,15 @@ describe 'model.find', ()->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 2
                     strings = _.flatten(i.get('string') for i in results)
-                    expect(strings).to.include 'hello', 'salut', 'hi'
+                    expect(strings).to.include.members ['hello', 'salut', 'hi']
                     integers = _.flatten(i.get('integer') for i in results)
-                    expect(integers).to.include 1, 2, 3, 4, 5
+                    expect(integers).to.include.members [1, 2, 3, 4, 5]
                     dates = _.flatten(i.get('date') for i in results)
-                    expect(j.toISOString() for j in dates).to.include(
+                    expect(j.toISOString() for j in dates).to.include.members [
                         new Date(2014, 1, 1).toISOString()
                         new Date(2014, 2, 1).toISOString()
                         new Date(2014, 3, 1).toISOString()
-                    )
+                    ]
                     done()
 
 
@@ -505,14 +505,14 @@ describe 'model.find', ()->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 1
                     strings = _.flatten(i.get('string') for i in results)
-                    expect(strings).to.include 'hello', 'salut'
+                    expect(strings).to.include.members ['hello', 'salut']
                     integers = _.flatten(i.get('integer') for i in results)
-                    expect(integers).to.include 1, 2, 3
+                    expect(integers).to.include.members [1, 2, 3]
                     dates = _.flatten(i.get('date') for i in results)
-                    expect(j.toISOString() for j in dates).to.include(
+                    expect(j.toISOString() for j in dates).to.include.members [
                         new Date(2014, 1, 1).toISOString()
                         new Date(2014, 2, 1).toISOString()
-                    )
+                    ]
                     done()
 
 
@@ -536,15 +536,15 @@ describe 'model.find', ()->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 2
                     strings = _.flatten(i.get('string') for i in results)
-                    expect(strings).to.include 'hello', 'salut', 'hi'
+                    expect(strings).to.include.members ['hello', 'salut', 'hi']
                     integers = _.flatten(i.get('integer') for i in results)
-                    expect(integers).to.include 1, 2, 3, 4, 5
+                    expect(integers).to.include.members [1, 2, 3, 4, 5]
                     dates = _.flatten(i.get('date') for i in results)
-                    expect(j.toISOString() for j in dates).to.include(
+                    expect(j.toISOString() for j in dates).to.include.members [
                         new Date(2014, 1, 1).toISOString()
                         new Date(2014, 2, 1).toISOString()
                         new Date(2014, 3, 1).toISOString()
-                    )
+                    ]
                     done()
 
         it 'should query the docs ($in)', (done) ->
@@ -567,15 +567,45 @@ describe 'model.find', ()->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 2
                     strings = _.flatten(i.get('string') for i in results)
-                    expect(strings).to.include 'hello', 'salut', 'hi'
+                    expect(strings).to.include.members ['hello', 'salut', 'hi']
                     integers = _.flatten(i.get('integer') for i in results)
-                    expect(integers).to.include 1, 2, 3, 4, 5
+                    expect(integers).to.include.members [1, 2, 3, 4, 5]
                     dates = _.flatten(i.get('date') for i in results)
-                    expect(j.toISOString() for j in dates).to.include(
+                    expect(j.toISOString() for j in dates).to.include.members [
                         new Date(2014, 1, 1).toISOString()
                         new Date(2014, 2, 1).toISOString()
                         new Date(2014, 3, 1).toISOString()
-                    )
+                    ]
+                    done()
+
+        it 'should query the docs ($in) (2)', (done) ->
+            obj = new db.Multi
+            obj.push 'string', 'hello'
+            obj.push 'string', 'salut'
+            obj.set 'integer', [1, 2, 3]
+            obj.push 'date', new Date(2014, 1, 1)
+            obj.push 'date', new Date(2014, 2, 1)
+            obj2 = new db.Multi
+            obj2.push 'string', 'hi'
+            obj2.push 'string', 'salut'
+            obj2.set 'integer', [3, 4, 5]
+            obj2.push 'date', new Date(2014, 2, 1)
+            obj2.push 'date', new Date(2014, 3, 1)
+            db.batchSync [obj.toJSONObject(), obj2.toJSONObject()], (err, data) ->
+                expect(err).to.be.null
+                expect(_.every(i.options.dbTouched for i in data)).to.be.true
+                db.Multi.find {string: {$in: ['hello']}}, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 1
+                    strings = _.flatten(i.get('string') for i in results)
+                    expect(strings).to.include.members ['hello', 'salut']
+                    integers = _.flatten(i.get('integer') for i in results)
+                    expect(integers).to.include.members [1, 2, 3]
+                    dates = _.flatten(i.get('date') for i in results)
+                    expect(j.toISOString() for j in dates).to.include.members [
+                        new Date(2014, 1, 1).toISOString()
+                        new Date(2014, 2, 1).toISOString()
+                    ]
                     done()
 
         it 'should query the docs ($nin)', (done) ->
@@ -598,15 +628,15 @@ describe 'model.find', ()->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 2
                     strings = _.flatten(i.get('string') for i in results)
-                    expect(strings).to.include 'hello', 'salut', 'hi'
+                    expect(strings).to.include.members ['hello', 'salut', 'hi']
                     integers = _.flatten(i.get('integer') for i in results)
-                    expect(integers).to.include 1, 2, 3, 4, 5
+                    expect(integers).to.include.members [1, 2, 3, 4, 5]
                     dates = _.flatten(i.get('date') for i in results)
-                    expect(j.toISOString() for j in dates).to.include(
+                    expect(j.toISOString() for j in dates).to.include.members [
                         new Date(2014, 1, 1).toISOString()
                         new Date(2014, 2, 1).toISOString()
                         new Date(2014, 3, 1).toISOString()
-                    )
+                    ]
                     db.Multi.find {string: {$nin: ['hello', 'hi']}}, (err, results) ->
                         expect(err).to.be.null
                         expect(results.length).to.be.equal 0
@@ -633,18 +663,18 @@ describe 'model.find', ()->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 1
                     strings = _.flatten(i.get('string') for i in results)
-                    expect(strings).to.include 'salut', 'hi'
+                    expect(strings).to.include.members ['salut', 'hi']
                     integers = _.flatten(i.get('integer') for i in results)
-                    expect(integers).to.include 3, 4, 5
+                    expect(integers).to.include.members [3, 4, 5]
                     dates = _.flatten(i.get('date') for i in results)
-                    expect(j.toISOString() for j in dates).to.include(
+                    expect(j.toISOString() for j in dates).to.include.members [
                         new Date(2014, 2, 1).toISOString()
                         new Date(2014, 3, 1).toISOString()
-                    )
+                    ]
                     done()
 
 
-        it 'should query the docs ($ne)', (done) ->
+        it.only 'should query the docs ($ne)', (done) ->
             obj = new db.Multi
             obj.push 'string', 'hello'
             obj.push 'string', 'salut'
@@ -664,14 +694,14 @@ describe 'model.find', ()->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 1
                     strings = _.flatten(i.get('string') for i in results)
-                    expect(strings).to.include 'salut', 'hi'
+                    expect(strings).to.include.members ['salut', 'hi']
                     integers = _.flatten(i.get('integer') for i in results)
-                    expect(integers).to.include 3, 4, 5
+                    expect(integers).to.include.members [3, 4, 5]
                     dates = _.flatten(i.get('date') for i in results)
-                    expect(j.toISOString() for j in dates).to.include(
+                    expect(j.toISOString() for j in dates).to.include.members [
                         new Date(2014, 2, 1).toISOString()
                         new Date(2014, 3, 1).toISOString()
-                    )
+                    ]
                    db.Multi.find {string: {$ne: 'salut'}}, (err, results) ->
                         expect(err).to.be.null
                         expect(results.length).to.be.equal 0
@@ -697,8 +727,8 @@ describe 'model.find', ()->
                     result = results[0]
                     expect(result.get 'string', 'en').to.equal 'hello'
                     expect(result.get 'string', 'fr').to.equal 'salut'
-                    expect(result.get 'strings', 'en').to.include 'foo', 'bar'
-                    expect(result.get 'strings', 'fr').to.include 'toto', 'tata'
+                    expect(result.get 'strings', 'en').to.include.members ['foo', 'bar']
+                    expect(result.get 'strings', 'fr').to.include.members ['toto', 'tata']
                     done()
 
 
@@ -718,8 +748,8 @@ describe 'model.find', ()->
                     expect(err).to.be.null
                     expect(result.get 'string', 'en').to.equal 'hello'
                     expect(result.get 'string', 'fr').to.equal 'salut'
-                    expect(result.get 'strings', 'en').to.include 'foo', 'bar'
-                    expect(result.get 'strings', 'fr').to.include 'toto', 'tata'
+                    expect(result.get 'strings', 'en').to.include.members ['foo', 'bar']
+                    expect(result.get 'strings', 'fr').to.include.members ['toto', 'tata']
                     done()
 
         it 'should return the all saved docs', (done) ->
@@ -744,13 +774,13 @@ describe 'model.find', ()->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 2
                     stringen = (r.get('string', 'en') for r in results)
-                    expect(stringen).to.include 'hello', 'goodbye'
+                    expect(stringen).to.include.members ['hello', 'goodbye']
                     stringfr = (r.get('string', 'fr') for r in results)
-                    expect(stringfr).to.include 'salut', 'au revoir'
+                    expect(stringfr).to.include.members ['salut', 'au revoir']
                     stringsen = _.flatten(r.get('strings', 'en') for r in results)
-                    expect(stringsen).to.include 'foo', 'bar', 'blah', 'bleh'
+                    expect(stringsen).to.include.members ['foo', 'bar', 'blah', 'bleh']
                     stringsfr = _.flatten(r.get('strings', 'fr') for r in results)
-                    expect(stringsfr).to.include 'toto', 'tata', 'titi', 'tutu'
+                    expect(stringsfr).to.include.members ['toto', 'tata', 'titi', 'tutu']
                     done()
 
 
@@ -778,8 +808,8 @@ describe 'model.find', ()->
                     result = results[0]
                     expect(result.get('string', 'en')).to.be.equal 'hello'
                     expect(result.get('string', 'fr')).to.be.equal 'salut'
-                    expect(result.get('strings', 'en')).to.include 'foo', 'bar'
-                    expect(result.get('strings', 'fr')).to.include 'toto', 'tata'
+                    expect(result.get('strings', 'en')).to.include.members ['foo', 'bar']
+                    expect(result.get('strings', 'fr')).to.include.members ['toto', 'tata']
                     done()
 
         it.skip 'should query the docs (bad $ne)', (done) ->
@@ -829,8 +859,8 @@ describe 'model.find', ()->
                     result = results[0]
                     expect(result.get('string', 'en')).to.be.equal 'hello'
                     expect(result.get('string', 'fr')).to.be.equal 'salut'
-                    expect(result.get('strings', 'en')).to.include 'foo', 'bar'
-                    expect(result.get('strings', 'fr')).to.include 'toto', 'tata'
+                    expect(result.get('strings', 'en')).to.include.members ['foo', 'bar']
+                    expect(result.get('strings', 'fr')).to.include.members ['toto', 'tata']
                     done()
 
         it 'should query the docs ($in)', (done) ->
@@ -857,16 +887,16 @@ describe 'model.find', ()->
                     result = results[0]
                     expect(result.get('string', 'en')).to.be.equal 'hello'
                     expect(result.get('string', 'fr')).to.be.equal 'salut'
-                    expect(result.get('strings', 'en')).to.include 'foo', 'bar'
-                    expect(result.get('strings', 'fr')).to.include 'toto', 'tata'
+                    expect(result.get('strings', 'en')).to.include.members ['foo', 'bar']
+                    expect(result.get('strings', 'fr')).to.include.members ['toto', 'tata']
                     db.I18n.find {'strings@en': {$in: ['blah', 'bleh', 'arf', 'toto']}}, (err, results) ->
                         expect(err).to.be.null
                         expect(results.length).to.be.equal 1
                         result = results[0]
                         expect(result.get('string', 'en')).to.be.equal 'goodbye'
                         expect(result.get('string', 'fr')).to.be.equal 'au revoir'
-                        expect(result.get('strings', 'en')).to.include 'blah', 'bleh'
-                        expect(result.get('strings', 'fr')).to.include 'titi', 'tutu'
+                        expect(result.get('strings', 'en')).to.include.members ['blah', 'bleh']
+                        expect(result.get('strings', 'fr')).to.include.members ['titi', 'tutu']
                         done()
 
 
@@ -894,16 +924,16 @@ describe 'model.find', ()->
                     result = results[0]
                     expect(result.get('string', 'en')).to.be.equal 'goodbye'
                     expect(result.get('string', 'fr')).to.be.equal 'au revoir'
-                    expect(result.get('strings', 'en')).to.include 'blah', 'bleh'
-                    expect(result.get('strings', 'fr')).to.include 'titi', 'tutu'
+                    expect(result.get('strings', 'en')).to.include.members ['blah', 'bleh']
+                    expect(result.get('strings', 'fr')).to.include.members ['titi', 'tutu']
                     db.I18n.find {'strings@en': {$nin: ['foo', 'titi', 'arf', 'tutu']}}, (err, results) ->
                         expect(err).to.be.null
                         expect(results.length).to.be.equal 1
                         result = results[0]
                         expect(result.get('string', 'en')).to.be.equal 'goodbye'
                         expect(result.get('string', 'fr')).to.be.equal 'au revoir'
-                        expect(result.get('strings', 'en')).to.include 'blah', 'bleh'
-                        expect(result.get('strings', 'fr')).to.include 'titi', 'tutu'
+                        expect(result.get('strings', 'en')).to.include.members ['blah', 'bleh']
+                        expect(result.get('strings', 'fr')).to.include.members ['titi', 'tutu']
                         done()
 
 

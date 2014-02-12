@@ -80,7 +80,7 @@ describe 'Database synchronization', ()->
             db.sync pojo, (err, obj, infos) ->
                 expect(err).to.be.null
                 expect(infos.dbTouched).to.be.true
-                expect(obj[f.index]).to.include 1, 2, 3
+                expect(obj[f.index]).to.include.members [1, 2, 3]
                 expect(obj._id).to.be.not.null
 
                 obj[f.index].push 'changed'
@@ -90,8 +90,7 @@ describe 'Database synchronization', ()->
                     expect(err).to.be.null
                     expect(infos.dbTouched).to.be.true
 
-                    expect(newobj[f.index]).to.include 1, 2, 3, 'changed'
-                    expect(newobj[f.index]).to.include 1, 2, 'changed'
+                    expect(newobj[f.index]).to.include.members [1, 2, 'changed']
                     expect(newobj[f.index]).to.not.include 3
                     expect(newobj._id).to.be.equal obj._id
 
@@ -149,7 +148,7 @@ describe 'Database synchronization', ()->
                     expect(infos.dbTouched).to.be.true
 
                     expect(newobj[f.foo].en[0]).to.be.equal 'changed'
-                    expect(newobj[f.foo].fr).to.include 'salut', 'ajout'
+                    expect(newobj[f.foo].fr).to.include.members ['salut', 'ajout']
                     expect(newobj[f.foo].fr).to.not.include 'bonjour'
                     expect(newobj[f.foo].es).to.include 'nuevo'
 
@@ -171,7 +170,7 @@ describe 'Database synchronization', ()->
                 expect(infos.dbTouched).to.be.true
                 expect(obj[f.title].en).to.be.equal 'foo'
                 expect(obj[f.title].fr).to.be.equal 'toto'
-                expect(obj[f.index]).to.include 1, 2, 3
+                expect(obj[f.index]).to.include.members [1, 2, 3]
                 expect(obj._id).to.be.not.null
 
                 obj[f.title].en = 'changed'
@@ -184,7 +183,7 @@ describe 'Database synchronization', ()->
                     expect(infos.dbTouched).to.be.true
                     expect(newobj[f.title].fr).to.be.equal 'toto'
                     expect(newobj[f.title].en).to.be.equal 'changed'
-                    expect(newobj[f.index]).to.include 1, 2, 3, 'changed'
+                    expect(newobj[f.index]).to.include.members [1, 2, 3, 'changed']
                     expect(newobj[f.foo].en[0]).to.be.equal 'changed'
                     expect(newobj[f.foo].fr[0]).to.be.equal 'bonjour'
                     expect(newobj._id).to.be.equal obj._id
