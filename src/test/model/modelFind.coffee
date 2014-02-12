@@ -609,7 +609,6 @@ describe 'model.find', ()->
                     )
                     db.Multi.find {string: {$nin: ['hello', 'hi']}}, (err, results) ->
                         expect(err).to.be.null
-                        console.log (i.toJSONObject() for i in results)
                         expect(results.length).to.be.equal 0
                         done()
 

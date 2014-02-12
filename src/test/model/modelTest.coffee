@@ -70,6 +70,9 @@ describe 'Model', ()->
     beforeEach (done) ->
         db.clear done
 
+    afterEach (done) ->
+        db.clear done
+
     describe '.constructor()', () ->
 
         it 'should be created without values', () ->
@@ -760,6 +763,32 @@ describe 'Model', ()->
                 jsonBlogPost = JSON.parse blogPost.toJSON()
                 expect(jsonBlogPost._id).to.not.be.undefined
                 expect(jsonBlogPost.id).to.be.undefined
+
+    describe '.delete()', ()->
+        it 'should remove a saved instance from the database', (done) ->
+            blogPost = new db.BlogPost()
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'keyword', ['hello', 'world']
+            blogPost.set 'content', 'article'
+            blogPost.save (err) ->
+                expect(err).to.be.null
+                db.count (err, total) ->
+                    expect(err).to.be.null
+                    expect(total).to.be.equal 1
+                    blogPost.delete (err) ->
+                        expect(err).to.be.null
+                        db.count (err, total) ->
+                            expect(total).to.be.equal 0
+                            done()
+
+        it 'should throw an error if we try to delete a non-saved model', (done) ->
+            blogPost = new db.BlogPost()
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'keyword', ['hello', 'world']
+            blogPost.set 'content', 'article'
+            blogPost.delete (err) ->
+                expect(err).to.be.equal "can't delete a non-saved model"
+                done()
 
 
     describe '._getPendingRelations()', () ->

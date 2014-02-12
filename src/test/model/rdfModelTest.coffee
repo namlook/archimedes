@@ -6,6 +6,9 @@ config = require('../config')
 RdfModel = config.Model
 RdfDatabase = config.Database
 
+if RdfDatabase.dbtype isnt 'rdf'
+    return
+
 describe 'RdfModel', ()->
 
     models = {}
@@ -286,10 +289,10 @@ describe 'RdfModel', ()->
                 expect(newBlogPost.isNew()).to.be.false
                 expect(newBlogPost.get '_id').to.be.equal blogPost.id
                 expect(newBlogPost.id).to.be.equal blogPost.id
-                expect(blogPost.id).to.match(/^http:\/\/data.example.org\/blogpost/)
-                blogPost.db.length (err, total) ->
+                expect(blogPost.id).to.match(/^http:\/\/data.example.org\//)
+                blogPost.db.count (err, total) ->
                     expect(err).to.be.null
-                    expect(total).to.be.equal 6
+                    expect(total).to.be.equal 1
                     done()
 
         it 'should generate an id from a specified field if no id is set', (done) ->
@@ -308,56 +311,7 @@ describe 'RdfModel', ()->
                 expect(newBlogPost.id).to.be.equal id
                 done()
 
-        it 'should store the values of an instance into the database', (done) ->
-            blogPost = new db.BlogPost()
-            blogPost.set 'title', 'hello world', 'en'
-            blogPost.set 'keyword', ['hello', 'world']
-            blogPost.set 'content', 'article'
-            blogPost.save (err, model, synced) ->
-                expect(err).to.be.null
-                db.store.query "select * {?s ?p ?o .}", (err, data) ->
-                    expect(err).to.be.null
-                    expect(model.id).to.be.equal blogPost.id
-                    results = (
-                        "#{i.s.value}::#{i.p.value}::#{i.o.value}" for i in data)
-                    nsprop = 'http://onto.example.org/properties'
-                    typeprop = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type'
-                    typeuri = 'http://onto.example.org/classes/BlogPost'
-                    expect(results).to.include(
-                        "#{blogPost.id}::#{typeprop}::#{typeuri}"
-                        "#{blogPost.id}::#{nsprop}/title::hello world",
-                        "#{blogPost.id}::#{nsprop}/keyword::hello",
-                        "#{blogPost.id}::#{nsprop}/keyword::world",
-                        "#{blogPost.id}::#{nsprop}/content::article")
-                    db.length (err, total) ->
-                        expect(total).to.be.equal 5
-                        done()
 
-    describe '.delete()', ()->
-        it 'should remove a saved instance from the database', (done) ->
-            blogPost = new db.BlogPost()
-            blogPost.set 'title', 'hello world', 'en'
-            blogPost.set 'keyword', ['hello', 'world']
-            blogPost.set 'content', 'article'
-            blogPost.save (err) ->
-                expect(err).to.be.null
-                blogPost.db.length (err, total) ->
-                    expect(err).to.be.null
-                    expect(total).to.be.equal 5
-                    blogPost.delete (err) ->
-                        expect(err).to.be.null
-                        blogPost.db.length (err, total) ->
-                            expect(total).to.be.equal 0
-                            done()
-
-        it 'should throw an error if we try to delete a non-saved model', (done) ->
-            blogPost = new db.BlogPost()
-            blogPost.set 'title', 'hello world', 'en'
-            blogPost.set 'keyword', ['hello', 'world']
-            blogPost.set 'content', 'article'
-            blogPost.delete (err) ->
-                expect(err).to.be.equal "can't delete a non-saved model"
-                done()
 
     describe '.getSerializableObject()', () ->
         it 'should convert the uri _id to the regular _id', (done) ->
