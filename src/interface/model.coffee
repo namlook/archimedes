@@ -174,9 +174,6 @@ class Model
     # - **describe**: (default false) if true, return a field with all the label
     #    of the related instances. A lang code can be to specify which i18n
     #    version to use
-    # - **prefixes**: if true, prefix the sparql query with the one specified on
-    #    the db. If `prefixes` is an object, the key is the prefix and the value
-    #    the full URL.
     @find: (query, options, callback) ->
         if typeof(query) is 'function'
             callback = query
@@ -193,7 +190,23 @@ class Model
             @db.find query, options, (err, pojos) =>
                 if err
                     return callback err
-                return callback null, (new @(pojo) for pojo in pojos)
+
+                instances = (new @(pojo) for pojo in pojos)
+                if options.populate
+                    async.map instances, (instance, cb) ->
+                        populateOptions = {}
+                        if _.isNumber options.populate
+                            fields = (fname for fname, val of @schema when @db[val.type]?)
+                        else # populate is a list of fields
+                            fields = null
+                            populateOptions.recursive = true
+                        instance.populate fields, populateOptions, cb
+                    , (err, data) =>
+                        if err
+                            return callback err
+                        return callback null, instances
+                else
+                    return callback null, instances
 
 
     # ## findURIs
@@ -239,7 +252,13 @@ class Model
             obj = new @(pojo)
 
             if options.populate
-                obj.populate options.populate, (err, populatedObj) ->
+                populateOptions = {}
+                if _.isNumber options.populate
+                    fields = (fname for fname, val of @schema when @db[val.type]?)
+                else # populate is a list of fields
+                    fields = null
+                    populateOptions.recursive = true
+                obj.populate fields, populateOptions, (err, populatedObj) ->
                     return callback null, populatedObj
             else
                 return callback null, obj
@@ -279,9 +298,12 @@ class Model
     # ## populate
     # Asyncronously populate the instance with all related object values.
     #
-    # `populate [fields...], (err, model) ->`
+    # `populate [fields...], options, (err, model) ->`
     #
     # `fields` is an array of fieldNames
+    #
+    # options:
+    #   - recursive: (default false) if true, populate all inner relations
     #
     # **example**:
     #
@@ -295,33 +317,86 @@ class Model
     #     @populate (err, model) ->
     #
     # If field values are already populated, do nothing.
-    populate: (fields, callback) ->
+    populate: (fields, options, callback) ->
         if typeof(fields) is 'function' and not callback
             callback = fields
+            options = {}
             fields = null
 
+        if typeof(options) is 'function' and not callback
+            callback = options
+            options = {}
+
+        if _.isObject(fields) and not _.isArray(fields)
+            options = fields
+            fields = null
+
+        # if no fields are specified, build it from the schema
         unless _.isArray(fields) and fields.length > 0
             fields = (fname for fname, val of @schema when @db[val.type]?)
 
-        # populate the related instances
-        relations = {}
+
+        # build relations index for each field
+        relationFieldNames = {}
+        relationInstances = {}
         for fieldName in fields
-                relId = @get(fieldName)
-                if _.isString relId
-                    relations[relId] = {
-                        fieldName: fieldName,
+            relationId = @get(fieldName)
+            if relationId
+                relationFieldNames[fieldName] = {
+                    id: relationId
+                    model: @db[@schema[fieldName].type]
+                }
+                if _.isString relationId
+                    relationId = [relationId]
+                for relId in relationId
+                    relationInstances[relId] = {
                         model: @db[@schema[fieldName].type]
                     }
 
-        @db.find _.keys(relations), (err, reldata) =>
+        relationIds = _.keys(relationInstances)
+
+        # fetch the related instances
+        @db.find relationIds, (err, data) =>
             if err
                 return callback err
 
-            for relobj in reldata
-                rinfo = relations[relobj._id]
-                @set rinfo.fieldName, new rinfo.model(relobj)
+            # instanciate relations
+            for pojo in data
+                rinfo = relationInstances[pojo._id]
+                relationInstances[pojo._id].instance = new rinfo.model(pojo)
 
-            return callback null, @
+            # dispatch all related instances into the correct fields
+            instancesToPopulate = []
+            for fieldName, relinfo of relationFieldNames
+                if @schema[fieldName].multi
+                    instance = (relationInstances[id].instance for id in relinfo.id)
+                else
+                    instance = relationInstances[relinfo.id].instance
+                @set fieldName, instance
+
+                if options.recursive
+                    instancesToPopulate = _.union(instancesToPopulate, instance)
+
+            # if recursive, populate the inner instances
+            if options.recursive
+                async.map instancesToPopulate, (instance, cb) ->
+                    instance.populate options, cb
+                , (err, data) =>
+                    if err
+                        return callback err
+                    return callback null, @
+            else
+                return callback null, @
+
+
+    # ## batchPopulate
+    # Populate multi instances in one time
+    #
+    # `batchPopulate instances, options, (err)`
+    #
+    # options:
+    #   - recursive: (default false), if true, populate all inner relation
+    batchPopulate: (instances, options, callback) ->
 
 
     # ## Get
@@ -858,7 +933,7 @@ class Model
     #       has a author setted, then the author is included into the resulted
     #       object. If `embed` is false, only the id of the embed object is added
     toJSONObject: (options) =>
-        options = {} or options
+        options = options or {}
         jsonObject = {}
         for key, value of @_properties
             if _.isArray value

@@ -9,6 +9,9 @@ describe 'model.find', ()->
 
     class models.Literal extends config.Model
         schema:
+            i18n:
+                type: 'string'
+                i18n: true
             string:
                 type: 'string'
             integer:
@@ -57,6 +60,8 @@ describe 'model.find', ()->
     describe '[literal]', () ->
         it 'should return the doc that match the id', (done) ->
             obj = new db.Literal
+            obj.set 'i18n', 'hello', 'en'
+            obj.set 'i18n', 'salut', 'fr'
             obj.set 'string', 'hello'
             obj.set 'integer', 2
             obj.set 'date', new Date(2014, 1, 1)
@@ -67,6 +72,8 @@ describe 'model.find', ()->
                 db.Literal.find savedObj.id, (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 1
+                    expect(results[0].get 'i18n', 'en').to.be.equal obj.get 'i18n', 'en'
+                    expect(results[0].get 'i18n', 'fr').to.be.equal obj.get 'i18n', 'fr'
                     expect(results[0].get 'string').to.be.equal obj.get 'string'
                     expect(results[0].get 'integer').to.be.equal obj.get 'integer'
                     expect(results[0].get('date').toISOString()).to.be.equal(
@@ -75,6 +82,8 @@ describe 'model.find', ()->
 
         it 'should return the first doc that match the id', (done) ->
             obj = new db.Literal
+            obj.set 'i18n', 'hello', 'en'
+            obj.set 'i18n', 'salut', 'fr'
             obj.set 'string', 'hello'
             obj.set 'integer', 2
             obj.set 'date', new Date(2014, 1, 1)
@@ -84,6 +93,8 @@ describe 'model.find', ()->
                 expect(obj.id).to.be.not.null
                 db.Literal.first savedObj.id, (err, result) ->
                     expect(err).to.be.null
+                    expect(result.get 'i18n', 'en').to.be.equal obj.get 'i18n', 'en'
+                    expect(result.get 'i18n', 'fr').to.be.equal obj.get 'i18n', 'fr'
                     expect(result.get 'string').to.be.equal obj.get 'string'
                     expect(result.get 'integer').to.be.equal obj.get 'integer'
                     expect(result.get('date').toISOString()).to.be.equal(
@@ -92,10 +103,14 @@ describe 'model.find', ()->
 
         it 'should return all saved docs', (done) ->
             obj = new db.Literal
+            obj.set 'i18n', 'hello', 'en'
+            obj.set 'i18n', 'bonjour', 'fr'
             obj.set 'string', 'hello'
             obj.set 'integer', 2
             obj.set 'date', new Date(2014, 1, 1)
             obj2 = new db.Literal
+            obj2.set 'i18n', 'hi', 'en'
+            obj2.set 'i18n', 'salut', 'fr'
             obj2.set 'string', 'salut'
             obj2.set 'integer', 3
             obj2.set 'date', new Date(2014, 1, 2)
@@ -107,14 +122,22 @@ describe 'model.find', ()->
                     expect(results.length).to.be.equal 2
                     strings = (i.get('string') for i in results)
                     expect(strings).to.include.members ['hello', 'salut']
+                    i18nen = (i.get('i18n', 'en') for i in results)
+                    expect(i18nen).to.include.members ['hello', 'hi']
+                    i18nfr = (i.get('i18n', 'fr') for i in results)
+                    expect(i18nfr).to.include.members ['bonjour', 'salut']
                     done()
 
         it 'should query the docs (equal op)', (done) ->
             obj = new db.Literal
+            obj.set 'i18n', 'hello', 'en'
+            obj.set 'i18n', 'bonjour', 'fr'
             obj.set 'string', 'hello'
             obj.set 'integer', 2
             obj.set 'date', new Date(2014, 1, 1)
             obj2 = new db.Literal
+            obj2.set 'i18n', 'hi', 'en'
+            obj2.set 'i18n', 'salut', 'fr'
             obj2.set 'string', 'salut'
             obj2.set 'integer', 3
             obj2.set 'date', new Date(2014, 1, 2)
@@ -124,15 +147,21 @@ describe 'model.find', ()->
                 db.Literal.find {integer: 2}, (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 1
+                    expect(results[0].get 'i18n', 'en').to.be.equal 'hello'
+                    expect(results[0].get 'i18n', 'fr').to.be.equal 'bonjour'
                     expect(results[0].get 'string').to.be.equal 'hello'
                     done()
 
         it 'should query the docs ($gt)', (done) ->
             obj = new db.Literal
+            obj.set 'i18n', 'hello', 'en'
+            obj.set 'i18n', 'bonjour', 'fr'
             obj.set 'string', 'hello'
             obj.set 'integer', 2
             obj.set 'date', new Date(2014, 1, 1)
             obj2 = new db.Literal
+            obj2.set 'i18n', 'hi', 'en'
+            obj2.set 'i18n', 'salut', 'fr'
             obj2.set 'string', 'salut'
             obj2.set 'integer', 3
             obj2.set 'date', new Date(2014, 1, 2)
@@ -143,15 +172,21 @@ describe 'model.find', ()->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 1
                     expect(results[0].get 'string').to.be.equal 'salut'
+                    expect(results[0].get 'i18n', 'en').to.be.equal 'hi'
+                    expect(results[0].get 'i18n', 'fr').to.be.equal 'salut'
                     done()
 
 
         it 'should query the docs ($gte)', (done) ->
             obj = new db.Literal
+            obj.set 'i18n', 'hello', 'en'
+            obj.set 'i18n', 'bonjour', 'fr'
             obj.set 'string', 'hello'
             obj.set 'integer', 2
             obj.set 'date', new Date(2014, 1, 1)
             obj2 = new db.Literal
+            obj2.set 'i18n', 'hi', 'en'
+            obj2.set 'i18n', 'salut', 'fr'
             obj2.set 'string', 'salut'
             obj2.set 'integer', 3
             obj2.set 'date', new Date(2014, 1, 2)
@@ -163,14 +198,22 @@ describe 'model.find', ()->
                     expect(results.length).to.be.equal 2
                     strings = (i.get('string') for i in results)
                     expect(strings).to.include.members ['hello', 'salut']
+                    i18nen = (i.get('i18n', 'en') for i in results)
+                    expect(i18nen).to.include.members ['hello', 'hi']
+                    i18nfr = (i.get('i18n', 'fr') for i in results)
+                    expect(i18nfr).to.include.members ['bonjour', 'salut']
                     done()
 
         it 'should query the docs ($lt)', (done) ->
             obj = new db.Literal
+            obj.set 'i18n', 'hello', 'en'
+            obj.set 'i18n', 'bonjour', 'fr'
             obj.set 'string', 'hello'
             obj.set 'integer', 2
             obj.set 'date', new Date(2014, 1, 1)
             obj2 = new db.Literal
+            obj2.set 'i18n', 'hi', 'en'
+            obj2.set 'i18n', 'salut', 'fr'
             obj2.set 'string', 'salut'
             obj2.set 'integer', 3
             obj2.set 'date', new Date(2014, 1, 2)
@@ -182,14 +225,20 @@ describe 'model.find', ()->
                     expect(results.length).to.be.equal 1
                     strings = (i.get('string') for i in results)
                     expect(results[0].get 'string').to.be.equal 'hello'
+                    expect(results[0].get 'i18n', 'en').to.be.equal 'hello'
+                    expect(results[0].get 'i18n', 'fr').to.be.equal 'bonjour'
                     done()
 
         it 'should query the docs ($lte)', (done) ->
             obj = new db.Literal
+            obj.set 'i18n', 'hello', 'en'
+            obj.set 'i18n', 'bonjour', 'fr'
             obj.set 'string', 'hello'
             obj.set 'integer', 2
             obj.set 'date', new Date(2014, 1, 1)
             obj2 = new db.Literal
+            obj2.set 'i18n', 'hi', 'en'
+            obj2.set 'i18n', 'salut', 'fr'
             obj2.set 'string', 'salut'
             obj2.set 'integer', 3
             obj2.set 'date', new Date(2014, 1, 2)
@@ -201,14 +250,22 @@ describe 'model.find', ()->
                     expect(results.length).to.be.equal 2
                     strings = (i.get('string') for i in results)
                     expect(strings).to.include.members ['hello', 'salut']
+                    i18nen = (i.get('i18n', 'en') for i in results)
+                    expect(i18nen).to.include.members ['hello', 'hi']
+                    i18nfr = (i.get('i18n', 'fr') for i in results)
+                    expect(i18nfr).to.include.members ['bonjour', 'salut']
                     done()
 
         it 'should query the docs ($in)', (done) ->
             obj = new db.Literal
+            obj.set 'i18n', 'hello', 'en'
+            obj.set 'i18n', 'bonjour', 'fr'
             obj.set 'string', 'hello'
             obj.set 'integer', 2
             obj.set 'date', new Date(2014, 1, 1)
             obj2 = new db.Literal
+            obj2.set 'i18n', 'hi', 'en'
+            obj2.set 'i18n', 'salut', 'fr'
             obj2.set 'string', 'salut'
             obj2.set 'integer', 3
             obj2.set 'date', new Date(2014, 1, 2)
@@ -220,14 +277,22 @@ describe 'model.find', ()->
                     expect(results.length).to.be.equal 2
                     strings = (i.get('string') for i in results)
                     expect(strings).to.include.members ['hello', 'salut']
+                    i18nen = (i.get('i18n', 'en') for i in results)
+                    expect(i18nen).to.include.members ['hello', 'hi']
+                    i18nfr = (i.get('i18n', 'fr') for i in results)
+                    expect(i18nfr).to.include.members ['bonjour', 'salut']
                     done()
 
         it 'should query the docs ($nin)', (done) ->
             obj = new db.Literal
+            obj.set 'i18n', 'hello', 'en'
+            obj.set 'i18n', 'bonjour', 'fr'
             obj.set 'string', 'hello'
             obj.set 'integer', 2
             obj.set 'date', new Date(2014, 1, 1)
             obj2 = new db.Literal
+            obj2.set 'i18n', 'hi', 'en'
+            obj2.set 'i18n', 'salut', 'fr'
             obj2.set 'string', 'salut'
             obj2.set 'integer', 3
             obj2.set 'date', new Date(2014, 1, 2)
@@ -239,6 +304,10 @@ describe 'model.find', ()->
                     expect(results.length).to.be.equal 1
                     strings = (i.get('string') for i in results)
                     expect(strings).to.include.members ['salut']
+                    i18nen = (i.get('i18n', 'en') for i in results)
+                    expect(i18nen).to.include.members ['hi']
+                    i18nfr = (i.get('i18n', 'fr') for i in results)
+                    expect(i18nfr).to.include.members ['salut']
                     db.Literal.find {integer: {$nin: [2, 3]}}, (err, results) ->
                         expect(err).to.be.null
                         expect(results.length).to.be.equal 0
@@ -247,10 +316,14 @@ describe 'model.find', ()->
 
         it 'should query the docs ($and)', (done) ->
             obj = new db.Literal
+            obj.set 'i18n', 'hello', 'en'
+            obj.set 'i18n', 'bonjour', 'fr'
             obj.set 'string', 'hello'
             obj.set 'integer', 2
             obj.set 'date', new Date(2014, 1, 1)
             obj2 = new db.Literal
+            obj2.set 'i18n', 'hi', 'en'
+            obj2.set 'i18n', 'salut', 'fr'
             obj2.set 'string', 'salut'
             obj2.set 'integer', 3
             obj2.set 'date', new Date(2014, 1, 2)
@@ -266,10 +339,14 @@ describe 'model.find', ()->
 
         it 'should query the docs ($ne)', (done) ->
             obj = new db.Literal
+            obj.set 'i18n', 'hello', 'en'
+            obj.set 'i18n', 'bonjour', 'fr'
             obj.set 'string', 'hello'
             obj.set 'integer', 2
             obj.set 'date', new Date(2014, 1, 1)
             obj2 = new db.Literal
+            obj2.set 'i18n', 'hi', 'en'
+            obj2.set 'i18n', 'salut', 'fr'
             obj2.set 'string', 'salut'
             obj2.set 'integer', 3
             obj2.set 'date', new Date(2014, 1, 2)
@@ -281,6 +358,8 @@ describe 'model.find', ()->
                     expect(results.length).to.be.equal 1
                     strings = (i.get('string') for i in results)
                     expect(results[0].get 'string').to.be.equal 'hello'
+                    expect(results[0].get 'i18n', 'en').to.be.equal 'hello'
+                    expect(results[0].get 'i18n', 'fr').to.be.equal 'bonjour'
                     done()
 
 
