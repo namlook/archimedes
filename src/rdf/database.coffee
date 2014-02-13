@@ -359,12 +359,12 @@ class Database extends DatabaseInterface
 
     # ## validateModel
     # Check the model schema for any errors
-    validateModel: (modelName, model) =>
+    validateModel: (modelName, model) ->
+        super modelName, model
         requiredNS = ['uri','graphURI','instancesNamespace','propertiesNamespace']
         for ns in requiredNS
             unless model::meta[ns]
                 throw "#{modelName}.meta.#{ns} not found"
-        # ...
 
 
     # ## beforeRegister

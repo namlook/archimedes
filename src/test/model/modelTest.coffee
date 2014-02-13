@@ -101,8 +101,10 @@ describe 'Model', ()->
             expect(author.id).to.be.undefined
             expect(author.get '_id').to.be.undefined
 
-    describe 'schema', () ->
-        it 'should allow default value', () ->
+    describe 'meta', () ->
+        it 'should have the model name', () ->
+            author = new db.Author
+            expect(author.meta.name).to.be.equal 'Author'
 
     describe '.get()', ()->
         it 'should return the value of a field'

@@ -4,11 +4,10 @@
 _ = require 'underscore'
 async = require 'async'
 objectdiff = require 'objectdiff'
-{extendOnClass} = require('extendonclass')
+{extendOnClass} = require 'extendonclass'
+{isPojo} = require './utils'
 
 
-isPojo = (obj) ->
-    _.isObject(obj) and not _.isArray(obj) and not _.isFunction(obj)
 
 
 class ValueError extends Error

@@ -4,6 +4,7 @@
 objectdiff = require 'objectdiff'
 async = require 'async'
 _ = require 'underscore'
+{deepClone} = require './utils'
 
 
 class Database
@@ -277,28 +278,35 @@ class Database
         for modelName, model of models
             @beforeRegister(modelName, model)
 
-            # Update the schema of model which inherits of its parent's
-            for field, value of model.__super__?.schema
-                model::schema[field] = value
-
-            @validateModel(modelName, model)
+            # attach the reference of the database to the model
+            # We need the db to be available from class and instance methods
             model::db = @
             model.db = @
+
+            # validate and attach the model to the database
+            @validateModel(modelName, model)
             @[modelName] = model
+
+
 
     # ## beforeRegister
     beforeRegister: (modelName, model) ->
-        unless model::meta?
-            model::meta = {}
+        # Update the model's schema which inherits of its parent's
+        schema = {}
+        for key, value of model.__super__?.schema or {}
+            schema[key] = deepClone(value)
+        for key, value of model::schema or {}
+            schema[key] = deepClone(value, schema[key])
+        model::schema = schema
 
-        model::meta.name = modelName
-
-        unless model::schema?
-            throw "#{modelName} has not schema"
-
-        for fieldName, field of model::schema
-            if field.i18n and field.type isnt 'string'
-                throw "#{modelName}.#{fieldName} is i18n and must be of type string"
+        # # Update the model's meta which inherits of its parent's
+        meta = {}
+        for key, value of model.__super__?.meta or {}
+            meta[key] = value
+        for key, value of model::meta or {}
+            meta[key] = value
+        meta.name = modelName
+        model::meta = meta
 
         # if the model doesn't specify default language, we set it
         unless model::meta.defaultLang
@@ -307,8 +315,13 @@ class Database
 
     # ## validateModel
     # Check the model structure for any errors
-    validateModel: (modelName, model) =>
-        # throw "not implemented"
+    validateModel: (modelName, model) ->
+        unless model::schema?
+            throw "#{modelName} has not schema"
+
+        for fieldName, field of model::schema
+            if field.i18n and field.type isnt 'string'
+                throw "#{modelName}.#{fieldName} is i18n and must be of type string"
 
 
     #
