@@ -935,9 +935,10 @@ class Model
     # templating)
     #
     # options:
-    #   - embed: if true, include the relation. For example, if a blogpost
+    #   - populate: if true, include the relation. For example, if a blogpost
     #       has a author setted, then the author is included into the resulted
-    #       object. If `embed` is false, only the id of the embed object is added
+    #       object. If `populate` is false, only the id of the related instance
+    #       is added
     toJSONObject: (options) =>
         options = options or {}
         jsonObject = {}
@@ -946,7 +947,7 @@ class Model
                 for val in value
                     jsonObject[key] = [] unless jsonObject[key]?
                     if val.meta?.name and val.toJSONObject?
-                        if options.embed
+                        if options.populate
                             jsonObject[key].push val.toJSONObject(options)
                         else
                             jsonObject[key].push val.id
@@ -955,7 +956,7 @@ class Model
             else if _.isObject(value) and not _.isArray(value) and not _.isDate(value)
                 jsonObject[key] = {} unless jsonObject[key]?
                 if value.meta?.name and value.toJSONObject?
-                    if options.embed
+                    if options.populate
                         jsonObject[key] = value.toJSONObject(options)
                     else
                         jsonObject[key] = value.id
