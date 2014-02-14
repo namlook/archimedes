@@ -5,45 +5,51 @@ _ = require 'underscore'
 
 
 exports.defaultTypes = {
-	'string':
-		validate: _.isString
-	'integer':
-		validate: check.isInt
-	'float':
-		validate: check.isFloat
-	'boolean':
-		validate: _.isBoolean
+    'string':
+        validate: _.isString
+    'integer':
+        validate: check.isInt
+    'float':
+        validate: check.isFloat
+    'boolean':
+        compute: (value, attrs) ->
+            unless _.isBoolean(value) or value in [0, 1]
+                throw "#{attrs.model.meta.name}.#{attrs.fieldName} must be a boolean not '#{typeof value}'"
+            Boolean value
+        validate: (value) -> _.isBoolean(value) or value in [0, 1]
 
-	# complexe
-	'date':
-		validate: check.isDate
-		compute: (value) -> check.toDate(value)
-	'email':
-		type: 'string'
-		validate: check.isEmail
-	'url':
-		type: 'string'
-		validate: check.isURL
+    # complexe
+    'date':
+        validate: check.isDate
+        compute: (value) -> check.toDate(value)
+    'email':
+        type: 'string'
+        validate: check.isEmail
+    'url':
+        type: 'string'
+        validate: check.isURL
 
-	# other
-	'creditcard':
-		type: 'string'
-		validate: check.isCreditCard
-	'ip':
-		validate: (value) -> check.isIP(value, 4) or check.isIP(value, 6)
-	'ipv4':
-		validate: (value) -> check.isIP(value, 4)
-	'ipv6':
-		validate: (value) -> check.isIP(value, 6)
-	'hexadecimal':
-		validate: check.isHexadecimal
-	'hexcolor':
-		validate: check.isHexColor
-	'uuid':
-		validate: (value) ->
-			uuid = check.isUUID
-			uuid(value, 3) or uuid(value, 4) or uuid(value, 5)
+    # other
+    'creditcard':
+        type: 'string'
+        validate: check.isCreditCard
+    'ip':
+        validate: (value) -> check.isIP(value, 4) or check.isIP(value, 6)
+    'ipv4':
+        validate: (value) -> check.isIP(value, 4)
+    'ipv6':
+        validate: (value) -> check.isIP(value, 6)
+    'hexadecimal':
+        validate: check.isHexadecimal
+    'hexcolor':
+        validate: check.isHexColor
+    'uuid':
+        validate: (value) ->
+            uuid = check.isUUID
+            uuid(value, 3) or uuid(value, 4) or uuid(value, 5)
 }
+
+
 
 class exports.Type
 
