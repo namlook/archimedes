@@ -563,6 +563,8 @@ class Model
 
                 if fieldName is '_id'
                     @id = value
+                else if fieldName is '_type'
+                    @type = value
 
                 @_properties[fieldName] = value
 
@@ -938,7 +940,9 @@ class Model
     #   - populate: if true, include the relation. For example, if a blogpost
     #       has a author setted, then the author is included into the resulted
     #       object. If `populate` is false, only the id of the related instance
-    #       is added
+    #       is added. If `populate` is equal to 'ref', then populate with
+    #       `{_id: instanceId, _type: instanceType}`. This is useful if one
+    #       wants to export in json but do not want to loose the type reference.
     toJSONObject: (options) =>
         options = options or {}
         jsonObject = {}
@@ -948,7 +952,10 @@ class Model
                     jsonObject[key] = [] unless jsonObject[key]?
                     if val.meta?.name and val.toJSONObject?
                         if options.populate
-                            jsonObject[key].push val.toJSONObject(options)
+                            if options.populate is 'ref'
+                                jsonObject[key].push {_id: val.id, _type: val.type}
+                            else
+                                jsonObject[key].push val.toJSONObject(options)
                         else
                             jsonObject[key].push val.id
                     else
@@ -957,7 +964,10 @@ class Model
                 jsonObject[key] = {} unless jsonObject[key]?
                 if value.meta?.name and value.toJSONObject?
                     if options.populate
-                        jsonObject[key] = value.toJSONObject(options)
+                        if options.populate is 'ref'
+                            jsonObject[key] = {_id: value.id, _type: value.type}
+                        else
+                            jsonObject[key] = value.toJSONObject(options)
                     else
                         jsonObject[key] = value.id
                 else
@@ -975,6 +985,8 @@ class Model
     # because of some database specificity. For instance, triples stores are
     # using uri for identifing fields.
     toSerializableObject: (options) ->
+        options = options or {}
+        options.populate = false
         return @toJSONObject(options)
 
 
