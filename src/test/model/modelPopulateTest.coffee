@@ -40,15 +40,6 @@ describe 'model relations', ()->
                 multi: true
 
 
-    badmodels = {}
-
-    class badmodels.BadI18n extends config.Model
-        schema:
-            integer:
-                type: 'integer'
-                i18n: true
-
-
     db = config.Database()
     db.registerModels models
 
@@ -124,43 +115,6 @@ describe 'model relations', ()->
                             literal.get('date').toISOString())
                         done()
 
-    describe '.populate() [Multi]', () ->
-        it 'should populate the relation fields', (done) ->
-            literal = new db.Literal
-            literal.set 'i18n', 'hello', 'en'
-            literal.set 'i18n', 'salut', 'fr'
-            literal.set 'string', 'hello'
-            literal.set 'integer', 2
-            literal.set 'date', new Date(2014, 1, 1)
-            literal2 = new db.Literal
-            literal2.set 'i18n', 'bye', 'en'
-            literal2.set 'i18n', 'au revoir', 'fr'
-            literal2.set 'string', 'hi'
-            literal2.set 'integer', 3
-            literal2.set 'date', new Date(2014, 1, 2)
-            multi = new db.Multi
-            multi.push 'literals', literal
-            multi.push 'literals', literal2
-            multi.save (err, savedMulti, infos) ->
-                expect(err).to.be.null
-                expect(infos.dbTouched).to.be.true
-                expect(multi.id).to.be.not.null
-                db.Multi.find savedMulti.id, (err, results) ->
-                    expect(err).to.be.null
-                    expect(results.length).to.be.equal 1
-                    fetchedMulti = results[0]
-                    (expect(i).to.be.string for i in fetchedMulti.get('literals'))
-
-                    fetchedMulti.populate (err, populatedMulti) ->
-                        literals = populatedMulti.get('literals')
-                        expect(literals[0].get 'i18n', 'en').to.be.equal 'hello'
-                        expect(literals[0].get 'i18n', 'fr').to.be.equal 'salut'
-                        expect(literals[0].get 'string').to.be.equal 'hello'
-                        expect(literals[0].get 'integer').to.be.equal 2
-                        expect(literals[0].get('date').toISOString()).to.be.equal(
-                            literals[0].get('date').toISOString())
-                        done()
-
 
     describe '.first() [One]', () ->
         it 'should populate the first doc that match the id', (done) ->
@@ -220,7 +174,7 @@ describe 'model relations', ()->
                     done()
 
 
-    describe '.find()', () ->
+    describe '.find() [One]', () ->
         it 'should populate all docs that match the query', (done) ->
             literal = new db.Literal
             literal.set 'i18n', 'hello', 'en'
@@ -280,4 +234,277 @@ describe 'model relations', ()->
                         literal.get('date').toISOString())
                     done()
 
+
+    describe '.populate() [Multi]', () ->
+        it 'should populate the relation fields', (done) ->
+            literal = new db.Literal
+            literal.set 'i18n', 'hello', 'en'
+            literal.set 'i18n', 'salut', 'fr'
+            literal.set 'string', 'hello'
+            literal.set 'integer', 2
+            literal.set 'date', new Date(2014, 1, 1)
+
+            literal2 = new db.Literal
+            literal2.set 'i18n', 'bye', 'en'
+            literal2.set 'i18n', 'au revoir', 'fr'
+            literal2.set 'string', 'hi'
+            literal2.set 'integer', 3
+            literal2.set 'date', new Date(2014, 1, 2)
+
+            multi = new db.Multi
+            multi.push 'literals', literal
+            multi.push 'literals', literal2
+
+            multi.save (err, savedMulti, infos) ->
+                expect(err).to.be.null
+                expect(infos.dbTouched).to.be.true
+                expect(multi.id).to.be.not.null
+                db.Multi.find savedMulti.id, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 1
+                    fetchedMulti = results[0]
+                    (expect(i).to.be.string for i in fetchedMulti.get('literals'))
+
+                    fetchedMulti.populate {recursive: true}, (err, populatedMulti) ->
+                        literals = populatedMulti.get('literals')
+                        i18nen = (l.get('i18n', 'en') for l in literals)
+                        expect(i18nen).to.be.include.members ['hello', 'bye']
+                        i18nfr = (l.get('i18n', 'fr') for l in literals)
+                        expect(i18nfr).to.be.include.members ['salut', 'au revoir']
+                        strings = (l.get('string') for l in literals)
+                        expect(strings).to.be.include.members ['hello', 'hi']
+                        integers = (l.get('integer') for l in literals)
+                        expect(integers).to.be.include.members [2, 3]
+                        dates = (l.get('date').toISOString() for l in literals)
+                        expect(dates).to.be.include.members [
+                            new Date(2014, 1, 1).toISOString()
+                            new Date(2014, 1, 2).toISOString()
+                        ]
+                        done()
+
+        it 'should populate inner relation fields', (done) ->
+            literal = new db.Literal
+            literal.set 'i18n', 'hello', 'en'
+            literal.set 'i18n', 'salut', 'fr'
+            literal.set 'string', 'hello'
+            literal.set 'integer', 2
+            literal.set 'date', new Date(2014, 1, 1)
+            literal.set 'inner', new db.Inner {string: 'foo'}
+
+            literal2 = new db.Literal
+            literal2.set 'i18n', 'bye', 'en'
+            literal2.set 'i18n', 'au revoir', 'fr'
+            literal2.set 'string', 'hi'
+            literal2.set 'integer', 3
+            literal2.set 'date', new Date(2014, 1, 2)
+            literal2.set 'inner', new db.Inner {string: 'bar'}
+
+            multi = new db.Multi
+            multi.push 'literals', literal
+            multi.push 'literals', literal2
+
+            multi.save (err, savedMulti, infos) ->
+                expect(err).to.be.null
+                expect(infos.dbTouched).to.be.true
+                expect(multi.id).to.be.not.null
+                db.Multi.find savedMulti.id, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 1
+                    fetchedMulti = results[0]
+                    (expect(i).to.be.string for i in fetchedMulti.get('literals'))
+
+                    fetchedMulti.populate {recursive: true}, (err, populatedMulti) ->
+                        literals = populatedMulti.get('literals')
+                        inners = (l.get('inner').get('string') for l in literals)
+                        expect(inners).to.be.include.members ['foo', 'bar']
+                        i18nen = (l.get('i18n', 'en') for l in literals)
+                        expect(i18nen).to.be.include.members ['hello', 'bye']
+                        i18nfr = (l.get('i18n', 'fr') for l in literals)
+                        expect(i18nfr).to.be.include.members ['salut', 'au revoir']
+                        strings = (l.get('string') for l in literals)
+                        expect(strings).to.be.include.members ['hello', 'hi']
+                        integers = (l.get('integer') for l in literals)
+                        expect(integers).to.be.include.members [2, 3]
+                        dates = (l.get('date').toISOString() for l in literals)
+                        expect(dates).to.be.include.members [
+                            new Date(2014, 1, 1).toISOString()
+                            new Date(2014, 1, 2).toISOString()
+                        ]
+                        done()
+
+
+    describe '.first() [Multi]', () ->
+        it 'should populate the first doc that match the id', (done) ->
+            literal = new db.Literal
+            literal.set 'i18n', 'hello', 'en'
+            literal.set 'i18n', 'salut', 'fr'
+            literal.set 'string', 'hello'
+            literal.set 'integer', 2
+            literal.set 'date', new Date(2014, 1, 1)
+
+            literal2 = new db.Literal
+            literal2.set 'i18n', 'bye', 'en'
+            literal2.set 'i18n', 'au revoir', 'fr'
+            literal2.set 'string', 'hi'
+            literal2.set 'integer', 3
+            literal2.set 'date', new Date(2014, 1, 2)
+
+            multi = new db.Multi
+            multi.push 'literals', literal
+            multi.push 'literals', literal2
+
+            multi.save (err, savedMulti, infos) ->
+                expect(err).to.be.null
+                expect(infos.dbTouched).to.be.true
+                expect(multi.id).to.be.not.null
+                db.Multi.first savedMulti.id, {populate: true}, (err, populatedMulti) ->
+                    expect(err).to.be.null
+                    literals = populatedMulti.get('literals')
+                    i18nen = (l.get('i18n', 'en') for l in literals)
+                    expect(i18nen).to.be.include.members ['hello', 'bye']
+                    i18nfr = (l.get('i18n', 'fr') for l in literals)
+                    expect(i18nfr).to.be.include.members ['salut', 'au revoir']
+                    strings = (l.get('string') for l in literals)
+                    expect(strings).to.be.include.members ['hello', 'hi']
+                    integers = (l.get('integer') for l in literals)
+                    expect(integers).to.be.include.members [2, 3]
+                    dates = (l.get('date').toISOString() for l in literals)
+                    expect(dates).to.be.include.members [
+                        new Date(2014, 1, 1).toISOString()
+                        new Date(2014, 1, 2).toISOString()
+                    ]
+                    done()
+
+        it 'should populate inner relation fields', (done) ->
+            literal = new db.Literal
+            literal.set 'i18n', 'hello', 'en'
+            literal.set 'i18n', 'salut', 'fr'
+            literal.set 'string', 'hello'
+            literal.set 'integer', 2
+            literal.set 'date', new Date(2014, 1, 1)
+            literal.set 'inner', new db.Inner {string: 'foo'}
+
+            literal2 = new db.Literal
+            literal2.set 'i18n', 'bye', 'en'
+            literal2.set 'i18n', 'au revoir', 'fr'
+            literal2.set 'string', 'hi'
+            literal2.set 'integer', 3
+            literal2.set 'date', new Date(2014, 1, 2)
+            literal2.set 'inner', new db.Inner {string: 'bar'}
+
+            multi = new db.Multi
+            multi.push 'literals', literal
+            multi.push 'literals', literal2
+
+            multi.save (err, savedMulti, infos) ->
+                expect(err).to.be.null
+                expect(infos.dbTouched).to.be.true
+                expect(multi.id).to.be.not.null
+                db.Multi.first savedMulti.id, {populate: true}, (err, populatedMulti) ->
+                    expect(err).to.be.null
+                    literals = populatedMulti.get('literals')
+                    inners = (l.get('inner').get('string') for l in literals)
+                    expect(inners).to.be.include.members ['foo', 'bar']
+                    i18nen = (l.get('i18n', 'en') for l in literals)
+                    expect(i18nen).to.be.include.members ['hello', 'bye']
+                    i18nfr = (l.get('i18n', 'fr') for l in literals)
+                    expect(i18nfr).to.be.include.members ['salut', 'au revoir']
+                    strings = (l.get('string') for l in literals)
+                    expect(strings).to.be.include.members ['hello', 'hi']
+                    integers = (l.get('integer') for l in literals)
+                    expect(integers).to.be.include.members [2, 3]
+                    dates = (l.get('date').toISOString() for l in literals)
+                    expect(dates).to.be.include.members [
+                        new Date(2014, 1, 1).toISOString()
+                        new Date(2014, 1, 2).toISOString()
+                    ]
+                    done()
+
+    describe '.find() [Multi]', () ->
+        it 'should populate the docs that match the ids', (done) ->
+            literal = new db.Literal
+            literal.set 'i18n', 'hello', 'en'
+            literal.set 'i18n', 'salut', 'fr'
+            literal.set 'string', 'hello'
+            literal.set 'integer', 2
+            literal.set 'date', new Date(2014, 1, 1)
+
+            literal2 = new db.Literal
+            literal2.set 'i18n', 'bye', 'en'
+            literal2.set 'i18n', 'au revoir', 'fr'
+            literal2.set 'string', 'hi'
+            literal2.set 'integer', 3
+            literal2.set 'date', new Date(2014, 1, 2)
+
+            multi = new db.Multi
+            multi.push 'literals', literal
+            multi.push 'literals', literal2
+
+            multi.save (err, saved, infos) ->
+                expect(err).to.be.null
+                expect(infos.dbTouched).to.be.true
+                db.Multi.find multi.id, {populate: true}, (err, results) ->
+                    expect(err).to.be.null
+                    populatedMulti = results[0]
+                    literals = populatedMulti.get('literals')
+                    i18nen = (l.get('i18n', 'en') for l in literals)
+                    expect(i18nen).to.be.include.members ['hello', 'bye']
+                    i18nfr = (l.get('i18n', 'fr') for l in literals)
+                    expect(i18nfr).to.be.include.members ['salut', 'au revoir']
+                    strings = (l.get('string') for l in literals)
+                    expect(strings).to.be.include.members ['hello', 'hi']
+                    integers = (l.get('integer') for l in literals)
+                    expect(integers).to.be.include.members [2, 3]
+                    dates = (l.get('date').toISOString() for l in literals)
+                    expect(dates).to.be.include.members [
+                        new Date(2014, 1, 1).toISOString()
+                        new Date(2014, 1, 2).toISOString()
+                    ]
+                    done()
+
+        it 'should populate inner relation fields', (done) ->
+            literal = new db.Literal
+            literal.set 'i18n', 'hello', 'en'
+            literal.set 'i18n', 'salut', 'fr'
+            literal.set 'string', 'hello'
+            literal.set 'integer', 2
+            literal.set 'date', new Date(2014, 1, 1)
+            literal.set 'inner', new db.Inner {string: 'foo'}
+
+            literal2 = new db.Literal
+            literal2.set 'i18n', 'bye', 'en'
+            literal2.set 'i18n', 'au revoir', 'fr'
+            literal2.set 'string', 'hi'
+            literal2.set 'integer', 3
+            literal2.set 'date', new Date(2014, 1, 2)
+            literal2.set 'inner', new db.Inner {string: 'bar'}
+
+            multi = new db.Multi
+            multi.push 'literals', literal
+            multi.push 'literals', literal2
+
+            multi.save (err, savedMulti, infos) ->
+                expect(err).to.be.null
+                expect(infos.dbTouched).to.be.true
+                expect(multi.id).to.be.not.null
+                db.Multi.find savedMulti.id, {populate: true}, (err, results) ->
+                    expect(err).to.be.null
+                    populatedMulti = results[0]
+                    literals = populatedMulti.get('literals')
+                    inners = (l.get('inner').get('string') for l in literals)
+                    expect(inners).to.be.include.members ['foo', 'bar']
+                    i18nen = (l.get('i18n', 'en') for l in literals)
+                    expect(i18nen).to.be.include.members ['hello', 'bye']
+                    i18nfr = (l.get('i18n', 'fr') for l in literals)
+                    expect(i18nfr).to.be.include.members ['salut', 'au revoir']
+                    strings = (l.get('string') for l in literals)
+                    expect(strings).to.be.include.members ['hello', 'hi']
+                    integers = (l.get('integer') for l in literals)
+                    expect(integers).to.be.include.members [2, 3]
+                    dates = (l.get('date').toISOString() for l in literals)
+                    expect(dates).to.be.include.members [
+                        new Date(2014, 1, 1).toISOString()
+                        new Date(2014, 1, 2).toISOString()
+                    ]
+                    done()
 

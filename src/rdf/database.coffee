@@ -444,6 +444,9 @@ class Database extends DatabaseInterface
             if property in ['_id', '_type']
                 continue
 
+            if value._uri? and _.isArray(value._uri)
+                value = ({_uri: val} for val in value._uri)
+
             # multi field
             if _.isArray(value)
                 for val in value

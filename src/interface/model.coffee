@@ -825,13 +825,19 @@ class Model
     # ## save
     # Sync the changed field into the database
     #
-    # `save (err, model) ->`
+    # `save (err, model, infos) ->`
     #
     # Only the field marked as change will be updated. If fields has been unset,
     # their related property uri will be delete.
+    #
+    # infos:
+    #   - dbTouched: if true, its means that the data has hitted the database
     save: (callback) =>
-        unless callback
+        if not callback
             throw 'callback is required'
+
+        if typeof(callback) isnt 'function'
+            throw 'callback should be a function'
 
         try
             @__checkRequiredFields()

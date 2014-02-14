@@ -43,6 +43,8 @@ class RdfModel extends ModelInterface
                 properties[key] = value
             if value._uri?
                 properties[key] = value._uri
+            else if _.isArray value
+                properties[key] = (val._uri? and val._uri or val for val in value)
         super properties
 
 
