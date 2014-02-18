@@ -185,7 +185,7 @@ describe 'Model', ()->
 
         it 'should set the value of a relation field via its id', () ->
             blogPost = new db.BlogPost
-            blogPost.set 'blog', {_id: 'TheBlog'}
+            blogPost.set 'blog', 'TheBlog'
             expect(blogPost.get('blog')).to.be.equal 'TheBlog'
 
 

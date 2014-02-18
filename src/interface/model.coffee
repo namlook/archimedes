@@ -699,11 +699,8 @@ class Model
     #
     # If `options` is a string, it is taken as a lang code
     unset: (fieldName, options)=>
+        options = options or {}
         @__checkFieldExistance(fieldName)
-
-        options = @__parseOptions(options, {
-            quietReadOnly: false
-        }, fieldName)
 
         # a read-only field cannot be unset
         if @schema[fieldName].readOnly
@@ -1092,7 +1089,9 @@ class Model
         if @db._types[type]?
             unless @db._types[type].validate(value)
                 ok = false
-        else if @db[type]? and type isnt value.meta?.name and not  _.isString value
+        else if @db[type]? and type isnt value.meta?.name and \
+          not _.isString(value) and not value._id?
+            console.log type, value, (not _.isString(value) or not value._id?)
             ok = false
         unless ok
             throw new ValueError(
