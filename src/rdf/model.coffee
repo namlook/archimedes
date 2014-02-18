@@ -66,6 +66,9 @@ class RdfModel extends ModelInterface
                 result[key] = value
             else
                 if @db[@schema[key].type]?
+                    unless _.str.startsWith(value, 'http://')
+                        nspace = @db[@schema[key].type]::meta.instancesNamespace
+                        value = "#{nspace}/#{value}"
                     result[@getURI(key)] = {_uri: value}
                 else
                     result[@getURI(key)] = value

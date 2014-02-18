@@ -38,5 +38,5 @@ Virtuoso = () ->
     }
 
 
-module.exports = NeDB()
-# module.exports = Virtuoso()
+# module.exports = NeDB()
+module.exports = Virtuoso()

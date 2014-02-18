@@ -4,9 +4,11 @@ expect = chai.expect
 
 config = require('../config')
 RdfModel = config.Model
-RdfDatabase = config.Database
+db = config.Database()
 
-if RdfDatabase.dbtype isnt 'rdf'
+if db.dbtype isnt 'rdf'
+    console.log db.dbtype
+    console.log "Database is not an RDF database (got #{db.dbtype}). Skipping..."
     return
 
 describe 'RdfModel', ()->
@@ -47,14 +49,6 @@ describe 'RdfModel', ()->
             keyword:
                 type: 'string'
                 multi: true
-
-    db = new RdfDatabase {
-        store: 'stardog'
-        namespace: 'http://onto.example.org'
-        defaultInstancesNamespace: 'http://data.example.org'
-        graphURI: 'http://example.org'
-        credentials: {login: 'admin', password: 'admin'}
-    }
 
     db.registerModels models
 
@@ -223,7 +217,22 @@ describe 'RdfModel', ()->
 
 
     describe 'set()', ()->
-        it 'should set the value of a relation field'
+        it 'should set the value of a relation field', () ->
+            blog = new db.Blog {title: 'the blog'}
+            blogPost = new db.BlogPost
+            blogPost.set 'blog', blog
+            sblog = blogPost.toSerializableObject()['http://onto.example.org/properties/blog']
+            expect(sblog._uri).to.be.equal 'http://data.example.org/blog/undefined'
+            expect(blogPost.get('blog').get('title')).to.be.equal 'the blog'
+
+        it 'should set the value of a relation field via its id', () ->
+            blogPost = new db.BlogPost
+            blogPost.set 'blog', 'TheBlog'
+            sblog = blogPost.toSerializableObject()['http://onto.example.org/properties/blog']
+            expect(sblog._uri).to.be.equal 'http://data.example.org/blog/TheBlog'
+            expect(blogPost.serialize().indexOf('<http://data.example.org/blog/TheBlog>')).to.be.gt 0
+            expect(blogPost.get('blog')).to.be.equal 'TheBlog'
+
         it 'should set the values of a relation field'
 
 

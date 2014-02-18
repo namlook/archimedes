@@ -144,6 +144,7 @@ class Database extends DatabaseInterface
         ntriples = @_pojo2nt(pojo._id, pojo)
         return ntriples.join(' .\n') + ' .\n'
 
+
     # ## batchSync
     #
     # Sync multiple pojo at a time
