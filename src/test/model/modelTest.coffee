@@ -101,6 +101,10 @@ describe 'Model', ()->
             expect(author.id).to.be.undefined
             expect(author.get '_id').to.be.undefined
 
+        it 'should accept null values', () ->
+            blogPost = new db.BlogPost {content: null, blog: null}
+            expect(blogPost.toJSONObject().content).to.be.undefined
+
     describe 'meta', () ->
         it 'should have the model name', () ->
             author = new db.Author
@@ -172,8 +176,21 @@ describe 'Model', ()->
             blog.get('i18ntags', {lang: 'fr'}).should.include 'toto', 'tata'
 
 
-        it 'should set the value of a relation field'
+        it 'should set the value of a relation field', () ->
+            blog = new db.Blog {title: 'the blog'}
+            blogPost = new db.BlogPost
+            blogPost.set 'blog', blog
+            expect(blogPost.get('blog').get('title')).to.be.equal 'the blog'
+
+
+        it 'should set the value of a relation field via its id', () ->
+            blogPost = new db.BlogPost
+            blogPost.set 'blog', {_id: 'TheBlog'}
+            expect(blogPost.get('blog')).to.be.equal 'TheBlog'
+
+
         it 'should set the values of a relation field'
+
 
         it 'should throw an error if the value is an array and the field non-multi', () ->
             blogPost = new db.BlogPost
@@ -186,6 +203,13 @@ describe 'Model', ()->
             blogPost = new db.BlogPost
             expect(-> blogPost.set 'dont-exists-field', 'foo').to.throw(
                 /'BlogPost.dont-exists-field' not found/)
+
+        it 'should accept null values', () ->
+            blogPost = new db.BlogPost
+            blogPost.set 'content', null
+            blogPost.set 'keyword', null
+            blogPost.set 'title', null
+            blogPost.set 'blog', null
 
 
     describe '.unset()', ()->

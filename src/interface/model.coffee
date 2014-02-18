@@ -499,6 +499,10 @@ class Model
     # - If the field is a i18n-field, a `options.lang` can be passed.
     # - If the field is a non-i18n field, the `options.lang` is ignored.
     #
+    # If the value is null or underfined, then apply the `unset()` method
+    # to the field (example: `obj.set('field', null)` is the same as
+    # `obj.unset('field')`
+    #
     # `options`:
     # - **lang**: the lang used in value (for i18n fields)
     # - **validate**: (default true) if false, do not validate the value
@@ -507,6 +511,11 @@ class Model
     #
     # If `options` is a string, it is taken as a lang code
     set: (fieldName, value, options) =>
+        options = options or {}
+
+        if value in [null, undefined]
+            @unset(fieldName, options)
+            return
 
         @__checkFieldExistance(fieldName)
 
@@ -704,9 +713,12 @@ class Model
 
         # unset the field
         if @schema[fieldName].i18n
-            lang = options.lang
-            if @_properties[fieldName]?[lang]?
-                delete @_properties[fieldName][lang]
+            if _.isString(options)
+                options = {lang: options}
+            if options.lang?
+                lang = options.lang
+                if @_properties[fieldName]?[lang]?
+                    delete @_properties[fieldName][lang]
 
         else
             delete @_properties[fieldName]
@@ -990,10 +1002,18 @@ class Model
         return @toJSONObject(options)
 
 
+    # ## serialize
+    # Return a raw representation of the model. This representation is useful
+    # if one wants to batch import the data directly into the database (with
+    # is usualy faster than using the `sync()` method)
+    serialize: (options) ->
+        return @toSerializableObject(options)
+
+
     # ## toJSON
     # Convert the model into a JSON string
-    toJSON: () =>
-        return JSON.stringify @toJSONObject()
+    toJSON: (options) =>
+        return JSON.stringify @toJSONObject(options)
 
 
     # # Private methods
@@ -1007,7 +1027,7 @@ class Model
         options = options or {}
 
         if fieldName
-            if _.isString options
+            if _.isString(options)
                 if @schema[fieldName].i18n
                     options = {lang: options}
                 else

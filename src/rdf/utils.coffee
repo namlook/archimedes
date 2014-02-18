@@ -105,7 +105,7 @@ exports.value2rdf = value2rdf = (value, lang) ->
     else
         quotedValue = value.replace(/"/g, '\\"')
         lang = if lang then "@#{lang}" else ''
-        value = "\"#{quotedValue}\"#{lang}"
+        value = "\"\"\"#{quotedValue}\"\"\"#{lang}"
     return value
 
 

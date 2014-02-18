@@ -136,6 +136,14 @@ class Database extends DatabaseInterface
             @_updateCache(convertedPojo)
             return callback null, convertedPojo, {dbTouched: true}
 
+    # ## serialize
+    # Convert a pojo into ntriples
+    serialize: (pojo) ->
+        unless pojo._id?
+            pojo._id = @__buildURI()
+        ntriples = @_pojo2nt(pojo._id, pojo)
+        return ntriples.join(' .\n') + ' .\n'
+
     # ## batchSync
     #
     # Sync multiple pojo at a time
@@ -197,18 +205,22 @@ class Database extends DatabaseInterface
                 for property, value of _changes
                     if _.isArray(value)
                         for val in value
-                            target.push "<#{pojo._id}> <#{property}> \"#{val}\""
+                            val = value2rdf(val)
+                            target.push "<#{pojo._id}> <#{property}> #{val}"
                     else if _.isObject(value)
                         for lang, val of value
                             if _.isArray val
                                 for _val in val
+                                    _val = value2rdf(_val, lang)
                                     target.push(
-                                        "<#{pojo._id}> <#{property}> \"#{_val}\"@#{lang}")
+                                        "<#{pojo._id}> <#{property}> #{_val}")
                             else
+                                val = value2rdf(val, lang)
                                 target.push(
-                                    "<#{pojo._id}> <#{property}> \"#{val}\"@#{lang}")
+                                    "<#{pojo._id}> <#{property}> #{val}")
                     else
-                        target.push "<#{pojo._id}> <#{property}> \"#{value}\""
+                        value = value2rdf(value, lang)
+                        target.push "<#{pojo._id}> <#{property}> #{value}"
                 return target
 
             addedNtriples = @_pojo2nt(pojo._id, changes.added)

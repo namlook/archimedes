@@ -36,6 +36,8 @@ class RdfModel extends ModelInterface
 
         # convert the pojo (with uris as key) into regular pojo
         for key, value of properties
+            if value in [null, undefined]
+                continue
             if _.str.startsWith(key, 'http://')
                 propURI = key
                 key = @db._propertiesIndexURI[key]
@@ -68,6 +70,13 @@ class RdfModel extends ModelInterface
                 else
                     result[@getURI(key)] = value
         return result
+
+
+    # ## serialize
+    # Convert the model into ntriples. This is usefull for dumping models in raw
+    # data in order to load them into the database
+    serialize: (options) ->
+        return @db.serialize(@toSerializableObject())
 
 
     # convert query's key into uri
