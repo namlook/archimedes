@@ -31,9 +31,13 @@ class Database extends DatabaseInterface
 
     # ## count
     # return the number of item that match the query
-    count: (query, callback) =>
-        if typeof query is 'function' and not callback
+    count: (query, options, callback) ->
+        if typeof options is 'function' and not callback
+            callback = options
+            options = {}
+        if typeof query is 'function'
             callback = query
+            options = {}
             query = {}
 
         @store.count query, (err, count) ->

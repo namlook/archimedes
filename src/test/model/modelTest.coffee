@@ -818,6 +818,28 @@ describe 'Model', ()->
                 expect(err).to.be.equal "can't delete a non-saved model"
                 done()
 
+    describe '.count()', () ->
+        it "should return only the instance's number of the same type", (done) ->
+            instances = [
+                new db.Blog {title: 'First blog'}
+                new db.Blog {title: 'Second blog'}
+                new db.Blog {title: 'Third blog'}
+                new db.Author {login: 'bob'}
+                new db.Author {login: 'timy'}
+            ]
+            db.batchSync instances, (err) ->
+                expect(err).to.be.null
+                db.Blog.count (err, total) ->
+                    expect(err).to.be.null
+                    expect(total).to.be.equal 3
+                    db.Author.count (err, total) ->
+                        expect(err).to.be.null
+                        expect(total).to.be.equal 2
+                        db.count (err, total) ->
+                            expect(err).to.be.null
+                            expect(total).to.be.equal 5
+                            done()
+
 
     describe '._getPendingRelations()', () ->
 

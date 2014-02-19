@@ -114,7 +114,7 @@ describe 'model.find', ()->
             obj2.set 'string', 'salut'
             obj2.set 'integer', 3
             obj2.set 'date', new Date(2014, 1, 2)
-            db.batchSync [obj.toJSONObject(), obj2.toJSONObject()], (err, data) ->
+            db.batchSync [obj, obj2], (err, data) ->
                 expect(err).to.be.null
                 expect(_.every(i.options.dbTouched for i in data)).to.be.true
                 db.Literal.find (err, results) ->
@@ -141,7 +141,7 @@ describe 'model.find', ()->
             obj2.set 'string', 'salut'
             obj2.set 'integer', 3
             obj2.set 'date', new Date(2014, 1, 2)
-            db.batchSync [obj.toJSONObject(), obj2.toJSONObject()], (err, data) ->
+            db.batchSync [obj, obj2], (err, data) ->
                 expect(err).to.be.null
                 expect(_.every(i.options.dbTouched for i in data)).to.be.true
                 db.Literal.find {integer: 2}, (err, results) ->
@@ -165,7 +165,7 @@ describe 'model.find', ()->
             obj2.set 'string', 'salut'
             obj2.set 'integer', 3
             obj2.set 'date', new Date(2014, 1, 2)
-            db.batchSync [obj.toJSONObject(), obj2.toJSONObject()], (err, data) ->
+            db.batchSync [obj, obj2], (err, data) ->
                 expect(err).to.be.null
                 expect(_.every(i.options.dbTouched for i in data)).to.be.true
                 db.Literal.find {integer: {$gt: 2}}, (err, results) ->
@@ -190,7 +190,7 @@ describe 'model.find', ()->
             obj2.set 'string', 'salut'
             obj2.set 'integer', 3
             obj2.set 'date', new Date(2014, 1, 2)
-            db.batchSync [obj.toJSONObject(), obj2.toJSONObject()], (err, data) ->
+            db.batchSync [obj, obj2], (err, data) ->
                 expect(err).to.be.null
                 expect(_.every(i.options.dbTouched for i in data)).to.be.true
                 db.Literal.find {integer: {$gte: 2}}, (err, results) ->
@@ -217,7 +217,7 @@ describe 'model.find', ()->
             obj2.set 'string', 'salut'
             obj2.set 'integer', 3
             obj2.set 'date', new Date(2014, 1, 2)
-            db.batchSync [obj.toJSONObject(), obj2.toJSONObject()], (err, data) ->
+            db.batchSync [obj, obj2], (err, data) ->
                 expect(err).to.be.null
                 expect(_.every(i.options.dbTouched for i in data)).to.be.true
                 db.Literal.find {integer: {$lt: 3}}, (err, results) ->
@@ -242,7 +242,7 @@ describe 'model.find', ()->
             obj2.set 'string', 'salut'
             obj2.set 'integer', 3
             obj2.set 'date', new Date(2014, 1, 2)
-            db.batchSync [obj.toJSONObject(), obj2.toJSONObject()], (err, data) ->
+            db.batchSync [obj, obj2], (err, data) ->
                 expect(err).to.be.null
                 expect(_.every(i.options.dbTouched for i in data)).to.be.true
                 db.Literal.find {integer: {$lte: 3}}, (err, results) ->
@@ -269,7 +269,7 @@ describe 'model.find', ()->
             obj2.set 'string', 'salut'
             obj2.set 'integer', 3
             obj2.set 'date', new Date(2014, 1, 2)
-            db.batchSync [obj.toJSONObject(), obj2.toJSONObject()], (err, data) ->
+            db.batchSync [obj, obj2], (err, data) ->
                 expect(err).to.be.null
                 expect(_.every(i.options.dbTouched for i in data)).to.be.true
                 db.Literal.find {integer: {$in: [2, 3, 4]}}, (err, results) ->
@@ -296,7 +296,7 @@ describe 'model.find', ()->
             obj2.set 'string', 'salut'
             obj2.set 'integer', 3
             obj2.set 'date', new Date(2014, 1, 2)
-            db.batchSync [obj.toJSONObject(), obj2.toJSONObject()], (err, data) ->
+            db.batchSync [obj, obj2], (err, data) ->
                 expect(err).to.be.null
                 expect(_.every(i.options.dbTouched for i in data)).to.be.true
                 db.Literal.find {integer: {$nin: [2, 4]}}, (err, results) ->
@@ -327,7 +327,7 @@ describe 'model.find', ()->
             obj2.set 'string', 'salut'
             obj2.set 'integer', 3
             obj2.set 'date', new Date(2014, 1, 2)
-            db.batchSync [obj.toJSONObject(), obj2.toJSONObject()], (err, data) ->
+            db.batchSync [obj, obj2], (err, data) ->
                 expect(err).to.be.null
                 expect(_.every(i.options.dbTouched for i in data)).to.be.true
                 query = {$and: [{integer: 2}, {integer: 3}]}
@@ -350,7 +350,7 @@ describe 'model.find', ()->
             obj2.set 'string', 'salut'
             obj2.set 'integer', 3
             obj2.set 'date', new Date(2014, 1, 2)
-            db.batchSync [obj.toJSONObject(), obj2.toJSONObject()], (err, data) ->
+            db.batchSync [obj, obj2], (err, data) ->
                 expect(err).to.be.null
                 expect(_.every(i.options.dbTouched for i in data)).to.be.true
                 db.Literal.find {integer: {$ne: 3}}, (err, results) ->
@@ -422,7 +422,7 @@ describe 'model.find', ()->
             obj2.set 'integer', [3, 4, 5]
             obj2.push 'date', new Date(2014, 2, 1)
             obj2.push 'date', new Date(2014, 3, 1)
-            db.batchSync [obj.toJSONObject(), obj2.toJSONObject()], (err, data) ->
+            db.batchSync [obj, obj2], (err, data) ->
                 expect(err).to.be.null
                 expect(_.every(i.options.dbTouched for i in data)).to.be.true
                 db.Multi.find (err, results) ->
@@ -454,7 +454,7 @@ describe 'model.find', ()->
             obj2.set 'integer', [3, 4, 5]
             obj2.push 'date', new Date(2014, 2, 1)
             obj2.push 'date', new Date(2014, 3, 1)
-            db.batchSync [obj.toJSONObject(), obj2.toJSONObject()], (err, data) ->
+            db.batchSync [obj, obj2], (err, data) ->
                 expect(err).to.be.null
                 expect(_.every(i.options.dbTouched for i in data)).to.be.true
                 db.Multi.find {'string': 'hi'}, (err, results) ->
@@ -484,7 +484,7 @@ describe 'model.find', ()->
             obj2.set 'integer', [3, 4, 5]
             obj2.push 'date', new Date(2014, 2, 1)
             obj2.push 'date', new Date(2014, 3, 1)
-            db.batchSync [obj.toJSONObject(), obj2.toJSONObject()], (err, data) ->
+            db.batchSync [obj, obj2], (err, data) ->
                 expect(err).to.be.null
                 expect(_.every(i.options.dbTouched for i in data)).to.be.true
                 db.Multi.find {integer: 3}, (err, results) ->
@@ -515,7 +515,7 @@ describe 'model.find', ()->
             obj2.set 'integer', [3, 4, 5]
             obj2.push 'date', new Date(2014, 2, 1)
             obj2.push 'date', new Date(2014, 3, 1)
-            db.batchSync [obj.toJSONObject(), obj2.toJSONObject()], (err, data) ->
+            db.batchSync [obj, obj2], (err, data) ->
                 expect(err).to.be.null
                 expect(_.every(i.options.dbTouched for i in data)).to.be.true
                 db.Multi.find {integer: {$gt: 3}}, (err, results) ->
@@ -545,7 +545,7 @@ describe 'model.find', ()->
             obj2.set 'integer', [3, 4, 5]
             obj2.push 'date', new Date(2014, 2, 1)
             obj2.push 'date', new Date(2014, 3, 1)
-            db.batchSync [obj.toJSONObject(), obj2.toJSONObject()], (err, data) ->
+            db.batchSync [obj, obj2], (err, data) ->
                 expect(err).to.be.null
                 expect(_.every(i.options.dbTouched for i in data)).to.be.true
                 db.Multi.find {integer: {$gte: 3}}, (err, results) ->
@@ -577,7 +577,7 @@ describe 'model.find', ()->
             obj2.set 'integer', [3, 4, 5]
             obj2.push 'date', new Date(2014, 2, 1)
             obj2.push 'date', new Date(2014, 3, 1)
-            db.batchSync [obj.toJSONObject(), obj2.toJSONObject()], (err, data) ->
+            db.batchSync [obj, obj2], (err, data) ->
                 expect(err).to.be.null
                 expect(_.every(i.options.dbTouched for i in data)).to.be.true
                 db.Multi.find {integer: {$lt: 3}}, (err, results) ->
@@ -608,7 +608,7 @@ describe 'model.find', ()->
             obj2.set 'integer', [3, 4, 5]
             obj2.push 'date', new Date(2014, 2, 1)
             obj2.push 'date', new Date(2014, 3, 1)
-            db.batchSync [obj.toJSONObject(), obj2.toJSONObject()], (err, data) ->
+            db.batchSync [obj, obj2], (err, data) ->
                 expect(err).to.be.null
                 expect(_.every(i.options.dbTouched for i in data)).to.be.true
                 db.Multi.find {integer: {$lte: 3}}, (err, results) ->
@@ -639,7 +639,7 @@ describe 'model.find', ()->
             obj2.set 'integer', [3, 4, 5]
             obj2.push 'date', new Date(2014, 2, 1)
             obj2.push 'date', new Date(2014, 3, 1)
-            db.batchSync [obj.toJSONObject(), obj2.toJSONObject()], (err, data) ->
+            db.batchSync [obj, obj2], (err, data) ->
                 expect(err).to.be.null
                 expect(_.every(i.options.dbTouched for i in data)).to.be.true
                 db.Multi.find {string: {$in: ['salut', 'hi', 'foo']}}, (err, results) ->
@@ -670,7 +670,7 @@ describe 'model.find', ()->
             obj2.set 'integer', [3, 4, 5]
             obj2.push 'date', new Date(2014, 2, 1)
             obj2.push 'date', new Date(2014, 3, 1)
-            db.batchSync [obj.toJSONObject(), obj2.toJSONObject()], (err, data) ->
+            db.batchSync [obj, obj2], (err, data) ->
                 expect(err).to.be.null
                 expect(_.every(i.options.dbTouched for i in data)).to.be.true
                 db.Multi.find {string: {$in: ['hello']}}, (err, results) ->
@@ -703,7 +703,7 @@ describe 'model.find', ()->
             obj2.push 'date', new Date(2014, 2, 1)
             obj2.push 'date', new Date(2014, 3, 1)
 
-            db.batchSync [obj.toJSONObject(), obj2.toJSONObject()], (err, data) ->
+            db.batchSync [obj, obj2], (err, data) ->
                 expect(err).to.be.null
                 expect(_.every(i.options.dbTouched for i in data)).to.be.true
 
@@ -743,7 +743,7 @@ describe 'model.find', ()->
             obj2.set 'integer', [3, 4, 5]
             obj2.push 'date', new Date(2014, 2, 1)
             obj2.push 'date', new Date(2014, 3, 1)
-            db.batchSync [obj.toJSONObject(), obj2.toJSONObject()], (err, data) ->
+            db.batchSync [obj, obj2], (err, data) ->
                 expect(err).to.be.null
                 expect(_.every(i.options.dbTouched for i in data)).to.be.true
                 query = {$and: [{string: 'salut'}, {string: 'hi'}]}
@@ -775,7 +775,7 @@ describe 'model.find', ()->
             obj2.set 'integer', [3, 4, 5]
             obj2.push 'date', new Date(2014, 2, 1)
             obj2.push 'date', new Date(2014, 3, 1)
-            db.batchSync [obj.toJSONObject(), obj2.toJSONObject()], (err, data) ->
+            db.batchSync [obj, obj2], (err, data) ->
                 expect(err).to.be.null
                 expect(_.every(i.options.dbTouched for i in data)).to.be.true
                 db.Multi.find {string: {$ne: 'hello'}}, (err, results) ->
@@ -856,7 +856,7 @@ describe 'model.find', ()->
             obj2.push 'strings', 'bleh', 'en'
             obj2.push 'strings', 'titi', 'fr'
             obj2.push 'strings', 'tutu', 'fr'
-            db.batchSync [obj.toJSONObject(), obj2.toJSONObject()], (err, data) ->
+            db.batchSync [obj, obj2], (err, data) ->
                 expect(err).to.be.null
                 expect(_.every(i.options.dbTouched for i in data)).to.be.true
                 db.I18n.find (err, results) ->
@@ -888,7 +888,7 @@ describe 'model.find', ()->
             obj2.push 'strings', 'bleh', 'en'
             obj2.push 'strings', 'titi', 'fr'
             obj2.push 'strings', 'tutu', 'fr'
-            db.batchSync [obj.toJSONObject(), obj2.toJSONObject()], (err, data) ->
+            db.batchSync [obj, obj2], (err, data) ->
                 expect(err).to.be.null
                 expect(_.every(i.options.dbTouched for i in data)).to.be.true
                 db.I18n.find {'string@en': 'hello'}, (err, results) ->
@@ -916,7 +916,7 @@ describe 'model.find', ()->
             obj2.push 'strings', 'bleh', 'en'
             obj2.push 'strings', 'titi', 'fr'
             obj2.push 'strings', 'tutu', 'fr'
-            db.batchSync [obj.toJSONObject(), obj2.toJSONObject()], (err, data) ->
+            db.batchSync [obj, obj2], (err, data) ->
                 expect(err).to.be.null
                 expect(_.every(i.options.dbTouched for i in data)).to.be.true
                 db.I18n.find {'string@fr': {$ne: ['au revoir']}}, (err, results) ->
@@ -939,7 +939,7 @@ describe 'model.find', ()->
             obj2.push 'strings', 'bleh', 'en'
             obj2.push 'strings', 'titi', 'fr'
             obj2.push 'strings', 'tutu', 'fr'
-            db.batchSync [obj.toJSONObject(), obj2.toJSONObject()], (err, data) ->
+            db.batchSync [obj, obj2], (err, data) ->
                 expect(err).to.be.null
                 expect(_.every(i.options.dbTouched for i in data)).to.be.true
                 db.I18n.find {'string@fr': {$ne: 'au revoir'}}, (err, results) ->
@@ -967,7 +967,7 @@ describe 'model.find', ()->
             obj2.push 'strings', 'bleh', 'en'
             obj2.push 'strings', 'titi', 'fr'
             obj2.push 'strings', 'tutu', 'fr'
-            db.batchSync [obj.toJSONObject(), obj2.toJSONObject()], (err, data) ->
+            db.batchSync [obj, obj2], (err, data) ->
                 expect(err).to.be.null
                 expect(_.every(i.options.dbTouched for i in data)).to.be.true
                 db.I18n.find {'string@en': {$in: ['hello', 'foo', 'au revoir']}}, (err, results) ->
@@ -1004,7 +1004,7 @@ describe 'model.find', ()->
             obj2.push 'strings', 'bleh', 'en'
             obj2.push 'strings', 'titi', 'fr'
             obj2.push 'strings', 'tutu', 'fr'
-            db.batchSync [obj.toJSONObject(), obj2.toJSONObject()], (err, data) ->
+            db.batchSync [obj, obj2], (err, data) ->
                 expect(err).to.be.null
                 expect(_.every(i.options.dbTouched for i in data)).to.be.true
                 db.I18n.find {'string@en': {$nin: ['hello', 'foo', 'au revoir']}}, (err, results) ->

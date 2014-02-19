@@ -69,9 +69,13 @@ class Database extends DatabaseInterface
 
     # ## count
     # return the number of item that match the query
-    count: (query, callback) =>
-        if typeof(query) is 'function' and not callback
+    count: (query, options, callback) =>
+        if typeof(options) is 'function' and not callback
+            callback = options
+            options = {}
+        if typeof(query) is 'function'
             callback = query
+            options = {}
             query = null
 
         unless callback?
@@ -218,16 +222,24 @@ class Database extends DatabaseInterface
 
     # ## batchSync
     #
-    # Sync multiple pojo at a time
+    # Sync multiple objects at the same time.
+    # Objects can be pojos or models. In fact, `batchSync()` will call
+    # the method `toSerializableObject()` on each object if it exists. If not
+    # the object is treated as a regular pojo.
     #
     # example:
-    #   @batchSync pojos, (err, data)
-    batchSync: (pojos, options, callback) ->
+    #   @batchSync objects, (err, data)
+    batchSync: (objects, options, callback) ->
         if typeof(options) is 'function' and not callback
             callback = options
             options = {}
         unless callback
             throw 'callback is required'
+        unless objects or not _.isArray(objects)
+            throw 'an array of objects is required'
+
+        pojos = (pojo.toSerializableObject? and pojo.toSerializableObject() \
+            or pojo for pojo in objects)
 
         async.map pojos, ((pojo, cb) =>
             try
@@ -356,6 +368,9 @@ class Database extends DatabaseInterface
         # if the model doesn't specify uri, we build it
         if not model::meta.uri
             model::meta.uri =  "#{@defaultClassesNamespace}/#{modelName}"
+
+        # the model.meta.type is model.meta.uri
+        model::meta.type = model::meta.uri
 
         # if the model doesn't specify graphURI, we set it
         if not model::meta.graphURI

@@ -143,6 +143,16 @@ class Model
         return callback null, query, options
 
 
+    @count: (query, options, callback) ->
+        if typeof(options) is 'function' and not callback
+            callback = options
+            options = {}
+        if typeof(query) is 'function'
+            callback = query
+            options = {}
+            query = {_type: @::meta.type}
+        return @db.count query, options, callback
+
     # # Static methods
 
     # ## find

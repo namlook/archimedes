@@ -19,7 +19,7 @@ class Database
 
     # ## count
     # return the number of documents that match the query
-    count: (query, callback) ->
+    count: (query, options, callback) ->
         callback 'count() is not implemented'
 
 
@@ -146,16 +146,24 @@ class Database
 
     # ## batchSync
     #
-    # Sync multiple pojo at a time
+    # Sync multiple objects at the same time.
+    # Objects can be pojos or models. In fact, `batchSync()` will call
+    # the method `toSerializableObject()` on each object if it exists. If not
+    # the object is treated as a regular pojo.
     #
     # example:
-    #   @batchSync pojos, (err, data)
-    batchSync: (pojos, options, callback) ->
+    #   @batchSync objects, (err, data)
+    batchSync: (objects, options, callback) ->
         if typeof(options) is 'function' and not callback
             callback = options
             options = {}
         unless callback
             throw 'callback is required'
+        unless objects or not _.isArray(objects)
+            throw 'an array of objects is required'
+
+        pojos = (pojo.toSerializableObject? and pojo.toSerializableObject()\
+         or pojo for pojo in objects)
 
         async.map pojos, (pojo, cb) =>
             @sync pojo, options, (err, result, options) ->
@@ -306,6 +314,7 @@ class Database
         for key, value of model::meta or {}
             meta[key] = value
         meta.name = modelName
+        meta.type = modelName
         model::meta = meta
 
         # if the model doesn't specify default language, we set it
