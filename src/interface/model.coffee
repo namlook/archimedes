@@ -245,23 +245,32 @@ class Model
         unless callback
             throw 'callback is required'
 
-        @db.first query, options, (err, pojo) =>
+        options.limit = 1
+        @find query, options, (err, pojos) ->
             if err
                 return callback err
+            unless pojos.length
+                return callback null, null
+            return callback null, pojos[0]
 
-            obj = new @(pojo)
 
-            if options.populate
-                populateOptions = {}
-                if _.isNumber options.populate
-                    fields = (fname for fname, val of @schema when @db[val.type]?)
-                else # populate is a list of fields
-                    fields = null
-                    populateOptions.recursive = true
-                obj.populate fields, populateOptions, (err, populatedObj) ->
-                    return callback null, populatedObj
-            else
-                return callback null, obj
+        # @db.first query, options, (err, pojo) =>
+        #     if err
+        #         return callback err
+
+        #     obj = new @(pojo)
+
+        #     if options.populate
+        #         populateOptions = {}
+        #         if _.isNumber options.populate
+        #             fields = (fname for fname, val of @schema when @db[val.type]?)
+        #         else # populate is a list of fields
+        #             fields = null
+        #             populateOptions.recursive = true
+        #         obj.populate fields, populateOptions, (err, populatedObj) ->
+        #             return callback null, populatedObj
+        #     else
+        #         return callback null, obj
 
     # ## firstURI
     # Like `first` but returns only the first object URI
@@ -1091,7 +1100,6 @@ class Model
                 ok = false
         else if @db[type]? and type isnt value.meta?.name and \
           not _.isString(value) and not value._id?
-            console.log type, value, (not _.isString(value) or not value._id?)
             ok = false
         unless ok
             throw new ValueError(

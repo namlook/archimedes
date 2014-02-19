@@ -72,12 +72,15 @@ class Database extends DatabaseInterface
     count: (query, callback) =>
         if typeof(query) is 'function' and not callback
             callback = query
-            query = '?s ?p ?o .'
+            query = null
 
         unless callback?
             throw "callback required"
 
-        # sparqlQuery = @_mongo2sparqlQuery(query)
+        try
+            query = @_mongo2sparqlQuery(query)
+        catch e
+            return callback e
 
         sparqlQuery = """
             select (count(distinct ?s) as ?total)
@@ -86,6 +89,74 @@ class Database extends DatabaseInterface
 
         @store.count sparqlQuery, callback
 
+
+    # ## _find
+    # Perform a find query against a regular query.
+    # The query is a mongo-like query which take the following form:
+    #
+    #     {fieldName: value, 'i18nfield@en': 'english content'}
+    #
+    # we can reach relations with the doted notation
+    #
+    #     {'blogPost.comment.author.name': 'Nico'}
+    #
+    # example:
+    #   @_find query, options, (err, docs) ->
+    _find: (query, options, callback) ->
+        try
+            query = @_mongo2sparqlQuery(query)
+        catch e
+            return callback e
+
+        sparqlQuery = "select distinct ?s from <#{@graphURI}> where {#{query}}"
+
+        @store.query sparqlQuery, options, (err, data) =>
+            if err
+                return callback err
+
+            ids = (item.s.value for item in data)
+            unless options.instances
+                return callback null, ids
+            else
+                return @_findByIds ids, callback
+
+
+    # ## _findByIds
+    # fetch documents by their ids
+    #
+    # example:
+    #   @_findByIds ids, options, (err, docs) ->
+    _findByIds: (ids, options, callback) ->
+        @store.describe ids, options, (err, results) =>
+            if err
+                return callback err
+            return callback null, results
+
+
+    # ## _findById
+    # fetch a document by its id
+    #
+    # example:
+    #   @_findById id, options, (err, docs) ->
+    _findById: (id, options, callback) ->
+        @_findByIds [id], options, callback
+
+
+    # ##### Sparql-like query (aka Sparqlite)
+    # A Sparql-like query take the followin form:
+    #
+    #     ?this <[[fieldName]]> "value" .
+    #
+    # We can reach relations and make complex query like this
+    #
+    #     ?this <[BlogPost.comment]> ?comment .
+    #     ?comment <[Comment.author]> ?author .
+    #     ?author <[Author.name]> "Nico" .
+    #     ?this <[BlogPost.blog]>  <#{nicoblog.id}>  .
+    #
+    # `?this` should be type of the object we are calling the `find` method.
+    @_findViaSparqlite: (SparqliteQuery, options, callback) ->
+        # ...
 
     # ## delete
     # Delete the item in database that match the id
@@ -242,113 +313,6 @@ class Database extends DatabaseInterface
         return sparqlQuery
 
 
-    # ## _find
-    # Perform a find query against a regular query.
-    # The query is a mongo-like query which take the following form:
-    #
-    #     {fieldName: value, 'i18nfield@en': 'english content'}
-    #
-    # we can reach relations with the doted notation
-    #
-    #     {'blogPost.comment.author.name': 'Nico'}
-    #
-    # example:
-    #   @_find query, options, (err, docs) ->
-    _find: (query, options, callback) ->
-        try
-            query = @_mongo2sparqlQuery(query)
-        catch e
-            return callback e
-
-        sparqlQuery = "select distinct ?s from <#{@graphURI}> where {#{query}}"
-
-        @store.query sparqlQuery, options, (err, data) =>
-            if err
-                return callback err
-
-            ids = (item.s.value for item in data)
-            unless options.instances
-                return callback null, ids
-            else
-                return @_findByIds ids, callback
-
-
-    # ## _findByIds
-    # fetch documents by their ids
-    #
-    # example:
-    #   @_findByIds ids, options, (err, docs) ->
-    _findByIds: (ids, options, callback) ->
-        @store.describe ids, options, (err, results) =>
-            if err
-                return callback err
-            return callback null, results
-
-
-    # ## _findById
-    # fetch a document by its id
-    #
-    # example:
-    #   @_findById id, options, (err, docs) ->
-    _findById: (id, options, callback) ->
-        @_findByIds [id], options, callback
-
-
-    # ##### Sparql-like query (aka Sparqlite)
-    # A Sparql-like query take the followin form:
-    #
-    #     ?this <[[fieldName]]> "value" .
-    #
-    # We can reach relations and make complex query like this
-    #
-    #     ?this <[BlogPost.comment]> ?comment .
-    #     ?comment <[Comment.author]> ?author .
-    #     ?author <[Author.name]> "Nico" .
-    #     ?this <[BlogPost.blog]>  <#{nicoblog.id}>  .
-    #
-    # `?this` should be type of the object we are calling the `find` method.
-    @_findViaSparqlite: (SparqliteQuery, options, callback) ->
-        # ...
-
-
-    # _describe: (model, uris, options, callback) =>
-    #     @store.describe uris, options, (err, rawdata) =>
-    #         if err
-    #             return callback err
-
-    #         properties = {}
-    #         schema = model::schema
-    #         results = []
-    #         for data in rawdata
-    #             for uri, item of data
-    #                 if uri is '@id'
-    #                     properties._id = item
-
-    #                 else if uri isnt '@type'
-    #                     prop = @_propertiesIndexURI[uri]
-    #                     if schema[prop].i18n
-    #                         unless properties[prop]?
-    #                             properties[prop] = {}
-    #                         for _item in item
-    #                             lang = _item['@language']
-    #                             value = _item['@value']
-    #                             if schema[prop].multi
-    #                                 unless lang
-    #                                     throw 'something wrong'
-    #                                 unless properties[prop][lang]?
-    #                                     properties[prop][lang] = []
-    #                                 properties[prop][lang].push value
-    #                             else
-    #                                 properties[prop][lang] = value
-
-    #                     else if schema[prop].multi
-    #                         properties[prop] = (_item['@value'] for _item in item)
-    #                     else
-    #                         properties[prop] = item[0]['@value']
-    #             results.push new model(properties)
-    #         return callback null, results
-
-
     #
     #
     # Model dealing section
@@ -454,7 +418,10 @@ class Database extends DatabaseInterface
 
         # build the n-triples
         for property, value of changes
-            if property in ['_id', '_type']
+            if property is '_id'
+                continue
+            else if property is '_type'
+                ntriples.push "<#{uri}> a <#{value}>"
                 continue
 
             if value._uri? and _.isArray(value._uri)

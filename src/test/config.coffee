@@ -6,6 +6,7 @@ NeDB = () ->
         Model: require('../interface/model')
         Database: () -> new Database()
         nsprop: ''
+        nsclass: ''
     }
 
 Stardog = () ->
@@ -21,6 +22,7 @@ Stardog = () ->
                 credentials: {login: 'admin', password: 'admin'}
             }
         nsprop: 'http://onto.example.org/properties/'
+        nsclass: 'http://onto.example.org/classes/'
     }
 
 Virtuoso = () ->
@@ -35,6 +37,7 @@ Virtuoso = () ->
                 graphURI: 'http://example.org'
             }
         nsprop: 'http://onto.example.org/properties/'
+        nsclass: 'http://onto.example.org/classes/'
     }
 
 

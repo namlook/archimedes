@@ -26,6 +26,9 @@ exports.mongo2sparql = (mongoQuery) ->
                 for val in value
                     _convert(val, sparqlQuery)
                 continue
+            else if prop is '_type'
+                sparqlQuery.push "?s a <#{value}>"
+                continue
 
             if '@' in prop
                 [prop, lang] = prop.split('@')

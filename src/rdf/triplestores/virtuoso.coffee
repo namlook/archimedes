@@ -110,6 +110,9 @@ module.exports = class Virtuoso
                 prop = item.p.value
                 lang = item.o.lang
                 value = item.o.value
+                if prop is 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type'
+                    result._type = value
+                    continue
                 if item.o.type is 'uri'
                     value = {_uri: value}
                 if lang?
@@ -130,7 +133,6 @@ module.exports = class Virtuoso
 
             if _.isEmpty result
                 result = null
-
             return callback null, result
 
     # ## update

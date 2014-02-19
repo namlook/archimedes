@@ -12,6 +12,10 @@ describe 'Database.find()', ()->
         index: "#{config.nsprop}index"
         foo: "#{config.nsprop}foo"
     }
+    t = {
+        pojo1: "#{config.nsclass}Pojo1"
+        pojo2: "#{config.nsclass}Pojo2"
+    }
 
     beforeEach (done) ->
         db.clear done
@@ -98,6 +102,28 @@ describe 'Database.find()', ()->
                     expect(results[0][f.index]).to.be.equal(pojo[f.index])
                     expect(results[0]._id).to.be.equal obj._id
                     done()
+
+        it 'should handle _type', (done) ->
+            pojos = []
+            for i in [1..4]
+                pojo = {_type: t.pojo1}
+                pojo[f.title] = i
+                pojo[f.index] = i*10
+                pojos.push pojo
+            for i in [1..6]
+                pojo = {_type: t.pojo2}
+                pojo[f.title] = i
+                pojo[f.index] = i*10
+                pojos.push pojo
+            db.batchSync pojos, (err, results) ->
+                expect(err).to.be.null
+                db.count {_type: t.pojo1}, (err, total) ->
+                    expect(err).to.be.null
+                    expect(total).to.be.equal 4
+                    db.count {_type: t.pojo2}, (err, total) ->
+                        expect(err).to.be.null
+                        expect(total).to.be.equal 6
+                        done()
 
 
     describe 'query', () ->
