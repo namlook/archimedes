@@ -57,6 +57,68 @@ describe 'model.find', ()->
     beforeEach (done) ->
         db.clear done
 
+    describe '[type]', () ->
+        it 'should return the doc of the same type', (done) ->
+            instances = [
+                new db.Literal {'string': 'foo'}
+                new db.Literal {'string': 'bar'}
+                new db.Literal {'string': 'baz'}
+                new db.Multi {'integer': [1, 2, 3]}
+                new db.Multi {'integer': [3, 4, 5]}
+                new db.I18n {'string': {'en': 'foo', 'fr': 'toto'}}
+            ]
+            db.batchSync instances, (err) ->
+                expect(err).to.be.null
+                db.Literal.find (err, literals) ->
+                    expect(err).to.be.null
+                    expect(literals.length).to.be.equal 3
+                    db.Multi.find (err, multis) ->
+                        expect(err).to.be.null
+                        expect(multis.length).to.be.equal 2
+                        db.I18n.find (err, i18ns) ->
+                            expect(err).to.be.null
+                            expect(i18ns.length).to.be.equal 1
+                            done()
+
+        it 'should return the doc of the same type with a query', (done) ->
+            instances = [
+                new db.Literal {'integer': 1}
+                new db.Literal {'integer': 2}
+                new db.Literal {'integer': 3}
+                new db.Multi {'integer': [1, 2, 3]}
+                new db.Multi {'integer': [3, 4, 5]}
+                new db.I18n {'string': {'en': 'foo', 'fr': 'toto'}}
+            ]
+            db.batchSync instances, (err) ->
+                expect(err).to.be.null
+                db.Literal.find {integer: 3}, (err, literals) ->
+                    expect(err).to.be.null
+                    expect(literals.length).to.be.equal 1
+                    db.Multi.find {integer: 3}, (err, multis) ->
+                        expect(err).to.be.null
+                        expect(multis.length).to.be.equal 2
+                        done()
+
+        it 'should return the first doc of the same type with a query', (done) ->
+            instances = [
+                new db.Literal {'integer': 1}
+                new db.Literal {'integer': 2}
+                new db.Literal {'integer': 3}
+                new db.Multi {'integer': [1, 2, 3]}
+                new db.Multi {'integer': [3, 4, 5]}
+                new db.I18n {'string': {'en': 'foo', 'fr': 'toto'}}
+            ]
+            db.batchSync instances, (err) ->
+                expect(err).to.be.null
+                db.Literal.first {integer: 3}, (err, literal) ->
+                    expect(err).to.be.null
+                    expect(literal.get 'integer').to.be.equal 3
+                    db.Multi.first {integer: 3}, (err, multi) ->
+                        expect(err).to.be.null
+                        expect(i for i in multi.get 'integer').to.include.members [3]
+                        done()
+
+
     describe '[literal]', () ->
         it 'should return the doc that match the id', (done) ->
             obj = new db.Literal

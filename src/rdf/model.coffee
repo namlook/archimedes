@@ -85,6 +85,8 @@ class RdfModel extends ModelInterface
     # convert query's key into uri
     @_convertQueryUri: (query) ->
         for key, value of query
+            if key is '_type'
+                continue
             if key is '$and'
                 for val in value
                     for k, v of val

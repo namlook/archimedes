@@ -111,7 +111,6 @@ class Database extends DatabaseInterface
             query = @_mongo2sparqlQuery(query)
         catch e
             return callback e
-
         sparqlQuery = "select distinct ?s from <#{@graphURI}> where {#{query}}"
 
         @store.query sparqlQuery, options, (err, data) =>

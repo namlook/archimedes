@@ -196,6 +196,9 @@ class Model
         unless callback
             throw 'callback is required'
 
+        unless query._type?
+            query._type = @::meta.type
+
         @beforeQuery query, options, (err, query, options) =>
             @db.find query, options, (err, pojos) =>
                 if err
