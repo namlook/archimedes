@@ -696,7 +696,6 @@ describe 'Model', ()->
 
                 expect(blogPost.get('author').get('login')).to.be.equal 'nico'
                 expect(blogPost.get('blog').get('title')).to.be.equal 'My blog'
-
                 blogPost.get('author').set('login', 'bob')
                 blogPost.get('blog').set('title', 'the blog')
 
@@ -705,12 +704,15 @@ describe 'Model', ()->
                     expect(infos.dbTouched).to.be.true
                     expect(obj.get('author').get('login')).to.be.equal 'bob'
                     expect(obj.get('blog').get('title')).to.be.equal 'the blog'
+
                     db.Blog.first blog.id, (err, blog) ->
                         expect(err).to.be.null
                         expect(blog.get('title')).to.be.equal 'the blog'
+
                         db.Author.first author.id, (err, author) ->
                             expect(err).to.be.null
                             expect(author.get('login')).to.be.equal 'bob'
+
                             db.BlogPost.first obj.id, (err, blogPost) ->
                                 expect(err).to.be.null
                                 expect(obj.get('author').get('login')).to.be.equal(
