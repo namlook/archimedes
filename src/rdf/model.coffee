@@ -66,10 +66,18 @@ class RdfModel extends ModelInterface
                 result[key] = value
             else
                 if @db[@schema[key].type]?
-                    unless _.str.startsWith(value, 'http://')
-                        nspace = @db[@schema[key].type]::meta.instancesNamespace
-                        value = "#{nspace}/#{value}"
-                    result[@getURI(key)] = {_uri: value}
+                    unless _.isArray(value)
+                        value = [value]
+                    values = []
+                    for val in value
+                        unless _.str.startsWith(val, 'http://')
+                            nspace = @db[@schema[key].type]::meta.instancesNamespace
+                            val = "#{nspace}/#{val}"
+                        values.push val
+                    if @schema[key].multi
+                        result[@getURI(key)] = {_uri: values}
+                    else
+                        result[@getURI(key)] = {_uri: values[0]}
                 else
                     result[@getURI(key)] = value
         return result
@@ -99,6 +107,8 @@ class RdfModel extends ModelInterface
                 query[propURI] = value
                 delete query[key]
 
+
+    # ## getURI
     # return the related field URI
     getURI: (fieldName) ->
         if '@' in fieldName

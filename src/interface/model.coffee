@@ -978,7 +978,9 @@ class Model
         options = options or {}
         jsonObject = {}
         for key, value of @_properties
-            if _.isArray value
+            if @schema[key].multi and not @schema[key].i18n
+                unless _.isArray(value)
+                    value = [value]
                 for val in value
                     jsonObject[key] = [] unless jsonObject[key]?
                     if val.meta?.name and val.toJSONObject?

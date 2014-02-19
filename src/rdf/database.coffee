@@ -439,6 +439,7 @@ class Database extends DatabaseInterface
                 triple = "<#{uri}> <#{property}> #{value}"
             ntriples.push triple
 
+
         # build the n-triples
         for property, value of changes
             if property is '_id'

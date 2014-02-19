@@ -50,6 +50,12 @@ describe 'RdfModel', ()->
                 type: 'string'
                 multi: true
 
+    class models.Group extends RdfModel
+        schema:
+            authors:
+                type: 'Author'
+                multi: true
+
     db.registerModels models
 
     beforeEach (done) ->
@@ -335,6 +341,17 @@ describe 'RdfModel', ()->
                 expect(serializedModel['http://onto.example.org/properties/_id']).to.be.undefined
                 done()
 
+        it 'should serialize an object with multi relations', () ->
+            group = new db.Group
+            group.push 'authors', 'bob'
+            group.push 'authors', 'timy'
+            group.push 'authors', 'jimy'
+            raw = group.serialize()
+            expect(raw.indexOf('<http://data.example.org/author/bob>')).to.be.gt -1
+            expect(raw.indexOf('<http://data.example.org/author/timy>')).to.be.gt -1
+            expect(raw.indexOf('<http://data.example.org/author/jimy>')).to.be.gt -1
+
+
     describe 'relationship', () ->
         it 'should store relations uri into the db', (done) ->
             blog = new db.Blog {title: 'My blog'}
@@ -355,6 +372,18 @@ describe 'RdfModel', ()->
     describe '.getJSONObject()', () ->
         it 'should return a jsonable object with related instance ids'
         it 'should not be modified if the model has relation and changes'
+        it 'should return a jsonable object with multi relations', (done) ->
+            group = new db.Group
+            group.push 'authors', new db.Author {login: 'bob'}
+            group.push 'authors', new db.Author {login: 'timy'}
+            group.push 'authors', new db.Author {login: 'jimy'}
+            group.save (err, model) ->
+                expect(err).to.be.null
+                jsonobject = model.toJSONObject()
+                expect(jsonobject._id).to.be.equal model.id
+                expect(jsonobject.authors.length).to.be.equal 3
+                done()
+
 
     describe '.getJSON()', () ->
         it 'should return a json string of the model with related instance ids'

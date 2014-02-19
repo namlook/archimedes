@@ -63,6 +63,12 @@ describe 'Model', ()->
                 type: 'string'
                 multi: true
 
+    class models.Group extends Model
+        schema:
+            authors:
+                type: 'Author'
+                multi: true
+
     db = config.Database()
 
     db.registerModels models
@@ -769,6 +775,24 @@ describe 'Model', ()->
             jsonBlogPost = blogPost.toJSONObject()
             blogPost.set 'title', 'salut monde', 'fr'
             expect(jsonBlogPost.title.fr).to.be.undefined
+
+
+       it 'should have its multi-field to be an array', (done) ->
+            group = new db.Group
+            group.push 'authors', new db.Author {login: 'jimy'}
+            jsongroup = group.toJSONObject()
+            expect(jsongroup.authors).to.be.instanceof(Array)
+            expect(jsongroup.authors[0]).to.be.undefined
+            group.save (err, model) ->
+                expect(err).to.be.null
+                db.Group.find (err, results) ->
+                    expect(err).to.be.null
+                    item = results[0]
+                    itemobject = item.toJSONObject()
+                    expect(itemobject.authors).to.be.instanceof(Array)
+                    expect(itemobject.authors.length).to.be.equal 1
+                    done()
+
 
     describe '.getJSON()', () ->
         it 'should return a json string of the model', () ->
