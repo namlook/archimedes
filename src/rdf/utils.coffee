@@ -10,7 +10,6 @@ operators = {
     '$lte': '<='
 }
 
-
 exports.mongo2sparql = (mongoQuery) ->
     if _.isEmpty(mongoQuery)
         return '?s ?p ?o .'
@@ -85,6 +84,14 @@ exports.mongo2sparql = (mongoQuery) ->
     _convert(mongoQuery, sparqlQuery)
 
     return sparqlQuery.join(' .\n')
+
+
+exports.options2sparql = (options) ->
+    sparql = ""
+    for key, value of options
+        if key is "limit"
+            sparql += "limit #{value}"
+    return sparql
 
 
 exports.value2rdf = value2rdf = (value, lang) ->

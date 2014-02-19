@@ -3,7 +3,7 @@
 _ = require 'underscore'
 DatabaseInterface = require '../interface/database'
 async = require 'async'
-{mongo2sparql, value2rdf} = require './utils'
+{mongo2sparql, value2rdf, options2sparql} = require './utils'
 
 triplestores = {
     'stardog': require './triplestores/stardog'
@@ -111,9 +111,18 @@ class Database extends DatabaseInterface
             query = @_mongo2sparqlQuery(query)
         catch e
             return callback e
-        sparqlQuery = "select distinct ?s from <#{@graphURI}> where {#{query}}"
 
-        @store.query sparqlQuery, options, (err, data) =>
+        try
+            sparqlOptions = options2sparql(options)
+        catch e
+            return callback e
+
+        sparqlQuery = """
+            select distinct ?s from <#{@graphURI}>
+            where {#{query}} #{sparqlOptions}
+        """
+
+        @store.query sparqlQuery, (err, data) =>
             if err
                 return callback err
 
