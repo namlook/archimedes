@@ -82,13 +82,13 @@ class Database extends DatabaseInterface
             throw "callback required"
 
         try
-            query = @_mongo2sparqlQuery(query)
+            query = mongo2sparql(query)
         catch e
             return callback e
 
         sparqlQuery = """
             select (count(distinct ?s) as ?total)
-            from <#{@graphURI}> where {#{query}}
+            from <#{@graphURI}> where #{query}
         """
 
         @store.count sparqlQuery, callback
@@ -107,19 +107,14 @@ class Database extends DatabaseInterface
     # example:
     #   @_find query, options, (err, docs) ->
     _find: (query, options, callback) ->
+        sparqlQuery = mongo2sparql(query, options)
         try
-            query = @_mongo2sparqlQuery(query)
-        catch e
-            return callback e
-
-        try
-            sparqlOptions = options2sparql(options)
+            query = mongo2sparql(query, options)
         catch e
             return callback e
 
         sparqlQuery = """
-            select distinct ?s from <#{@graphURI}>
-            where {#{query}} #{sparqlOptions}
+            select distinct ?s from <#{@graphURI}> where #{query}
         """
 
         @store.query sparqlQuery, (err, data) =>
@@ -401,10 +396,6 @@ class Database extends DatabaseInterface
     # Private methods
     #
     #
-
-    _mongo2sparqlQuery: (mongoQuery) ->
-        return mongo2sparql(mongoQuery)
-
 
     # ## __buildURI
     #

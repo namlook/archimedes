@@ -96,8 +96,20 @@ class Database extends DatabaseInterface
 
         call = @store.find query
 
-        if options.limit
+        if options.limit?
             call.limit options.limit
+
+        if options.sortBy?
+            if _.isString options.sortBy
+                options.sortBy = [options.sortBy]
+            sortBy = {}
+            for field in options.sortBy
+                order = 1
+                if field[0] is '-'
+                    order = -1
+                    field = field[1..]
+                sortBy[field] = order
+            call.sort sortBy
 
         call.exec (err, data) =>
             if err

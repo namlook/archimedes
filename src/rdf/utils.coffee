@@ -10,20 +10,30 @@ operators = {
     '$lte': '<='
 }
 
-exports.mongo2sparql = (mongoQuery) ->
-    if _.isEmpty(mongoQuery)
-        return '?s ?p ?o .'
+# ## mongo2sparql
+# convert a mongo-like query into a sparql query
+#
+# example:
+#  convert
+#   {foo: 3, bar: {$gt: 2}}
+#
+#   into
+#
+#    {
+#       ?s <http://example.org/foo> ?bar .
+#       ?s <http://example.org/foo> ?foo .
+#       filter(?foo=3 && ?bar > 2)
+#    }
+exports.mongo2sparql = (mongoQuery, options) ->
+    options = options or {}
 
-    sparqlQuery = []
-    valuesIndex = 0
-
-    _convert = (query, sparqlQuery) ->
+    _convert = (query, sparqlQuery, options, propIndex) ->
         for prop, value of query
             lang = null
 
             if prop is '$and'
                 for val in value
-                    _convert(val, sparqlQuery)
+                    _convert(val, sparqlQuery, options, propIndex)
                 continue
             else if prop is '_type'
                 sparqlQuery.push "?s a <#{value}>"
@@ -51,6 +61,7 @@ exports.mongo2sparql = (mongoQuery) ->
                         filter = filter.join(' || ')
                         sparqlQuery.push "FILTER (#{filter})"
                         sparqlQuery.push "?s <#{prop}> ?value#{valuesIndex}"
+                        propIndex[prop] = valuesIndex
                         valuesIndex += 1
 
                     else if $op is '$all'
@@ -75,23 +86,62 @@ exports.mongo2sparql = (mongoQuery) ->
                         val = value2rdf(val, lang)
                         sparqlQuery.push "FILTER (?value#{valuesIndex} #{op} #{val})"
                         sparqlQuery.push "?s <#{prop}> ?value#{valuesIndex}"
+                        propIndex[prop] = valuesIndex
                         valuesIndex += 1
 
             else
                 value = value2rdf(value, lang)
                 sparqlQuery.push "?s <#{prop}> #{value}"
 
-    _convert(mongoQuery, sparqlQuery)
+    sparqlQuery = []
+    sparqlOrder = []
+    sparqlLimit = ""
+    valuesIndex = 0
+    propIndex = {}
 
-    return sparqlQuery.join(' .\n')
 
+    if _.isEmpty(mongoQuery) and not options.sortBy?
+        sparqlQuery.push '?s ?p ?o .'
+    else
+        _convert(mongoQuery, sparqlQuery, options, propIndex)
 
-exports.options2sparql = (options) ->
-    sparql = ""
-    for key, value of options
-        if key is "limit"
-            sparql += "limit #{value}"
-    return sparql
+    # build sorting
+    if options.sortBy?
+        sortBy = options.sortBy
+        if _.isString sortBy
+            sortBy = [sortBy]
+
+        # we have to keep an index on prop and its related value index
+        for prop in sortBy
+            order = 'asc'
+            if prop[0] is '-'
+                prop = prop[1..]
+                order = 'desc'
+            unless propIndex[prop]?
+                propIndex[prop] = valuesIndex
+                sparqlQuery.push "?s <#{prop}> ?value#{valuesIndex}"
+                valuesIndex += 1
+
+        # generate sparqlOrder
+        unless _.isEmpty propIndex
+            sparqlOrder.push 'order by'
+            for prop in sortBy
+                order = 'asc'
+                if prop[0] is '-'
+                    order = 'desc'
+                    prop = prop[1..]
+                index = propIndex[prop]
+                sparqlOrder.push "#{order}(?value#{index})"
+
+    # build limit
+    if options.limit?
+        sparqlLimit = "limit #{options.limit}"
+
+    return """{#{sparqlQuery.join(' .\n')}}
+        #{sparqlOrder.join(' ')}
+        #{sparqlLimit}
+    """
+
 
 
 exports.value2rdf = value2rdf = (value, lang) ->
