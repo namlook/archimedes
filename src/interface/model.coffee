@@ -364,12 +364,12 @@ class Model
         for fieldName in fields
             relationId = @get(fieldName)
             if relationId
+                if _.isString relationId
+                    relationId = [relationId]
                 relationFieldNames[fieldName] = {
                     id: relationId
                     model: @db[@schema[fieldName].type]
                 }
-                if _.isString relationId
-                    relationId = [relationId]
                 for relId in relationId
                     relationInstances[relId] = {
                         model: @db[@schema[fieldName].type]
