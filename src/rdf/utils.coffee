@@ -128,7 +128,7 @@ exports.mongo2sparql = (mongoQuery, options) ->
                 valuesIndex += 1
 
         # generate sparqlOrder
-        unless _.isEmpty propIndex
+        if not _.isEmpty(propIndex) and not _.isEmpty(sortBy)
             sparqlOrder.push 'order by'
             for prop in sortBy
                 order = 'asc'
@@ -149,6 +149,7 @@ exports.mongo2sparql = (mongoQuery, options) ->
         #{sparqlOrder.join(' ')}
         #{sparqlLimit}
     """
+
 
 
 exports.value2rdf = value2rdf = (value, lang) ->

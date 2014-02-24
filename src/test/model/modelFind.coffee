@@ -1087,4 +1087,30 @@ describe 'model.find', ()->
                         expect(result.get('strings', 'fr')).to.include.members ['titi', 'tutu']
                         done()
 
+    describe 'sortBy', () ->
+        it 'should sort the results by i18n fields in different order with query', (done) ->
+            literals = []
+            for i in [5..1]
+                literals.push new db.Literal {i18n: {en: "#{i}", fr: "#{i%2}"}}
+            db.batchSync literals, (err, results) ->
+                expect(err).to.be.null
+                expect(results.length).to.be.equal 5
+                expect(_.every(r.options.dbTouched for r in results)).to.be.true
+                db.Literal.find {}, {sortBy: ['i18n@fr', '-i18n@en']}, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results[0].get 'i18n', 'fr').to.be.equal "0"
+                    expect(results[0].get 'i18n', 'en').to.be.equal "4"
 
+                    expect(results[1].get 'i18n', 'fr').to.be.equal "0"
+                    expect(results[1].get 'i18n', 'en').to.be.equal "2"
+
+                    expect(results[2].get 'i18n', 'fr').to.be.equal "1"
+                    expect(results[2].get 'i18n', 'en').to.be.equal "5"
+
+                    expect(results[3].get 'i18n', 'fr').to.be.equal "1"
+                    expect(results[3].get 'i18n', 'en').to.be.equal "3"
+
+                    expect(results[4].get 'i18n', 'fr').to.be.equal "1"
+                    expect(results[4].get 'i18n', 'en').to.be.equal "1"
+
+                    done()

@@ -107,7 +107,6 @@ class Database extends DatabaseInterface
     # example:
     #   @_find query, options, (err, docs) ->
     _find: (query, options, callback) ->
-        sparqlQuery = mongo2sparql(query, options)
         try
             query = mongo2sparql(query, options)
         catch e

@@ -50,10 +50,34 @@ class RdfModel extends ModelInterface
         super properties
 
 
-    # convert query's key into uris
     @beforeQuery: (query, options, callback) ->
+        # convert query's key into uris
         if not _.isString(query) and not _.isArray(query)
             @_convertQueryUri(query)
+
+        # convert sortBy keys into uri
+        if options.sortBy? and not _.isArray options.sortBy
+            _sortBy = [options.sortBy]
+        else
+            _sortBy = options.sortBy or []
+
+        sortBy = []
+        for key in _sortBy
+            unless _.str.startsWith(key, 'http://')
+                lang = ''
+                order = ''
+                if key[0] is '-'
+                    propURI = key[1..]
+                    order = '-'
+                else
+                    propURI = key[..]
+                if key.indexOf('@') > -1
+                    [propURI, lang] = propURI.split('@')
+                    lang = "@#{lang}"
+                propURI = @::getURI(propURI)
+                sortBy.push "#{order}#{propURI}#{lang}"
+
+        options.sortBy = sortBy
         return callback null, query, options
 
 
