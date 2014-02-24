@@ -190,3 +190,75 @@ describe 'Database.find(options)', ()->
                     expect(results[6][f.index]).to.be.equal 5
                     done()
 
+        it 'should sort the results by i18n field in asc order', (done) ->
+            pojos = []
+            for i in [5..1]
+                pojo = {}
+                pojo[f.title] = {en: "#{i}", fr: "#{i%2}"}
+                pojo[f.index] = {en: "#{i * 10}"}
+                pojos.push pojo
+            db.batchSync pojos, (err, results) ->
+                expect(err).to.be.null
+                expect(results.length).to.be.equal 5
+                expect(_.every(r.options.dbTouched for r in results)).to.be.true
+                db.find {}, {sortBy: [f.title+'@fr']}, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results[0][f.title].fr).to.be.equal "0"
+                    expect(results[1][f.title].fr).to.be.equal "0"
+                    expect(results[2][f.title].fr).to.be.equal "1"
+                    expect(results[3][f.title].fr).to.be.equal "1"
+                    expect(results[4][f.title].fr).to.be.equal "1"
+                    done()
+
+
+        it 'should sort the results by i18n field in desc order', (done) ->
+            pojos = []
+            for i in [5..1]
+                pojo = {}
+                pojo[f.title] = {en: "#{i}", fr: "#{i%2}"}
+                pojo[f.index] = {en: "#{i * 10}"}
+                pojos.push pojo
+            db.batchSync pojos, (err, results) ->
+                expect(err).to.be.null
+                expect(results.length).to.be.equal 5
+                expect(_.every(r.options.dbTouched for r in results)).to.be.true
+                db.find {}, {sortBy: ['-'+f.title+'@fr']}, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results[0][f.title].fr).to.be.equal "1"
+                    expect(results[1][f.title].fr).to.be.equal "1"
+                    expect(results[2][f.title].fr).to.be.equal "1"
+                    expect(results[3][f.title].fr).to.be.equal "0"
+                    expect(results[4][f.title].fr).to.be.equal "0"
+                    done()
+
+        it 'should sort the results by i18n fields in different order with query', (done) ->
+            pojos = []
+            for i in [5..1]
+                pojo = {}
+                pojo[f.title] = {en: "#{i}", fr: "#{i%2}"}
+                pojo[f.index] = {en: "#{i * 10}"}
+                pojos.push pojo
+            db.batchSync pojos, (err, results) ->
+                expect(err).to.be.null
+                expect(results.length).to.be.equal 5
+                expect(_.every(r.options.dbTouched for r in results)).to.be.true
+                db.find {}, {sortBy: [f.title+'@fr', '-'+f.title+'@en']}, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results[0][f.title].fr).to.be.equal "0"
+                    expect(results[0][f.title].en).to.be.equal "4"
+
+                    expect(results[1][f.title].fr).to.be.equal "0"
+                    expect(results[1][f.title].en).to.be.equal "2"
+
+                    expect(results[2][f.title].fr).to.be.equal "1"
+                    expect(results[2][f.title].en).to.be.equal "5"
+
+                    expect(results[3][f.title].fr).to.be.equal "1"
+                    expect(results[3][f.title].en).to.be.equal "3"
+
+                    expect(results[4][f.title].fr).to.be.equal "1"
+                    expect(results[4][f.title].en).to.be.equal "1"
+
+                    done()
+
+

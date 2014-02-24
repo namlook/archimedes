@@ -114,12 +114,17 @@ exports.mongo2sparql = (mongoQuery, options) ->
         # we have to keep an index on prop and its related value index
         for prop in sortBy
             order = 'asc'
+            lang = ''
             if prop[0] is '-'
                 prop = prop[1..]
                 order = 'desc'
             unless propIndex[prop]?
                 propIndex[prop] = valuesIndex
-                sparqlQuery.push "?s <#{prop}> ?value#{valuesIndex}"
+                if prop.indexOf('@') > -1
+                    [prop, lang] = prop.split('@')
+                sparqlQuery.push "?s <#{prop}> ?value#{valuesIndex}#{lang}"
+                if lang
+                    sparqlQuery.push "filter (lang(?value#{valuesIndex}#{lang}) = \"#{lang}\")"
                 valuesIndex += 1
 
         # generate sparqlOrder
@@ -127,11 +132,14 @@ exports.mongo2sparql = (mongoQuery, options) ->
             sparqlOrder.push 'order by'
             for prop in sortBy
                 order = 'asc'
+                lang = ''
                 if prop[0] is '-'
                     order = 'desc'
                     prop = prop[1..]
                 index = propIndex[prop]
-                sparqlOrder.push "#{order}(?value#{index})"
+                if prop.indexOf('@') > -1
+                    [prop, lang] = prop.split('@')
+                sparqlOrder.push "#{order}(?value#{index}#{lang})"
 
     # build limit
     if options.limit?
@@ -141,7 +149,6 @@ exports.mongo2sparql = (mongoQuery, options) ->
         #{sparqlOrder.join(' ')}
         #{sparqlLimit}
     """
-
 
 
 exports.value2rdf = value2rdf = (value, lang) ->

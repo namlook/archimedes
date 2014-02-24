@@ -108,6 +108,8 @@ class Database extends DatabaseInterface
                 if field[0] is '-'
                     order = -1
                     field = field[1..]
+                if field.indexOf('@') > -1
+                    field = field.replace('@', '.')
                 sortBy[field] = order
             call.sort sortBy
 
