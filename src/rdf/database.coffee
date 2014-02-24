@@ -186,6 +186,64 @@ class Database extends DatabaseInterface
             return callback null
 
 
+    # ## facets
+    # `facets(field, [query], [options], callback)`
+    #
+    # Performe a group count on a specified field. A query can be added to filter
+    # the data to aggregate
+    #
+    # It takes the following options
+    #   * limit: (default 30) the maximum of results to return
+    #
+    facets: (field, query, options, callback) =>
+        if typeof(options) is 'function' and not callback
+            callback = options
+            options = {}
+        else if typeof(query) is 'function'
+            callback = query
+            query = {}
+            options = {}
+
+        unless field
+            throw 'field is required'
+        unless callback
+            throw 'callback is required'
+        unless options.limit?
+            options.limit = 30
+        unless options.order?
+            options.order = 'desc'
+
+
+        sparqlQuery = ''
+        unless _.isEmpty query
+            try
+                sparqlQuery = mongo2sparql(query, options)
+            catch e
+                return callback e
+
+        sparqlQuery = """
+            select ?facet, (count(?facet) as ?count) from <#{@graphURI}> where {
+                ?s <#{field}> ?facet .
+            }
+            group by ?facet
+            order by #{options.order}(?count) asc(?facet)
+            limit #{options.limit}
+        """
+
+        console.log sparqlQuery
+
+        @store.query sparqlQuery, (err, data) =>
+            if err
+                return callback err
+            results = []
+            for item in data
+                results.push {
+                    facet: item.facet.value,
+                    count: parseInt(item.count.value, 10)
+                }
+            return callback null, results
+
+
     # ## sync
     # Insert or update a pojo into the database. An `_id` attribute
     # will be added if there isn't already.

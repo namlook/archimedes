@@ -101,6 +101,17 @@ class Database
                 results = null
             return callback null, results
 
+    # ## facets
+    # `facets(field, [query], [options], callback)`
+    #
+    # Performe a group count on a specified field. A query can be added to filter
+    # the data to aggregate
+    #
+    # It takes the following options
+    #   * limit: (default 30) the maximum of results to return
+    #
+    facets: (query, options, callback) =>
+        callback 'facets() is not implemented'
 
 
     # ## sync

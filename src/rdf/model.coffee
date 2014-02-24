@@ -81,6 +81,39 @@ class RdfModel extends ModelInterface
         return callback null, query, options
 
 
+    # ## facets
+    # `facets(field, [query], [options], callback)`
+    #
+    # Performe a group count on a specified field. A query can be added to filter
+    # the data to aggregate
+    #
+    # It takes the following options
+    #   * limit: (default 30) the maximum of results to return
+    #
+    @facets: (field, query, options, callback) ->
+        if typeof(options) is 'function' and not callback
+            callback = options
+            options = {}
+        else if typeof(query) is 'function'
+            callback = query
+            query = {}
+            options = {}
+
+        unless field
+            throw 'field is required'
+        unless callback
+            throw 'callback is required'
+        unless options.limit?
+            options.limit = 30
+        unless options.order?
+            options.order = 'desc'
+
+        unless _.str.startsWith field, 'http://'
+            field = @::getURI(field)
+        @db.facets field, query, options, callback
+
+    # ## toSerializableObject
+    #
     # convert the model into an object which will be passed to the database
     toSerializableObject: (options) ->
         jsonObj = super(options)

@@ -302,19 +302,16 @@ class Model
 
 
     # ## facets
-    # `facets(query, [options], callback)`
-
-    # Performe a group count of the query. It takes the following options:
-
-    # * fields: faceting only on the specified fields. If no fields are
-    #     set, then the faceting is done for all fields
-    @facets: (query, options, callback) ->
-        if typeof(options) is 'function' and not callback
-            callback = options
-            options = {}
-        unless callback
-            throw 'callback is required'
-        # ...
+    # `facets(field, [query], [options], callback)`
+    #
+    # Performe a group count on a specified field. A query can be added to filter
+    # the data to aggregate
+    #
+    # It takes the following options
+    #   * limit: (default 30) the maximum of results to return
+    #
+    @facets: (field, query, options, callback) ->
+        return 'facets() not implemented'
 
 
     # ## populate
