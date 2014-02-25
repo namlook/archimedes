@@ -24,16 +24,17 @@ operators = {
 #       ?s <http://example.org/foo> ?foo .
 #       filter(?foo=3 && ?bar > 2)
 #    }
-exports.mongo2sparql = (mongoQuery, options) ->
+exports.mongo2sparql = (mongoQuery, queryOptions, options) ->
+    queryOptions = queryOptions or {}
     options = options or {}
 
-    _convert = (query, sparqlQuery, options, propIndex) ->
+    _convert = (query, sparqlQuery, queryOptions, propIndex) ->
         for prop, value of query
             lang = null
 
             if prop is '$and'
                 for val in value
-                    _convert(val, sparqlQuery, options, propIndex)
+                    _convert(val, sparqlQuery, queryOptions, propIndex)
                 continue
             else if prop is '_type'
                 sparqlQuery.push "?s a <#{value}>"
@@ -100,14 +101,17 @@ exports.mongo2sparql = (mongoQuery, options) ->
     propIndex = {}
 
 
-    if _.isEmpty(mongoQuery) and not options.sortBy?
+    if _.isEmpty(mongoQuery) and not queryOptions.sortBy?
         sparqlQuery.push '?s ?p ?o .'
     else
-        _convert(mongoQuery, sparqlQuery, options, propIndex)
+        _convert(mongoQuery, sparqlQuery, queryOptions, propIndex)
+
+    if options.queryOnly
+        return sparqlQuery.join(' .\n')
 
     # build sorting
-    if options.sortBy?
-        sortBy = options.sortBy
+    if queryOptions.sortBy?
+        sortBy = queryOptions.sortBy
         if _.isString sortBy
             sortBy = [sortBy]
 
@@ -142,8 +146,8 @@ exports.mongo2sparql = (mongoQuery, options) ->
                 sparqlOrder.push "#{order}(?value#{index}#{lang})"
 
     # build limit
-    if options.limit?
-        sparqlLimit = "limit #{options.limit}"
+    if queryOptions.limit?
+        sparqlLimit = "limit #{queryOptions.limit}"
 
     return """{#{sparqlQuery.join(' .\n')}}
         #{sparqlOrder.join(' ')}

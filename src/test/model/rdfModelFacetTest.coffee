@@ -1,6 +1,11 @@
 expect = require('chai').expect
 _ = require 'underscore'
 config = require('../config')
+db = config.Database()
+
+if db.dbtype isnt 'rdf'
+    console.log "Database is not an RDF database (got #{db.dbtype}). Skipping..."
+    return
 
 describe 'model.facets', ()->
 
@@ -18,7 +23,6 @@ describe 'model.facets', ()->
             date:
                 type: 'date'
 
-    db = config.Database()
     db.registerModels models
 
     beforeEach (done) ->
@@ -31,7 +35,7 @@ describe 'model.facets', ()->
     }
 
     describe 'simple', () ->
-        it.only 'should return the facets on a specified field ', (done) ->
+        it 'should return the facets on a specified field ', (done) ->
             literals = []
             for i in [1..5]
                 literals.push new db.Literal {string: facetValues[i%3], integer: i}
@@ -39,7 +43,6 @@ describe 'model.facets', ()->
                 expect(err).to.be.null
                 db.Literal.facets 'string', (err, results) ->
                     expect(err).to.be.null
-                    console.log results
                     expect(results.length).to.be.equal 3
                     expect(results[0].facet).to.be.equal 'arf'
                     expect(results[0].count).to.be.equal 2
@@ -47,4 +50,21 @@ describe 'model.facets', ()->
                     expect(results[1].count).to.be.equal 2
                     expect(results[2].facet).to.be.equal 'bar'
                     expect(results[2].count).to.be.equal 1
+                    done()
+
+        it 'should return the facets on a specified field with a query', (done) ->
+            literals = []
+            for i in [1..15]
+                literals.push new db.Literal {string: facetValues[i%3], integer: i%2}
+            db.batchSync literals, (err, obj, infos) ->
+                expect(err).to.be.null
+                db.Literal.facets 'string', {integer: 1}, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 3
+                    expect(results[0].facet).to.be.equal 'bar'
+                    expect(results[0].count).to.be.equal 3
+                    expect(results[1].facet).to.be.equal 'foo'
+                    expect(results[1].count).to.be.equal 3
+                    expect(results[2].facet).to.be.equal 'arf'
+                    expect(results[2].count).to.be.equal 2
                     done()

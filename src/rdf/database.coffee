@@ -217,20 +217,21 @@ class Database extends DatabaseInterface
         sparqlQuery = ''
         unless _.isEmpty query
             try
-                sparqlQuery = mongo2sparql(query, options)
+                sparqlQuery = mongo2sparql(query, options, {queryOnly: true})
             catch e
                 return callback e
 
         sparqlQuery = """
             select ?facet, (count(?facet) as ?count) from <#{@graphURI}> where {
                 ?s <#{field}> ?facet .
+                #{sparqlQuery}
             }
             group by ?facet
             order by #{options.order}(?count) asc(?facet)
             limit #{options.limit}
         """
 
-        console.log sparqlQuery
+        # console.log sparqlQuery
 
         @store.query sparqlQuery, (err, data) =>
             if err

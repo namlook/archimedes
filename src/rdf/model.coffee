@@ -110,6 +110,9 @@ class RdfModel extends ModelInterface
 
         unless _.str.startsWith field, 'http://'
             field = @::getURI(field)
+
+        @_convertQueryUri(query)
+
         @db.facets field, query, options, callback
 
     # ## toSerializableObject
