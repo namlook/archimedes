@@ -100,9 +100,12 @@ class RdfModel extends ModelInterface
             options = {}
 
         unless field
-            throw 'field is required'
+            return callback 'field is required'
+        unless @::schema[field]?
+            return callback "Can't faceting on an unknown field: \"#{field}\""
         unless callback
-            throw 'callback is required'
+            return callback 'callback is required'
+
         unless options.limit?
             options.limit = 30
         unless options.order?

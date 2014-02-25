@@ -35,7 +35,19 @@ describe 'model.facets', ()->
     }
 
     describe 'simple', () ->
-        it 'should return the facets on a specified field ', (done) ->
+        it 'should return an error if the field is not in the schema', (done) ->
+            literals = []
+            for i in [1..5]
+                literals.push new db.Literal {string: facetValues[i%3], integer: i}
+            db.batchSync literals, (err, obj, infos) ->
+                expect(err).to.be.null
+                db.Literal.facets 'notinschema', (err, results) ->
+                    expect(err).to.be.equal 'Can\'t faceting on an unknown field: "notinschema"'
+                    expect(results).to.be.undefined
+                    done()
+
+
+        it 'should return the facets on a specified field', (done) ->
             literals = []
             for i in [1..5]
                 literals.push new db.Literal {string: facetValues[i%3], integer: i}
