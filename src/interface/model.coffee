@@ -199,7 +199,15 @@ class Model
         unless query._type?
             query._type = @::meta.type
 
+        # validate the query
+        try
+            @_validateQuery(@, query)
+        catch e
+            return callback e
+
         @beforeQuery query, options, (err, query, options) =>
+            if err
+                return callback err
             @db.find query, options, (err, pojos) =>
                 if err
                     return callback err
@@ -220,7 +228,6 @@ class Model
                         return callback null, instances
                 else
                     return callback null, instances
-
 
     # ## findURIs
     # `findIDs query, [options], (err, ids) ->`
@@ -1167,5 +1174,34 @@ class Model
                     @_cachedProperties[key][lang] = val
             else
                 @_cachedProperties[key] = value
+
+    # ## _validateQuery()
+    #
+    # check if the field in the query correctly match the model's schema
+    @_validateQuery = (model, mongoQuery) ->
+        if _.isString(mongoQuery) or _.isArray(mongoQuery)
+            return
+        for field, value of mongoQuery
+            if field is '$and'
+                continue
+
+            if field.indexOf('@') > -1
+                [field, lang] = field.split('@')
+
+            if field.indexOf('.') > -1
+                [relation, field] = field.split('.')
+                unless model::schema[relation]?
+                    throw "Unknown field #{model::meta.name}.#{relation}"
+                relationModel = @db[model::schema[relation].type]
+                unless relationModel
+                    throw "#{model::meta.name}.#{relation} is not a model"
+                if _.isArray(field)
+                    field = field.join('.')
+                newQuery = {}
+                newQuery[field] = value
+                @_validateQuery(relationModel, newQuery)
+            else unless model::schema[field]?
+                throw "Unknown field #{model::meta.name}.#{field}"
+
 
 module.exports = Model

@@ -62,7 +62,7 @@ describe 'Database', ()->
                             expect(count).to.be.equal 0
                             done()
 
-    describe '.changes()', () ->
+    describe.skip '.changes()', () ->
 
         it 'should return the changes of a simple object', (done) ->
             pojo = {}

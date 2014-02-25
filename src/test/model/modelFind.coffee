@@ -118,6 +118,21 @@ describe 'model.find', ()->
                         expect(i for i in multi.get 'integer').to.include.members [3]
                         done()
 
+        it 'should return an error when quering on an unknown field', (done) ->
+            instances = [
+                new db.Literal {'integer': 1}
+                new db.Literal {'integer': 2}
+                new db.Literal {'integer': 3}
+                new db.Multi {'integer': [1, 2, 3]}
+                new db.Multi {'integer': [3, 4, 5]}
+                new db.I18n {'string': {'en': 'foo', 'fr': 'toto'}}
+            ]
+            db.batchSync instances, (err) ->
+                expect(err).to.be.null
+                db.Literal.find {unknownField: 3}, (err, results) ->
+                    expect(err).to.be.equal "Unknown field Literal.unknownField"
+                    expect(results).to.be.undefined
+                    done()
 
     describe '[literal]', () ->
         it 'should return the doc that match the id', (done) ->

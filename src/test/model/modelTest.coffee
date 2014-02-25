@@ -655,8 +655,8 @@ describe 'Model', ()->
             expect(author.isNew()).to.be.true
 
             pending = blogPost._getPendingRelations()
-            expect(pending).to.include author
-            expect(pending).to.include blog
+            expect(p.toJSON() for p in pending).to.include author.toJSON()
+            expect(p.toJSON() for p in pending).to.include blog.toJSON()
 
             expect(blog.id).to.be.undefined
             expect(author.id).to.be.undefined
@@ -687,8 +687,8 @@ describe 'Model', ()->
             expect(author.isNew()).to.be.true
 
             pending = blogPost._getPendingRelations()
-            expect(pending).to.include author
-            expect(pending).to.include blog
+            expect(p.toJSON() for p in pending).to.include author.toJSON()
+            expect(p.toJSON() for p in pending).to.include blog.toJSON()
 
             expect(blog.id).to.be.undefined
             expect(author.id).to.be.undefined
@@ -874,10 +874,14 @@ describe 'Model', ()->
             blogIndex = new db.BlogIndex
             blogIndex.push 'multiBlogs', blog1
 
-            expect(blogIndex._getPendingRelations()).to.include blog1
+            expect(
+                p.toJSON() for p in blogIndex._getPendingRelations()
+            ).to.include blog1.toJSON()
 
             blogIndex.push 'multiBlogs', blog2
-            expect(blogIndex._getPendingRelations()).to.include blog2
+            expect(
+                p.toJSON() for p in blogIndex._getPendingRelations()
+            ).to.include blog2.toJSON()
 
 
         it 'should discard all unsaved relations if unset', () ->
@@ -889,15 +893,18 @@ describe 'Model', ()->
             blogPost.set 'author', author
             blogPost.set 'blog', blog
 
-            expect(blogPost._getPendingRelations()).to.include author
-            expect(blogPost._getPendingRelations()).to.include blog
+            pending = blogPost._getPendingRelations()
+            expect(p.toJSON() for p in pending).to.include author.toJSON()
+            expect(p.toJSON() for p in pending).to.include blog.toJSON()
 
             blogPost.unset 'author'
-            expect(blogPost._getPendingRelations()).to.not.include author
-            expect(blogPost._getPendingRelations()).to.include blog
+            pending = blogPost._getPendingRelations()
+            expect(p.toJSON() for p in pending).to.not.include author.toJSON()
+            expect(p.toJSON() for p in pending).to.include blog.toJSON()
 
             blogPost.unset 'blog'
-            expect(blogPost._getPendingRelations()).to.not.include blog
+            pending = blogPost._getPendingRelations()
+            expect(p.toJSON() for p in pending).to.not.include blog.toJSON()
 
         it.skip 'should discard all unsaved relations if unset a i18n field', () ->
             nico = new db.Author {login: 'nico'}
@@ -925,15 +932,17 @@ describe 'Model', ()->
             blogIndex.push 'multiBlogs', blog3
 
 
-            expect(blogIndex._getPendingRelations()).to.include blog1
-            expect(blogIndex._getPendingRelations()).to.include blog2
-            expect(blogIndex._getPendingRelations()).to.include blog3
+            pending = blogIndex._getPendingRelations()
+            expect(p.toJSON() for p in pending).to.include blog1.toJSON()
+            expect(p.toJSON() for p in pending).to.include blog2.toJSON()
+            expect(p.toJSON() for p in pending).to.include blog3.toJSON()
 
 
             blogIndex.unset 'multiBlogs'
-            expect(blogIndex._getPendingRelations()).to.not.include blog1
-            expect(blogIndex._getPendingRelations()).to.not.include blog2
-            expect(blogIndex._getPendingRelations()).to.not.include blog3
+            pending = blogIndex._getPendingRelations()
+            expect(p.toJSON() for p in pending).to.not.include blog1.toJSON()
+            expect(p.toJSON() for p in pending).to.not.include blog2.toJSON()
+            expect(p.toJSON() for p in pending).to.not.include blog3.toJSON()
 
         it 'should discard all unsaved relations if pulled a multi field', () ->
             blog1 = new db.Blog {title: 'My first blog'}
@@ -944,18 +953,20 @@ describe 'Model', ()->
             blogIndex.push 'multiBlogs', blog3
 
 
-            expect(blogIndex._getPendingRelations()).to.include blog1
-            expect(blogIndex._getPendingRelations()).to.include blog2
-            expect(blogIndex._getPendingRelations()).to.include blog3
+            pending = blogIndex._getPendingRelations()
+            expect(p.toJSON() for p in pending).to.include blog1.toJSON()
+            expect(p.toJSON() for p in pending).to.include blog2.toJSON()
+            expect(p.toJSON() for p in pending).to.include blog3.toJSON()
 
             blogIndex.pull 'multiBlogs', blog2
-
-            expect(blogIndex._getPendingRelations()).to.include blog1
-            expect(blogIndex._getPendingRelations()).to.not.include blog2
-            expect(blogIndex._getPendingRelations()).to.include blog3
+            pending = blogIndex._getPendingRelations()
+            expect(p.toJSON() for p in pending).to.include blog1.toJSON()
+            expect(p.toJSON() for p in pending).to.not.include blog2.toJSON()
+            expect(p.toJSON() for p in pending).to.include blog3.toJSON()
 
             blogIndex.pull 'multiBlogs', blog3
-            expect(blogIndex._getPendingRelations()).to.not.include blog3
+            pending = blogIndex._getPendingRelations()
+            expect(p.toJSON() for p in pending).to.not.include blog3.toJSON()
 
 
         it.skip 'should discard all matching unsaved relations on a multi-i18n field', () ->

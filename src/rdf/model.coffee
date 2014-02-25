@@ -53,7 +53,10 @@ class RdfModel extends ModelInterface
     @beforeQuery: (query, options, callback) ->
         # convert query's key into uris
         if not _.isString(query) and not _.isArray(query)
-            @_convertQueryUri(query)
+            try
+                @_convertQueryUri(query)
+            catch e
+                return callback e
 
         # convert sortBy keys into uri
         if options.sortBy? and not _.isArray options.sortBy
@@ -114,7 +117,10 @@ class RdfModel extends ModelInterface
         unless _.str.startsWith field, 'http://'
             field = @::getURI(field)
 
-        @_convertQueryUri(query)
+        try
+            @_convertQueryUri(query)
+        catch e
+            return callback e
 
         @db.facets field, query, options, callback
 
@@ -160,25 +166,35 @@ class RdfModel extends ModelInterface
                 continue
             if key is '$and'
                 for val in value
-                    for k, v of val
-                        unless _.str.startsWith key, 'http://'
-                            propURI = @::getURI(k)
-                            val[propURI] = v
-                            delete val[k]
+                    @_convertQueryUri val
             else unless _.str.startsWith key, 'http://'
-                propURI = @::getURI(key)
-                query[propURI] = value
+                if key.indexOf('.') > -1
+                    [field, prop] = key.split('.')
+                    rel = @::getURI(field)
+                    typeName = @::schema[field].type
+                    type = @db[typeName]
+                    prop = @::getURI(prop, type)
+                    query["#{rel}->#{prop}"] = value
+                else
+                    propURI = @::getURI(key)
+                    query[propURI] = value
                 delete query[key]
 
 
     # ## getURI
     # return the related field URI
-    getURI: (fieldName) ->
-        if '@' in fieldName
+    getURI: (fieldName, type) ->
+        if fieldName.indexOf('@') > -1
             [name, lang] = fieldName.split('@')
         else
             name = fieldName
-        return @schema[name].uri or "#{@meta.propertiesNamespace}/#{fieldName}"
+        if type
+            schema = type::schema
+            meta = type::meta
+        else
+            schema = @schema
+            meta = @meta
+        return schema[name].uri or "#{meta.propertiesNamespace}/#{fieldName}"
 
 
 module.exports = RdfModel

@@ -116,6 +116,8 @@ class Database extends DatabaseInterface
             select distinct ?s from <#{@graphURI}> where #{query}
         """
 
+        # console.log sparqlQuery
+
         @store.query sparqlQuery, (err, data) =>
             if err
                 return callback err
@@ -269,7 +271,7 @@ class Database extends DatabaseInterface
                 return callback err
             unless ok
                 return callback "error while syncing the data"
-            @_updateCache(convertedPojo)
+            # @_updateCache(convertedPojo)
             return callback null, convertedPojo, {dbTouched: true}
 
     # ## serialize
@@ -332,58 +334,73 @@ class Database extends DatabaseInterface
             @store.update sparqlQuery.join('\n'), (err, ok) =>
                 if err
                     return callback err
-                for item in results
-                    @_updateCache(item.result)
+                # for item in results
+                    # @_updateCache(item.result)
                 return callback null, results
 
 
     # ## _getSparqlSyncQuery
     # returns the sparql query in order to update the pojo
     _getSparqlSyncQuery: (pojo) ->
-        changes = @changes pojo
-        if changes is null
-            return null
-
-        if pojo._id and changes isnt undefined
-            fillChangesTriples = (_changes) ->
-                target = []
-                for property, value of _changes
-                    if _.isArray(value)
-                        for val in value
-                            val = value2rdf(val)
-                            target.push "<#{pojo._id}> <#{property}> #{val}"
-                    else if _.isObject(value)
-                        for lang, val of value
-                            if _.isArray val
-                                for _val in val
-                                    _val = value2rdf(_val, lang)
-                                    target.push(
-                                        "<#{pojo._id}> <#{property}> #{_val}")
-                            else
-                                val = value2rdf(val, lang)
-                                target.push(
-                                    "<#{pojo._id}> <#{property}> #{val}")
-                    else
-                        value = value2rdf(value, lang)
-                        target.push "<#{pojo._id}> <#{property}> #{value}"
-                return target
-
-            addedNtriples = @_pojo2nt(pojo._id, changes.added)
-            removedNtriples = @_pojo2nt(pojo._id, changes.removed)
-
-            sparqlQuery = ''
-            if removedNtriples.length
-                sparqlQuery += "delete data {graph <#{@graphURI}> { #{removedNtriples.join(' .\n')} . }}; "
-            if addedNtriples.length
-                sparqlQuery += "insert data {graph <#{@graphURI}> { #{addedNtriples.join(' .\n')} . }}; "
-
+        sparqlQuery = []
+        if pojo._id?
+            sparqlQuery.push """delete {graph <#{@graphURI}> {<#{pojo._id}> ?p ?o .}}
+                where {<#{pojo._id}> ?p ?o .};"""
         else
-            unless pojo._id?
-                pojo._id = @__buildURI()
-            ntriples = @_pojo2nt(pojo._id, pojo)
-            sparqlQuery = "insert data {graph <#{@graphURI}> { #{ntriples.join(' .\n')} }};"
+            pojo._id = @__buildURI()
 
-        return sparqlQuery
+        ntriples = @_pojo2nt(pojo._id, pojo)
+
+        sparqlQuery.push """insert data {
+            graph <#{@graphURI}> {#{ntriples.join(' .\n\t')} }
+        };"""
+        return sparqlQuery.join('\n')
+
+
+        # changes = @changes pojo
+        # if changes is null
+        #     return null
+
+        # if pojo._id and changes isnt undefined
+        #     fillChangesTriples = (_changes) ->
+        #         target = []
+        #         for property, value of _changes
+        #             if _.isArray(value)
+        #                 for val in value
+        #                     val = value2rdf(val)
+        #                     target.push "<#{pojo._id}> <#{property}> #{val}"
+        #             else if _.isObject(value)
+        #                 for lang, val of value
+        #                     if _.isArray val
+        #                         for _val in val
+        #                             _val = value2rdf(_val, lang)
+        #                             target.push(
+        #                                 "<#{pojo._id}> <#{property}> #{_val}")
+        #                     else
+        #                         val = value2rdf(val, lang)
+        #                         target.push(
+        #                             "<#{pojo._id}> <#{property}> #{val}")
+        #             else
+        #                 value = value2rdf(value, lang)
+        #                 target.push "<#{pojo._id}> <#{property}> #{value}"
+        #         return target
+
+        #     addedNtriples = @_pojo2nt(pojo._id, changes.added)
+        #     removedNtriples = @_pojo2nt(pojo._id, changes.removed)
+
+        #     sparqlQuery = ''
+        #     if removedNtriples.length
+        #         sparqlQuery += "delete data {graph <#{@graphURI}> { #{removedNtriples.join(' .\n')} . }}; "
+        #     if addedNtriples.length
+        #         sparqlQuery += "insert data {graph <#{@graphURI}> { #{addedNtriples.join(' .\n')} . }}; "
+
+        # else
+        #     unless pojo._id?
+        #         pojo._id = @__buildURI()
+        #     ntriples = @_pojo2nt(pojo._id, pojo)
+        #     sparqlQuery = "insert data {graph <#{@graphURI}> { #{ntriples.join(' .\n')} }};"
+
+        # return sparqlQuery
 
 
     #
@@ -503,14 +520,16 @@ class Database extends DatabaseInterface
             # multi field
             if _.isArray(value)
                 for val in value
-                    addTriple(val)
+                    if val not in [null, undefined]
+                        addTriple(val)
 
             # i18n field
             else if _.isObject(value) and not value._uri? and not _.isDate(value)
                 for lang, val of value
                     if _.isArray(val) # multi-i18n field
                         for _val in val
-                            addTriple(_val, lang)
+                            if _val not in [null, undefined]
+                                addTriple(_val, lang)
                     else # regular i18n field
                         addTriple(val, lang)
 

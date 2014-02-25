@@ -31,16 +31,23 @@ exports.mongo2sparql = (mongoQuery, queryOptions, options) ->
     _convert = (query, sparqlQuery, queryOptions, propIndex) ->
         for prop, value of query
             lang = null
+            relIndex = 0
+            rel = '?s'
 
             if prop is '$and'
                 for val in value
                     _convert(val, sparqlQuery, queryOptions, propIndex)
                 continue
             else if prop is '_type'
-                sparqlQuery.push "?s a <#{value}>"
+                sparqlQuery.push "#{rel} a <#{value}>"
                 continue
 
-            if '@' in prop
+            if prop.indexOf('->') > -1
+                [relURI, prop] = prop.split('->')
+                rel = "?rel#{relIndex}"
+                sparqlQuery.push "?s <#{relURI}> #{rel}"
+
+            if prop.indexOf('@') > -1
                 [prop, lang] = prop.split('@')
 
             if _.isRegExp(value)
@@ -50,7 +57,7 @@ exports.mongo2sparql = (mongoQuery, queryOptions, options) ->
 
                 if _.isDate(value)
                     value = value2rdf(value, lang)
-                    sparqlQuery.push "?s <#{prop}> #{value}"
+                    sparqlQuery.push "#{rel} <#{prop}> #{value}"
 
                 else for $op, val of value
 
@@ -61,7 +68,7 @@ exports.mongo2sparql = (mongoQuery, queryOptions, options) ->
                         filter = ("?value#{valuesIndex} = #{v}" for v in vals)
                         filter = filter.join(' || ')
                         sparqlQuery.push "FILTER (#{filter})"
-                        sparqlQuery.push "?s <#{prop}> ?value#{valuesIndex}"
+                        sparqlQuery.push "#{rel} <#{prop}> ?value#{valuesIndex}"
                         propIndex[prop] = valuesIndex
                         valuesIndex += 1
 
@@ -70,15 +77,15 @@ exports.mongo2sparql = (mongoQuery, queryOptions, options) ->
                             val = [val]
                         for v in val
                             v = value2rdf(v, lang)
-                            sparqlQuery.push "?s <#{prop}> #{v}"
+                            sparqlQuery.push "#{rel} <#{prop}> #{v}"
 
                     else if $op in ['$nin', '$ne']
-                        sparqlQuery.push "?s ?p ?o"
+                        sparqlQuery.push "#{rel} ?p ?o"
                         unless _.isArray val
                             val = [val]
                         for v in val
                             v = value2rdf(v, lang)
-                            sparqlQuery.push "MINUS {?s <#{prop}> #{v}}"
+                            sparqlQuery.push "MINUS {#{rel} <#{prop}> #{v}}"
 
                     else # $gt, $gte, $lt, $lte
                         op = operators[$op]
@@ -86,13 +93,13 @@ exports.mongo2sparql = (mongoQuery, queryOptions, options) ->
                             throw "unknown operator #{$op}"
                         val = value2rdf(val, lang)
                         sparqlQuery.push "FILTER (?value#{valuesIndex} #{op} #{val})"
-                        sparqlQuery.push "?s <#{prop}> ?value#{valuesIndex}"
+                        sparqlQuery.push "#{rel} <#{prop}> ?value#{valuesIndex}"
                         propIndex[prop] = valuesIndex
                         valuesIndex += 1
 
             else
                 value = value2rdf(value, lang)
-                sparqlQuery.push "?s <#{prop}> #{value}"
+                sparqlQuery.push "#{rel} <#{prop}> #{value}"
 
     sparqlQuery = []
     sparqlOrder = []
