@@ -261,4 +261,3 @@ describe 'Database.find(options)', ()->
 
                     done()
 
-

@@ -399,6 +399,24 @@ describe 'Database.find()', ()->
                     expect(results.length).to.be.equal 4
                     done()
 
+    describe 'query[$exists]', () ->
+        it 'should return the docs that match a simple query', (done) ->
+            pojos = []
+            for i in [1..5]
+                pojo = {}
+                pojo[f.title] = i
+                if i%2 is 0
+                    pojo[f.index] = i*10
+                pojos.push pojo
+            db.batchSync pojos, (err, results) ->
+                expect(err).to.be.null
+                query = {}
+                query[f.index] = {$exists: true}
+                db.find query, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 2
+                    done()
+
     describe 'query multi-fields', () ->
         it 'should return the docs that match a simple query on a multi-fields', (done) ->
             pojos = []
@@ -449,6 +467,71 @@ describe 'Database.find()', ()->
                 db.find query, (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 4
+                    done()
+
+        it 'should handle simple query [$all]', (done) ->
+            pojos = []
+            for i in [1..5]
+                pojo = {}
+                pojo[f.title] = i
+                pojo[f.index] = (i*j for j in [1..5])
+                pojos.push pojo
+            db.batchSync pojos, (err, results) ->
+                expect(err).to.be.null
+                query = {}
+                query[f.index] = {$all: [2, 4]}
+                db.find query, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 2
+                    done()
+
+
+        it 'should handle simple query [$nall]', (done) ->
+            pojos = []
+            for i in [1..5]
+                pojo = {}
+                pojo[f.title] = i
+                pojo[f.index] = (i*j for j in [1..5])
+                pojos.push pojo
+            db.batchSync pojos, (err, results) ->
+                expect(err).to.be.null
+                query = {}
+                query[f.index] = {$nall: [2, 4]}
+                db.find query, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 3
+                    done()
+
+        it 'should handle simple query [$in]', (done) ->
+            pojos = []
+            for i in [1..5]
+                pojo = {}
+                pojo[f.title] = i
+                pojo[f.index] = (i*j for j in [1..5])
+                pojos.push pojo
+            db.batchSync pojos, (err, results) ->
+                expect(err).to.be.null
+                query = {}
+                query[f.index] = {$in: [2, 4]}
+                db.find query, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 3
+                    done()
+
+        it 'should handle simple query [$nin]', (done) ->
+            pojos = []
+            for i in [1..5]
+                pojo = {}
+                pojo[f.title] = i
+                pojo[f.index] = (i*j for j in [1..5])
+                pojos.push pojo
+            db.batchSync pojos, (err, results) ->
+                expect(err).to.be.null
+                query = {}
+                query[f.index] = {$nin: [2, 4]}
+                db.find query, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 2
                     done()
 
     describe 'query i18n-fields', () ->

@@ -1,5 +1,6 @@
 
 _ = require 'underscore'
+_.str = require 'underscore.string'
 {defaultTypes} = require '../interface/types'
 
 
@@ -25,144 +26,170 @@ operators = {
 #       filter(?foo=3 && ?bar > 2)
 #    }
 exports.mongo2sparql = (mongoQuery, queryOptions, options) ->
+    mongoQuery = mongoQuery or {}
     queryOptions = queryOptions or {}
     options = options or {}
-
-    _convert = (query, sparqlQuery, queryOptions, propIndex) ->
-        for prop, value of query
-            lang = null
-            relIndex = 0
-            rel = '?s'
-
-            if prop is '$and'
-                for val in value
-                    _convert(val, sparqlQuery, queryOptions, propIndex)
-                continue
-            else if prop is '_type'
-                sparqlQuery.push "#{rel} a <#{value}>"
-                continue
-
-            if prop.indexOf('->') > -1
-                [relURI, prop] = prop.split('->')
-                rel = "?rel#{relIndex}"
-                sparqlQuery.push "?s <#{relURI}> #{rel}"
-
-            if prop.indexOf('@') > -1
-                [prop, lang] = prop.split('@')
-
-            if _.isRegExp(value)
-                throw 'regex not implemented'
-
-            else if _.isObject(value)
-
-                if _.isDate(value)
-                    value = value2rdf(value, lang)
-                    sparqlQuery.push "#{rel} <#{prop}> #{value}"
-
-                else for $op, val of value
-
-                    if $op is '$in'
-                        unless _.isArray val
-                            val = [val]
-                        vals = (value2rdf(v, lang) for v in val)
-                        filter = ("?value#{valuesIndex} = #{v}" for v in vals)
-                        filter = filter.join(' || ')
-                        sparqlQuery.push "FILTER (#{filter})"
-                        sparqlQuery.push "#{rel} <#{prop}> ?value#{valuesIndex}"
-                        propIndex[prop] = valuesIndex
-                        valuesIndex += 1
-
-                    else if $op is '$all'
-                        unless _.isArray val
-                            val = [val]
-                        for v in val
-                            v = value2rdf(v, lang)
-                            sparqlQuery.push "#{rel} <#{prop}> #{v}"
-
-                    else if $op in ['$nin', '$ne']
-                        sparqlQuery.push "#{rel} ?p ?o"
-                        unless _.isArray val
-                            val = [val]
-                        for v in val
-                            v = value2rdf(v, lang)
-                            sparqlQuery.push "MINUS {#{rel} <#{prop}> #{v}}"
-
-                    else # $gt, $gte, $lt, $lte
-                        op = operators[$op]
-                        unless op?
-                            throw "unknown operator #{$op}"
-                        val = value2rdf(val, lang)
-                        sparqlQuery.push "FILTER (?value#{valuesIndex} #{op} #{val})"
-                        sparqlQuery.push "#{rel} <#{prop}> ?value#{valuesIndex}"
-                        propIndex[prop] = valuesIndex
-                        valuesIndex += 1
-
-            else
-                value = value2rdf(value, lang)
-                sparqlQuery.push "#{rel} <#{prop}> #{value}"
-
     sparqlQuery = []
     sparqlOrder = []
-    sparqlLimit = ""
-    valuesIndex = 0
-    propIndex = {}
-
+    sparqlLimit = ''
 
     if _.isEmpty(mongoQuery) and not queryOptions.sortBy?
         sparqlQuery.push '?s ?p ?o .'
     else
-        _convert(mongoQuery, sparqlQuery, queryOptions, propIndex)
+        validx = 0
+        _convert(sparqlQuery, mongoQuery, validx)
+
+    if (1 for s in sparqlQuery when _.str.startsWith(s, 'MINUS')).length is sparqlQuery.length
+        sparqlQuery.push '?s ?p ?o .'
 
     if options.queryOnly
-        return sparqlQuery.join(' .\n')
+        return sparqlQuery.join('\n')
 
-    # build sorting
+    # built sortBy
     if queryOptions.sortBy?
         sortBy = queryOptions.sortBy
         if _.isString sortBy
             sortBy = [sortBy]
 
-        # we have to keep an index on prop and its related value index
-        for prop in sortBy
-            order = 'asc'
-            lang = ''
-            if prop[0] is '-'
-                prop = prop[1..]
-                order = 'desc'
-            unless propIndex[prop]?
-                propIndex[prop] = valuesIndex
-                if prop.indexOf('@') > -1
-                    [prop, lang] = prop.split('@')
-                sparqlQuery.push "?s <#{prop}> ?value#{valuesIndex}#{lang}"
-                if lang
-                    sparqlQuery.push "filter (lang(?value#{valuesIndex}#{lang}) = \"#{lang}\")"
-                valuesIndex += 1
-
-        # generate sparqlOrder
-        if not _.isEmpty(propIndex) and not _.isEmpty(sortBy)
+        if sortBy.length
             sparqlOrder.push 'order by'
             for prop in sortBy
-                order = 'asc'
                 lang = ''
+                order = 'asc'
                 if prop[0] is '-'
                     order = 'desc'
                     prop = prop[1..]
-                index = propIndex[prop]
                 if prop.indexOf('@') > -1
                     [prop, lang] = prop.split('@')
-                sparqlOrder.push "#{order}(?value#{index}#{lang})"
+                if not mongoQuery[prop]? or not (1 for v in mongoQuery['$and']? or [] when v[prop]?).length
+                    prop = _buildProperty(prop)
+                    propuri = "#{_.str.classify prop}#{lang}"
+                    sparqlQuery.push "?s #{prop} ?#{propuri} ."
+                    if lang
+                        sparqlQuery.push "filter (lang(?#{propuri}) = '#{lang}')"
+                sparqlOrder.push "#{order}(?#{_.str.classify prop}#{lang})"
+
 
     # build limit
     if queryOptions.limit?
         sparqlLimit = "limit #{queryOptions.limit}"
 
-    return """{#{sparqlQuery.join(' .\n')}}
+    return """{#{sparqlQuery.join('\n')}}
         #{sparqlOrder.join(' ')}
         #{sparqlLimit}
     """
 
 
+_convert = (sparqlQuery, query, validx) ->
+    for prop, value of query
+        if prop is '$and'
+            for val in value
+                _convert(sparqlQuery, val, validx)
+                validx+= 1
+        else
+            sparqlQuery.push _getStatement(prop, value, validx)
+            validx += 1
 
+
+_buildProperty = (prop) ->
+    if prop.indexOf('->') > -1
+        prop = ("<#{_prop}>" for _prop in prop.split('->')).join('/')
+    else if prop is '_type'
+        prop = 'a'
+    else
+        prop = "<#{prop}>"
+    return prop
+
+_getStatement = (prop, value, validx) ->
+    sparqlQuery = []
+    lang = ''
+    isNot = false
+
+    if prop.indexOf('@') > -1
+        [prop, lang] = prop.split('@')
+
+    variable = "?#{_.str.classify prop}#{lang}#{validx}"
+    prop = _buildProperty(prop)
+    sparqlQuery.push "?s #{prop} #{variable}"
+
+    if _.isRegExp(value)
+        throw 'regex not implemented'
+
+    if _.isObject(value) and not _.isDate(value) and not value._uri?
+        for $op, val of value
+
+            if $op in ['$gt', '$lt', '$gte', '$lte']
+                if prop is 'a'
+                    val = {_id: val}
+                _val = value2rdf(val, lang)
+                op = operators[$op]
+                sparqlQuery.push "filter (#{variable} #{op} #{_val})"
+
+            else if $op in ['$in', '$nin']
+                if $op is '$nin'
+                    isNot = true
+                unless _.isArray val
+                    val = [val]
+                val = (prop is 'a' and {_id: v} or v for v in val)
+                vals = (value2rdf(v, lang) for v in val)
+                filter = ("#{variable} = #{v}" for v in vals)
+                sparqlQuery.push "filter (#{filter.join(' || ')})"
+
+            else if $op in ['$all', '$nall']
+                if $op is '$nall'
+                    isNot = true
+                unless _.isArray val
+                    val = [val]
+                _variable = variable
+                varidx = 0
+                for _val in val
+                    unless _variable is variable
+                        sparqlQuery.push "?s #{prop} #{_variable}"
+                    if prop is 'a'
+                        _val = {_id: _val}
+                    _val = value2rdf(_val, lang)
+                    sparqlQuery.push "filter (#{_variable} = #{_val})"
+                    varidx += 1
+                    _variable = "#{variable}#{varidx}"
+
+            else if $op is '$exists'
+                notExists = ''
+                unless val
+                    notExists = 'not'
+                sparqlQuery.push "filter (#{notExists} exists {?s #{prop} #{variable}})"
+
+            else if $op is '$ne'
+                isNot = true
+                if prop is 'a'
+                    val = {_id: val}
+                _val = value2rdf(val, lang)
+                sparqlQuery.push "filter (#{variable} = #{_val})"
+
+            else
+                throw "unknown operator #{$op}"
+    else
+        if prop is 'a'
+            value = {_id: value}
+        value = value2rdf(value, lang)
+        sparqlQuery.push "filter (#{variable} = #{value})"
+
+    sparqlQuery = sparqlQuery.join(' .\n')
+    if isNot
+        sparqlQuery = "MINUS {#{sparqlQuery}}"
+    return sparqlQuery
+
+
+# ## value2rdf
+# Convert a value into its rdf representation. If lang is passed, add the
+# language to the string.
+# If the value is an object with an `_id` attribute then treat the value as an
+# URI.
+#
+# Examples:
+#    3                               -> "3"^^xsd:integer
+#    true                            -> "1"^^xsd:boolean
+#    'title@en'                      -> "title"@en
+#    {_id: 'http://example.org/foo'} -> <http://example.org/foo>
 exports.value2rdf = value2rdf = (value, lang) ->
     if lang and not _.isString(value)
         throw 'i18n fields accept only strings'
@@ -187,5 +214,18 @@ exports.value2rdf = value2rdf = (value, lang) ->
         value = "\"\"\"#{quotedValue}\"\"\"#{lang}"
     return value
 
+
+if require.main is module
+    uris = {
+        foo: 'http://example.org/foo'
+        bar: 'http://example.org/bar'
+        toto: 'http://example.org/toto'
+    }
+    query = {}
+    query[uris.foo+"@en"] = "hello"
+    query["#{uris.bar}->#{uris.toto}->#{uris.foo}"] = new Date()
+    console.log ' '
+    console.log  exports.mongo2sparql query, {sortBy: ["-#{uris.bar}->#{uris.toto}->#{uris.foo}"]}
+    console.log ' '
 
 

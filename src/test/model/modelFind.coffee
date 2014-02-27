@@ -407,10 +407,10 @@ describe 'model.find', ()->
             db.batchSync [obj, obj2], (err, data) ->
                 expect(err).to.be.null
                 expect(_.every(i.options.dbTouched for i in data)).to.be.true
-                query = {$and: [{integer: 2}, {integer: 3}]}
+                query = {$and: [{integer: {$gt: 2}}, {integer: {$lt: 4}}]}
                 db.Literal.find query, (err, results) ->
                     expect(err).to.be.null
-                    expect(results.length).to.be.equal 0
+                    expect(results.length).to.be.equal 1
                     done()
 
 
