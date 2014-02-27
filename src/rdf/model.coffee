@@ -4,6 +4,7 @@
 _ = require 'underscore'
 _.str = require 'underscore.string'
 ModelInterface = require '../interface/model'
+{field2uri} = require './utils'
 
 class ValueError extends Error
 class ModelError extends Error
@@ -70,14 +71,14 @@ class RdfModel extends ModelInterface
                 lang = ''
                 order = ''
                 if key[0] is '-'
-                    propURI = key[1..]
+                    key = key[1..]
                     order = '-'
                 else
-                    propURI = key[..]
+                    key = key[..]
                 if key.indexOf('@') > -1
-                    [propURI, lang] = propURI.split('@')
+                    [key, lang] = key.split('@')
                     lang = "@#{lang}"
-                propURI = @::getURI(propURI)
+                propURI = field2uri(key, @)
                 sortBy.push "#{order}#{propURI}#{lang}"
 
         options.sortBy = sortBy
@@ -115,7 +116,7 @@ class RdfModel extends ModelInterface
             options.order = 'desc'
 
         unless _.str.startsWith field, 'http://'
-            field = @::getURI(field)
+            field = field2uri(field, @)
 
         try
             @_convertQueryUri(query)
@@ -134,6 +135,7 @@ class RdfModel extends ModelInterface
             if key in ['_id', '_type']
                 result[key] = value
             else
+                propURI = field2uri(key, @db[@meta.name])
                 if @db[@schema[key].type]?
                     unless _.isArray(value)
                         value = [value]
@@ -144,11 +146,11 @@ class RdfModel extends ModelInterface
                             val = "#{nspace}/#{val}"
                         values.push val
                     if @schema[key].multi
-                        result[@getURI(key)] = {_uri: values}
+                        result[propURI] = {_uri: values}
                     else
-                        result[@getURI(key)] = {_uri: values[0]}
+                        result[propURI] = {_uri: values[0]}
                 else
-                    result[@getURI(key)] = value
+                    result[propURI] = value
         return result
 
 
@@ -168,33 +170,9 @@ class RdfModel extends ModelInterface
                 for val in value
                     @_convertQueryUri val
             else unless _.str.startsWith key, 'http://'
-                if key.indexOf('.') > -1
-                    [field, prop] = key.split('.')
-                    rel = @::getURI(field)
-                    typeName = @::schema[field].type
-                    type = @db[typeName]
-                    prop = @::getURI(prop, type)
-                    query["#{rel}->#{prop}"] = value
-                else
-                    propURI = @::getURI(key)
-                    query[propURI] = value
+                propURI = field2uri(key, @)
+                query[propURI] = value
                 delete query[key]
-
-
-    # ## getURI
-    # return the related field URI
-    getURI: (fieldName, type) ->
-        if fieldName.indexOf('@') > -1
-            [name, lang] = fieldName.split('@')
-        else
-            name = fieldName
-        if type
-            schema = type::schema
-            meta = type::meta
-        else
-            schema = @schema
-            meta = @meta
-        return schema[name].uri or "#{meta.propertiesNamespace}/#{fieldName}"
 
 
 module.exports = RdfModel

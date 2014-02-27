@@ -89,3 +89,29 @@ describe 'model deep find', ()->
                     expect(results).to.be.undefined
                     done()
 
+    describe '[sort]', () ->
+        it "should able to sort results via an embed model's field", (done) ->
+            ones  = []
+            for i in [1..15]
+                ones.push new db.One {
+                    literal: new db.Literal {integer: i, string: "#{i%2}"}
+                }
+             async.map ones, (one, cb) ->
+                one.save cb
+            , (err, results) ->
+                expect(err).to.be.null
+                query = {'literal.string': '1'}
+                options = {sortBy: ['literal.integer'], populate: 1}
+                db.One.find query, options, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 8
+                    expect(results[0].get('literal').get('integer')).to.be.equal 1
+                    expect(results[1].get('literal').get('integer')).to.be.equal 3
+                    expect(results[2].get('literal').get('integer')).to.be.equal 5
+                    expect(results[3].get('literal').get('integer')).to.be.equal 7
+                    expect(results[4].get('literal').get('integer')).to.be.equal 9
+                    expect(results[5].get('literal').get('integer')).to.be.equal 11
+                    expect(results[6].get('literal').get('integer')).to.be.equal 13
+                    expect(results[7].get('literal').get('integer')).to.be.equal 15
+                    done()
+

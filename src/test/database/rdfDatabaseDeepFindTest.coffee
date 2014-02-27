@@ -105,33 +105,29 @@ describe 'Database deep find:', ()->
                     done()
 
 
+    describe '[sort]', () ->
         it "should able to sort results via an embed model's field", (done) ->
-            db.count (err, total) ->
-                embededs = []
-                pojos = []
-                for i in [1..15]
-                    embeded = {_id: "http://example.org/embeded#{i}"}
-                    embeded[f.index] = i
-                    embeded[f.title] = "#{i%2}"
-                    embededs.push embeded
-                    pojo = {}
-                    pojo[f.foo] = {_uri: embeded._id}
-                    pojo[f.index] = i*2
-                    pojos.push pojo
-                db.batchSync embededs, (err, savedOne, infos) ->
+            data = []
+            for i in [1..15]
+                embeded = {_id: "http://example.org/embeded#{i}"}
+                embeded[f.index] = i
+                embeded[f.title] = "#{i%2}"
+                data.push embeded
+                pojo = {}
+                pojo[f.foo] = {_uri: embeded._id}
+                pojo[f.index] = i*2
+                data.push pojo
+            db.batchSync data, (err, savedOne, infos) ->
+                expect(err).to.be.null
+                query = {}
+                query["#{f.foo}->#{f.title}"] = "1"
+                query[f.index] = {$gt: 10}
+                options = {sortBy: ["#{f.foo}->#{f.index}"]}
+                db.find query, options, (err, results) ->
                     expect(err).to.be.null
-                    db.batchSync pojos, (err, savedOne, infos) ->
-                        expect(err).to.be.null
-                        query = {}
-                        query["#{f.foo}->#{f.title}"] = "1"
-                        query[f.index] = {$gt: 10}
-                        options = {sortBy: ["#{f.foo}->#{f.title}"]}
-                        db.find query, (err, results) ->
-                            db.find query, options, (err, results) ->
-                                expect(err).to.be.null
-                                expect(results.length).to.be.equal 5
-                                expect(item[f.foo]._uri for item in results).to.include.members(
-                                    "http://example.org/embeded#{i}" for i in [7, 9, 11, 13, 15]
-                                )
-                                done()
+                    expect(results.length).to.be.equal 5
+                    expect(item[f.foo]._uri for item in results).to.include.members(
+                        "http://example.org/embeded#{i}" for i in [7, 9, 11, 13, 15]
+                    )
+                    done()
 

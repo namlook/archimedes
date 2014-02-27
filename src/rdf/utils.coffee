@@ -223,6 +223,25 @@ exports.value2rdf = value2rdf = (value, lang) ->
     return value
 
 
+# ## field2uri
+# convert a field into its related uri
+exports.field2uri = field2uri = (fieldName, model) ->
+    schema = model::schema
+    meta = model::meta
+    if fieldName.indexOf('@') > -1
+        [name, lang] = fieldName.split('@')
+    else
+        name = fieldName
+    if fieldName.indexOf('.') > -1
+        fields = fieldName.split('.')
+        newmodel = model.db[model::schema[fields[0]].type]
+        newfieldName = fields[1..].join('.')
+        uri = schema[fields[0]].uri or "#{meta.propertiesNamespace}/#{fields[0]}"
+        return "#{uri}->#{field2uri(newfieldName, newmodel)}"
+    else
+        return schema[name].uri or "#{meta.propertiesNamespace}/#{fieldName}"
+
+
 if require.main is module
     uris = {
         foo: 'http://example.org/foo'
