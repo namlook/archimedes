@@ -104,13 +104,13 @@ _getStatement = (prop, value, validx) ->
     sparqlQuery = []
     lang = ''
     isNot = false
+    addVariableStatement = true
 
     if prop.indexOf('@') > -1
         [prop, lang] = prop.split('@')
 
     variable = "?#{_.str.classify prop}#{lang}#{validx}"
     prop = _buildProperty(prop)
-    sparqlQuery.push "?s #{prop} #{variable}"
 
     if _.isRegExp(value)
         throw 'regex not implemented'
@@ -154,8 +154,10 @@ _getStatement = (prop, value, validx) ->
 
             else if $op is '$exists'
                 notExists = ''
+                addVariableStatement = false
                 unless val
                     notExists = 'not'
+                sparqlQuery.push "?s ?p ?o"
                 sparqlQuery.push "filter (#{notExists} exists {?s #{prop} #{variable}})"
 
             else if $op is '$ne'
@@ -173,9 +175,15 @@ _getStatement = (prop, value, validx) ->
         value = value2rdf(value, lang)
         sparqlQuery.push "filter (#{variable} = #{value})"
 
+    if addVariableStatement
+        sparqlQuery.push "?s #{prop} #{variable}"
+
+
     sparqlQuery = sparqlQuery.join(' .\n')
+    minus = ''
     if isNot
-        sparqlQuery = "MINUS {#{sparqlQuery}}"
+        minus = "MINUS "
+    sparqlQuery = "#{minus}{#{sparqlQuery}}"
     return sparqlQuery
 
 

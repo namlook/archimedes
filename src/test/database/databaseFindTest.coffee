@@ -400,7 +400,7 @@ describe 'Database.find()', ()->
                     done()
 
     describe 'query[$exists]', () ->
-        it 'should return the docs that match a simple query', (done) ->
+        it 'should return the docs which field exists', (done) ->
             pojos = []
             for i in [1..5]
                 pojo = {}
@@ -415,6 +415,23 @@ describe 'Database.find()', ()->
                 db.find query, (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 2
+                    done()
+
+        it 'should return the docs which field not exists', (done) ->
+            pojos = []
+            for i in [1..5]
+                pojo = {}
+                pojo[f.title] = i
+                if i%2 is 0
+                    pojo[f.index] = i*10
+                pojos.push pojo
+            db.batchSync pojos, (err, results) ->
+                expect(err).to.be.null
+                query = {}
+                query[f.index] = {$exists: false}
+                db.find query, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 3
                     done()
 
     describe 'query multi-fields', () ->
