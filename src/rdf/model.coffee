@@ -105,8 +105,6 @@ class RdfModel extends ModelInterface
 
         unless field
             return callback 'field is required'
-        unless @::schema[field]?
-            return callback "Can't faceting on an unknown field: \"#{field}\""
         unless callback
             return callback 'callback is required'
 
@@ -116,7 +114,10 @@ class RdfModel extends ModelInterface
             options.order = 'desc'
 
         unless _.str.startsWith field, 'http://'
-            field = field2uri(field, @)
+            try
+                field = field2uri(field, @)
+            catch e
+                return callback e
 
         try
             @_convertQueryUri(query)

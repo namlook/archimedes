@@ -223,9 +223,13 @@ class Database extends DatabaseInterface
             catch e
                 return callback e
 
+        if field.indexOf('->') > -1
+            propURI = ("<#{_prop}>" for _prop in field.split('->')).join('/')
+        else
+            propURI = "<#{field}>"
         sparqlQuery = """
             select ?facet, (count(?facet) as ?count) from <#{@graphURI}> where {
-                ?s <#{field}> ?facet .
+                ?s #{propURI} ?facet .
                 #{sparqlQuery}
             }
             group by ?facet

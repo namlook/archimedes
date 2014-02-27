@@ -29,7 +29,7 @@ describe 'Database.facets()', ()->
     beforeEach (done) ->
         db.clear done
 
-    describe 'simple', () ->
+    describe '[simple]', () ->
         it 'should return the facets on a specified field ', (done) ->
             pojos = []
             for i in [1..5]
@@ -72,4 +72,51 @@ describe 'Database.facets()', ()->
                     expect(results[1].count).to.be.equal 3
                     expect(results[2].facet).to.be.equal 'arf'
                     expect(results[2].count).to.be.equal 2
+                    done()
+
+    describe '[deep]', () ->
+        it "should facet on relations", (done) ->
+            data = []
+            for i in [1..15]
+                embeded = {_id: "http://example.org/embeded#{i}"}
+                embeded[f.index] = i
+                embeded[f.title] = "#{i%2}"
+                data.push embeded
+                pojo = {}
+                pojo[f.foo] = {_uri: embeded._id}
+                pojo[f.index] = i*2
+                data.push pojo
+            db.batchSync data, (err, savedOne, infos) ->
+                expect(err).to.be.null
+                db.facets "#{f.foo}->#{f.title}", (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 2
+                    expect(results[0].facet).to.be.equal '1'
+                    expect(results[0].count).to.be.equal 8
+                    expect(results[1].facet).to.be.equal '0'
+                    expect(results[1].count).to.be.equal 7
+                    done()
+
+        it "should facet on relations with query", (done) ->
+            data = []
+            for i in [1..15]
+                embeded = {_id: "http://example.org/embeded#{i}"}
+                embeded[f.index] = i
+                embeded[f.title] = "#{i%2}"
+                data.push embeded
+                pojo = {}
+                pojo[f.foo] = {_uri: embeded._id}
+                pojo[f.index] = i*2
+                data.push pojo
+            db.batchSync data, (err, savedOne, infos) ->
+                expect(err).to.be.null
+                query = {}
+                query[f.index] = {$lt: 16}
+                db.facets "#{f.foo}->#{f.title}", query, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 2
+                    expect(results[0].facet).to.be.equal '1'
+                    expect(results[0].count).to.be.equal 4
+                    expect(results[1].facet).to.be.equal '0'
+                    expect(results[1].count).to.be.equal 3
                     done()
