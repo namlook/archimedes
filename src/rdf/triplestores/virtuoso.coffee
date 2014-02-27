@@ -45,7 +45,7 @@ module.exports = class Virtuoso
             if err
                 return callback err
 
-            regErr = new RegExp /^Virtuoso\s\w+\sError\s\w+\W\s/
+            regErr = new RegExp /^Virtuoso\s\w+\sError\s\w+\s/
             if body.search(regErr) > -1
                 return callback body
 
