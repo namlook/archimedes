@@ -3,7 +3,7 @@
 _ = require 'underscore'
 DatabaseInterface = require '../interface/database'
 async = require 'async'
-{mongo2sparql, value2rdf, options2sparql} = require './utils'
+{mongo2sparql, value2rdf, options2sparql, buildTimeSeriesQuery} = require './utils'
 
 triplestores = {
     'stardog': require './triplestores/stardog'
@@ -234,6 +234,76 @@ class Database extends DatabaseInterface
             }
             group by ?facet
             order by #{options.order}(?count) asc(?facet)
+            limit #{options.limit}
+        """
+
+        # console.log sparqlQuery
+
+        @store.query sparqlQuery, (err, data) =>
+            if err
+                return callback err
+            results = []
+            for item in data
+                results.push {
+                    facet: item.facet.value,
+                    count: parseInt(item.count.value, 10)
+                }
+            return callback null, results
+
+
+    # ## timeSeries
+    # Aggregate the data by a specified step.
+    #
+    # Steps are : $year, $month, $day, $hours, $minutes and $seconds
+    #   steps can be combined like "$month-$day" or "$year/$month" etc..
+    timeSeries: (dateField, step, query, options, callback) ->
+        unless dateField
+            throw 'field is required'
+        unless step
+            throw 'step is required'
+
+        if not callback and typeof(query) is 'function'
+            callback = query
+            query = {}
+            options = {}
+        else if not callback and typeof(options) is 'function'
+            callback = options
+            options = {}
+
+        unless callback
+            throw 'callback is required'
+
+        unless options.limit?
+            options.limit = 30
+        unless options.order?
+            options.order = 'asc'
+
+        if step is '$second'
+            return @facets dateField, query, options, callback
+
+        if dateField.indexOf('->') > -1
+            propURI = ("<#{_prop}>" for _prop in dateField.split('->')).join('/')
+        else
+            propURI = "<#{dateField}>"
+
+        {modifiers, groupBy} = buildTimeSeriesQuery(step)
+
+        sparqlQuery = ''
+        unless _.isEmpty query
+            try
+                sparqlQuery = mongo2sparql(query, options, {queryOnly: true})
+            catch e
+                return callback e
+
+        sparqlQuery = """
+            select ?facet, (count(?facet) as ?count) from <#{@graphURI}> where {
+                #{sparqlQuery}
+                ?s #{propURI} ?date .
+                #{modifiers}
+            }
+
+            GROUP BY #{groupBy}
+            order by #{options.order}(?facet)
             limit #{options.limit}
         """
 

@@ -247,17 +247,57 @@ exports.field2uri = field2uri = (fieldName, model) ->
         return schema[name].uri or "#{meta.propertiesNamespace}/#{fieldName}"
 
 
-if require.main is module
-    uris = {
-        foo: 'http://example.org/foo'
-        bar: 'http://example.org/bar'
-        toto: 'http://example.org/toto'
-    }
-    query = {}
-    query[uris.foo+"@en"] = "hello"
-    query["#{uris.bar}->#{uris.toto}->#{uris.foo}"] = new Date()
-    console.log ' '
-    console.log  exports.mongo2sparql query, {sortBy: ["-#{uris.bar}->#{uris.toto}->#{uris.foo}"]}
-    console.log ' '
 
+exports.buildTimeSeriesQuery = (step) ->
+    stepIndex = {
+        'year': false
+        'month': false
+        'day': false
+        'hours': false
+        'minutes': false
+        'seconds': false
+    }
+
+    for _step in step.split('$')
+        for key, _value of stepIndex
+            if _.str.startsWith(_step, key)
+                stepIndex[key] = true
+                nbSteps += 1
+
+    steps = (s for s, v of stepIndex when v is true)
+    nbSteps = steps.length
+
+    modifiers = []
+    if nbSteps is 0
+        throw 'timeSeries requires a step'
+    else if nbSteps is 1
+        concat = "#{steps[0]}(?date)"
+    else
+        for _step in steps
+            step = step.replace("$#{_step}", "\", ?#{_step}, \"")
+            modifiers.push """
+            bind(str(#{_step}(?date)) as ?_#{_step}) .
+            bind(if(strlen(?_#{_step}) = 1, concat('0', ?_#{_step}), ?_#{_step}) as ?#{_step}) .
+            """
+        concat = "concat(\"#{step}\")"
+
+    return {
+        'modifiers': modifiers.join('\n')
+        'groupBy': "(#{concat} as ?facet)"
+    }
+
+if require.main is module
+    # uris = {
+    #     foo: 'http://example.org/foo'
+    #     bar: 'http://example.org/bar'
+    #     toto: 'http://example.org/toto'
+    # }
+    # query = {}
+    # query[uris.foo+"@en"] = "hello"
+    # query["#{uris.bar}->#{uris.toto}->#{uris.foo}"] = new Date()
+    # console.log ' '
+    # console.log  exports.mongo2sparql query, {sortBy: ["-#{uris.bar}->#{uris.toto}->#{uris.foo}"]}
+    # console.log ' '
+
+    console.log  exports.buildTimeSeriesQuery('$year-$month/$seconds')
 

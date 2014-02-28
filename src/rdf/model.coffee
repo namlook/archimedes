@@ -126,6 +126,53 @@ class RdfModel extends ModelInterface
 
         @db.facets field, query, options, callback
 
+    # ## timeSeries
+    # Aggregate the data by a specified step.
+    #
+    # Steps are : $year, $month, $day, $hours, $minutes and $seconds
+    #   steps can be combined like "$month-$day" or "$year/$month" etc..
+    @timeSeries: (dateField, step, query, options, callback) ->
+        unless dateField
+            throw 'field is required'
+        unless step
+            throw 'step is required'
+
+        if not callback and typeof(query) is 'function'
+            callback = query
+            query = {}
+            options = {}
+        else if not callback and typeof(options) is 'function'
+            callback = options
+            options = {}
+
+        unless callback
+            throw 'callback is required'
+
+        unless options.limit?
+            options.limit = 30
+        unless options.order?
+            options.order = 'asc'
+
+        unless _.str.startsWith dateField, 'http://'
+            try
+                field = field2uri(dateField, @)
+            catch e
+                return callback e
+
+        unless @::schema[dateField]?.type in ['datetime', 'date']
+            return callback \
+                "#{@::meta.name}.#{dateField} is not a date. timeSeries() "+\
+                "requires a date field"
+
+        try
+            @_convertQueryUri(query)
+        catch e
+            return callback e
+
+        return @db.timeSeries field, step, query, options, callback
+
+
+
     # ## toSerializableObject
     #
     # convert the model into an object which will be passed to the database
