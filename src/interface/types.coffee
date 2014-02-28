@@ -9,8 +9,12 @@ exports.defaultTypes = {
         validate: _.isString
     'integer':
         validate: check.isInt
+        compute: (value, attrs) ->
+            parseInt(value, 10)
     'float':
         validate: check.isFloat
+        compute: (value, attrs) ->
+            parseFloat(value)
     'boolean':
         compute: (value, attrs) ->
             unless _.isBoolean(value) or value in [0, 1]

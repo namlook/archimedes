@@ -12,6 +12,20 @@ describe 'Model.schema', ()->
 
     models = {}
 
+    class models.Literal extends config.Model
+        schema:
+            i18n:
+                type: 'string'
+                i18n: true
+            string:
+                type: 'string'
+            integer:
+                type: 'integer'
+            float:
+                type: 'float'
+            date:
+                type: 'date'
+
     class models.A extends config.Model
         schema:
             defaultValue:
@@ -73,6 +87,23 @@ describe 'Model.schema', ()->
         db = config.Database()
         db.registerModels models
         next()
+
+    describe 'type validation', () ->
+        it 'should throw an error if the value is not an integer', () ->
+            literal = new db.Literal
+            literal.set 'integer', '9'
+            expect(typeof literal.get 'integer').to.be.equal 'number'
+            expect(literal.get 'integer').to.be.equal 9
+            expect(-> literal.set 'integer', 'arf').to.throw(
+                'Literal.integer must be a integer')
+
+        it 'should throw an error if the value is not a float', () ->
+            literal = new db.Literal
+            literal.set 'float', '9.90'
+            expect(typeof literal.get 'float').to.be.equal 'number'
+            expect(literal.get 'float').to.be.equal 9.9
+            expect(-> literal.set 'float', 'arf').to.throw(
+                'Literal.float must be a float')
 
     describe 'default value', () ->
 
