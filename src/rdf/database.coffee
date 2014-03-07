@@ -29,8 +29,8 @@ class Database extends DatabaseInterface
             throw "graphURI is required"
 
         # what store do we have to use ?
-        unless options.store
-            throw "store is required"
+        unless triplestores[options.store]?
+            throw "unkwown store"
 
         @store = new triplestores[options.store](options)
 
