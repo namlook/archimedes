@@ -144,13 +144,17 @@ class Model
 
 
     @count: (query, options, callback) ->
-        if typeof(options) is 'function' and not callback
+        if not callback and typeof(options) is 'function'
             callback = options
             options = {}
-        if typeof(query) is 'function'
+        if not callback and typeof(query) is 'function'
             callback = query
             options = {}
-            query = {_type: @::meta.type}
+            query = {}
+
+        unless query._type?
+            query._type = @::meta.type
+
         return @db.count query, options, callback
 
     # # Static methods
@@ -185,12 +189,12 @@ class Model
     #    of the related instances. A lang code can be to specify which i18n
     #    version to use
     @find: (query, options, callback) ->
-        if typeof(query) is 'function'
+        if not callback and typeof(options) is 'function'
+            callback = options
+            options = {}
+        if not callback and typeof(query) is 'function'
             callback = query
             query = {}
-            options = {}
-        else if typeof(options) is 'function' and not callback
-            callback = options
             options = {}
 
         unless callback
@@ -211,7 +215,6 @@ class Model
             @db.find query, options, (err, pojos) =>
                 if err
                     return callback err
-
                 instances = (new @(pojo) for pojo in pojos)
                 if options.populate
                     async.map instances, (instance, cb) ->
