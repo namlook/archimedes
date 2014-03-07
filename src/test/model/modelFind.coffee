@@ -135,7 +135,7 @@ describe 'model.find', ()->
                     done()
 
     describe '[literal]', () ->
-        it 'should return the doc that match the id', (done) ->
+        it 'should return the doc (in a list) that match the id', (done) ->
             obj = new db.Literal
             obj.set 'i18n', 'hello', 'en'
             obj.set 'i18n', 'salut', 'fr'
@@ -157,7 +157,44 @@ describe 'model.find', ()->
                         obj.get('date').toISOString())
                     done()
 
-        it 'should return the first doc that match the id', (done) ->
+        it 'should return the doc (in a list) that match the id in a query', (done) ->
+            obj = new db.Literal
+            obj.set 'i18n', 'hello', 'en'
+            obj.set 'i18n', 'salut', 'fr'
+            obj.set 'string', 'hello'
+            obj.set 'integer', 2
+            obj.set 'date', new Date(2014, 1, 1)
+            obj.save (err, savedObj, infos) ->
+                expect(err).to.be.null
+                expect(infos.dbTouched).to.be.true
+                expect(obj.id).to.be.not.null
+                db.Literal.find {_id: savedObj.id}, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 1
+                    expect(results[0].get 'i18n', 'en').to.be.equal obj.get 'i18n', 'en'
+                    expect(results[0].get 'i18n', 'fr').to.be.equal obj.get 'i18n', 'fr'
+                    expect(results[0].get 'string').to.be.equal obj.get 'string'
+                    expect(results[0].get 'integer').to.be.equal obj.get 'integer'
+                    expect(results[0].get('date').toISOString()).to.be.equal(
+                        obj.get('date').toISOString())
+                    done()
+
+        it 'should return the docs that match the ids in a query', (done) ->
+            literals = []
+            for i in [1..4]
+                literals.push new db.Literal {integer: i}
+            db.batchSync literals, (err, savedObjs) ->
+                expect(err).to.be.null
+                db.Literal.find {_id: (i.result._id for i in savedObjs)}, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 4
+                    expect(results[0].get 'integer').to.be.equal 1
+                    expect(results[1].get 'integer').to.be.equal 2
+                    expect(results[2].get 'integer').to.be.equal 3
+                    expect(results[3].get 'integer').to.be.equal 4
+                    done()
+
+        it 'should return the doc that match the id', (done) ->
             obj = new db.Literal
             obj.set 'i18n', 'hello', 'en'
             obj.set 'i18n', 'salut', 'fr'
@@ -169,6 +206,27 @@ describe 'model.find', ()->
                 expect(infos.dbTouched).to.be.true
                 expect(obj.id).to.be.not.null
                 db.Literal.first savedObj.id, (err, result) ->
+                    expect(err).to.be.null
+                    expect(result.get 'i18n', 'en').to.be.equal obj.get 'i18n', 'en'
+                    expect(result.get 'i18n', 'fr').to.be.equal obj.get 'i18n', 'fr'
+                    expect(result.get 'string').to.be.equal obj.get 'string'
+                    expect(result.get 'integer').to.be.equal obj.get 'integer'
+                    expect(result.get('date').toISOString()).to.be.equal(
+                        obj.get('date').toISOString())
+                    done()
+
+        it 'should return the doc that match the id in a query', (done) ->
+            obj = new db.Literal
+            obj.set 'i18n', 'hello', 'en'
+            obj.set 'i18n', 'salut', 'fr'
+            obj.set 'string', 'hello'
+            obj.set 'integer', 2
+            obj.set 'date', new Date(2014, 1, 1)
+            obj.save (err, savedObj, infos) ->
+                expect(err).to.be.null
+                expect(infos.dbTouched).to.be.true
+                expect(obj.id).to.be.not.null
+                db.Literal.first {_id: savedObj.id}, (err, result) ->
                     expect(err).to.be.null
                     expect(result.get 'i18n', 'en').to.be.equal obj.get 'i18n', 'en'
                     expect(result.get 'i18n', 'fr').to.be.equal obj.get 'i18n', 'fr'

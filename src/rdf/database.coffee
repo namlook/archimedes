@@ -107,6 +107,14 @@ class Database extends DatabaseInterface
     # example:
     #   @_find query, options, (err, docs) ->
     _find: (query, options, callback) ->
+
+        # if _id is in the query, then we delegate to the _findByIds
+        # method.
+        if query._id?
+            return @_findByIds query._id, options, callback
+
+        # otherwise, we have to convert the mongo-like query into a
+        # sparql one.
         try
             query = mongo2sparql(query, options)
         catch e
