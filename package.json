@@ -9,7 +9,7 @@
   "keywords": [
   ],
   "author": "Namlook",
-  "license": "BSD-2-Clause",
+  "license": "MIT",
   "devDependencies": {
     "chai": "~1.8.1",
     "mocha": "~1.14.0",
