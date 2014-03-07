@@ -1,3 +1,3 @@
 # Archimedes
 
-Archimedes is a simple but powerful javascript ORM for RDF and Triple Stores.
+Archimedes is a simple ORDFM. Please, note that it is still in very alpha stage!
