@@ -1,15 +1,12 @@
 {
   "name": "archimedes",
   "version": "0.0.0",
-  "description": "An RDF ORM",
+  "description": "A simple ORDFM",
   "main": "index.js",
   "scripts": {
     "test": "mocha"
   },
   "keywords": [
-    "orm",
-    "rdf",
-    "triplestore"
   ],
   "author": "Namlook",
   "license": "BSD-2-Clause",
