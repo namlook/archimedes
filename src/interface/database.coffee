@@ -13,6 +13,7 @@ class Database
 
     constructor: (options) ->
         options = options || {}
+        @modelsList = []
         @_cache = {}
         # the types used by the schema to describe, validate and compute values
         @_types = defaultTypes
@@ -305,6 +306,7 @@ class Database
             # validate and attach the model to the database
             @validateModel(modelName, model)
             @[modelName] = model
+            @modelsList.push modelName
 
 
 
