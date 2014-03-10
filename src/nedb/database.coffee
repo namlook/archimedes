@@ -91,6 +91,8 @@ class Database extends DatabaseInterface
     # example:
     #   @_find query, options, (err, docs) ->
     _find: (query, options, callback) ->
+        if query._id? and _.isArray(query._id)
+            query._id = {'$in': query._id}
 
         query = @_convertQuery(query)
 
@@ -143,10 +145,23 @@ class Database extends DatabaseInterface
 
         # handle special opertors
         for key, value of query
-            if value['$ne']
+            if value['$ne']?
                 newquery['$not'] = {} unless newquery['$not']
                 newquery['$not'][key] = value['$ne']
-            if value['$nin']
+            else if value['$all']?
+                newquery['$and'] = [] unless newquery['$all']
+                for val in value['$all']
+                    _q = {}
+                    _q[key] = val
+                    newquery['$and'].push _q
+            else if value['$nall']?
+                newquery['$not'] = {} unless newquery['$not']
+                newquery['$not']['$and'] = []
+                for val in value['$nall']
+                    _q = {}
+                    _q[key] = val
+                    newquery['$not']['$and'].push _q
+            else if value['$nin']?
                 whereFn.push {
                     fieldName: key
                     query: value
