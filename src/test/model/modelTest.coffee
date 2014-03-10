@@ -865,6 +865,27 @@ describe 'Model', ()->
                             done()
 
 
+        it "should return only the instance's number of the same type that match the query", (done) ->
+            instances = [
+                new db.Blog {title: 'First blog'}
+                new db.Blog {title: 'Second blog'}
+                new db.Blog {title: 'Third blog'}
+                new db.Author {login: 'bob'}
+                new db.Author {login: 'timy'}
+            ]
+            db.batchSync instances, (err) ->
+                expect(err).to.be.null
+                db.Blog.count {title: 'First blog'}, (err, total) ->
+                    expect(err).to.be.null
+                    expect(total).to.be.equal 1
+                    db.Author.count {login: {$in: ['bob', 'timy']}}, (err, total) ->
+                        expect(err).to.be.null
+                        expect(total).to.be.equal 2
+                        db.count (err, total) ->
+                            expect(err).to.be.null
+                            expect(total).to.be.equal 5
+                            done()
+
     describe '._getPendingRelations()', () ->
 
         it 'should push a pending relation', () ->

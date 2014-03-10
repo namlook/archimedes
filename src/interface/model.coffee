@@ -155,7 +155,10 @@ class Model
         unless query._type?
             query._type = @::meta.type
 
-        return @db.count query, options, callback
+        @beforeQuery query, options, (err, query, options) =>
+            if err
+                return callback err
+            return @db.count query, options, callback
 
     # # Static methods
 

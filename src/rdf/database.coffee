@@ -91,6 +91,8 @@ class Database extends DatabaseInterface
             from <#{@graphURI}> where #{query}
         """
 
+        # console.log sparqlQuery
+
         @store.count sparqlQuery, callback
 
 
