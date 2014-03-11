@@ -140,6 +140,11 @@ class Model
 
 
     @beforeQuery: (query, options, callback) ->
+        # validate the query
+        try
+            @_validateQuery(@, query)
+        catch e
+            return callback e
         return callback null, query, options
 
 
@@ -207,10 +212,10 @@ class Model
             query._type = @::meta.type
 
         # validate the query
-        try
-            @_validateQuery(@, query)
-        catch e
-            return callback e
+        # try
+        #     @_validateQuery(@, query)
+        # catch e
+        #     return callback e
 
         @beforeQuery query, options, (err, query, options) =>
             if err

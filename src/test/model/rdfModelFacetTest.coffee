@@ -66,7 +66,7 @@ describe 'model.facets', ()->
             db.batchSync literals, (err, obj, infos) ->
                 expect(err).to.be.null
                 db.Literal.facets 'notinschema', (err, results) ->
-                    expect(err).to.be.equal 'Unknown field: Literal.notinschema'
+                    expect(err).to.be.equal 'Unknown field Literal.notinschema'
                     expect(results).to.be.undefined
                     done()
 
@@ -121,7 +121,7 @@ describe 'model.facets', ()->
             , (err, results) ->
                 expect(err).to.be.null
                 db.One.facets 'literal.inner.notinschema', (err, results) ->
-                    expect(err).to.be.equal 'Unknown field: Inner.notinschema'
+                    expect(err).to.be.equal 'Unknown field Inner.notinschema'
                     expect(results).to.be.undefined
                     done()
 

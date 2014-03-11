@@ -68,7 +68,7 @@ describe 'model.timeSeries', ()->
             db.batchSync literals, (err, obj, infos) ->
                 expect(err).to.be.null
                 db.Literal.timeSeries 'notinschema', '$year', (err, results) ->
-                    expect(err).to.be.equal 'Unknown field: Literal.notinschema'
+                    expect(err).to.be.equal 'Unknown field Literal.notinschema'
                     expect(results).to.be.undefined
                     done()
 

@@ -236,14 +236,14 @@ exports.field2uri = field2uri = (fieldName, model) ->
         fields = fieldName.split('.')
         fieldName = fields[0]
         unless schema[fieldName]?
-            throw "Unknown field: #{meta.name}.#{fieldName} xx"
+            throw "Unknown field #{meta.name}.#{fieldName}"
         newmodel = model.db[model::schema[fieldName].type]
         newfieldName = fields[1..].join('.')
         uri = schema[fieldName].uri or "#{meta.propertiesNamespace}/#{fieldName}"
         return "#{uri}->#{field2uri(newfieldName, newmodel)}"
     else
         unless schema[name]?
-            throw "Unknown field: #{meta.name}.#{name}"
+            throw "Unknown field #{meta.name}.#{name}"
         return schema[name].uri or "#{meta.propertiesNamespace}/#{fieldName}"
 
 

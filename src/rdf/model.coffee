@@ -52,37 +52,40 @@ class RdfModel extends ModelInterface
 
 
     @beforeQuery: (query, options, callback) ->
-        # convert query's key into uris
-        if not _.isString(query) and not _.isArray(query)
-            try
-                @_convertQueryUri(query)
-            catch e
-                return callback e
+        super query, options, (err, query, options) =>
+            if err
+                return callback err
+            # convert query's key into uris
+            if not _.isString(query) and not _.isArray(query)
+                try
+                    @_convertQueryUri(query)
+                catch e
+                    return callback e
 
-        # convert sortBy keys into uri
-        if options.sortBy? and not _.isArray options.sortBy
-            _sortBy = [options.sortBy]
-        else
-            _sortBy = options.sortBy or []
+            # convert sortBy keys into uri
+            if options.sortBy? and not _.isArray options.sortBy
+                _sortBy = [options.sortBy]
+            else
+                _sortBy = options.sortBy or []
 
-        sortBy = []
-        for key in _sortBy
-            unless _.str.startsWith(key, 'http://')
-                lang = ''
-                order = ''
-                if key[0] is '-'
-                    key = key[1..]
-                    order = '-'
-                else
-                    key = key[..]
-                if key.indexOf('@') > -1
-                    [key, lang] = key.split('@')
-                    lang = "@#{lang}"
-                propURI = field2uri(key, @)
-                sortBy.push "#{order}#{propURI}#{lang}"
+            sortBy = []
+            for key in _sortBy
+                unless _.str.startsWith(key, 'http://')
+                    lang = ''
+                    order = ''
+                    if key[0] is '-'
+                        key = key[1..]
+                        order = '-'
+                    else
+                        key = key[..]
+                    if key.indexOf('@') > -1
+                        [key, lang] = key.split('@')
+                        lang = "@#{lang}"
+                    propURI = field2uri(key, @)
+                    sortBy.push "#{order}#{propURI}#{lang}"
 
-        options.sortBy = sortBy
-        return callback null, query, options
+            options.sortBy = sortBy
+            return callback null, query, options
 
 
     # ## facets
