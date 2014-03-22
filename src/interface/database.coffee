@@ -309,6 +309,12 @@ class Database
             @modelsList.push modelName
 
 
+    # # clearRegisteredModels
+    # unregister the registered models
+    clearRegisteredModels: () ->
+        for modelName in @modelsList
+            delete @[modelName]
+        @modelsList = []
 
     # ## beforeRegister
     beforeRegister: (modelName, model) ->
