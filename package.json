@@ -2,12 +2,11 @@
   "name": "archimedes",
   "version": "0.0.1",
   "description": "A simple ORDFM",
-  "main": "index.js",
+  "main": "lib",
   "scripts": {
     "test": "mocha"
   },
-  "keywords": [
-  ],
+  "keywords": [],
   "author": "Namlook",
   "license": "MIT",
   "devDependencies": {
@@ -25,6 +24,7 @@
     "async": "~0.2.9",
     "extendonclass": "~1.0.0",
     "request": "~2.33.0",
-    "nedb": "~0.10.3"
+    "nedb": "~0.10.3",
+    "superagent": "^0.17.0"
   }
 }
