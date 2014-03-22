@@ -118,10 +118,14 @@ class Model
 
         # fill the model with the values passed to the constructor
         for key, value of properties
+            fieldType = @schema[key].type
+            if _.isObject(key) and @db[fieldType]?
+                if _.isArray(value)
+                    value = (_.isObject(val) and @db[fieldType](val) or val for val in value)
+                else
+                    value = new @db[fieldType](value)
             @set key, value
 
-            # value = @__computeValue(value, {fieldName: key, model: @})
-            # @_initProperties[key] = _.clone(value)
 
         # set all other properties to their default values if specified
         for fieldName, field of @schema
@@ -132,9 +136,6 @@ class Model
                     value = field.default #_.clone(field.default)
 
                 @set fieldName, value, {quietReadOnly: true}
-
-                # value = @__computeValue(value, {fieldName: fieldName, model: @})
-                # @_initProperties[fieldName] = value
 
         @_updateCachedProperties()
 
