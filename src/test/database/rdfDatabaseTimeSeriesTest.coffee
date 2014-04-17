@@ -33,7 +33,7 @@ describe 'Database.timeSeries()', ()->
         it 'should return the results grouped by year ', (done) ->
             pojos = []
             for i in [1..14]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.date] = new Date(Date.UTC(2000+i%3, 1, i))
                 pojos.push pojo
             db.batchSync pojos, (err, obj, infos) ->
@@ -52,7 +52,7 @@ describe 'Database.timeSeries()', ()->
         it 'should return the results grouped by year and month ', (done) ->
             pojos = []
             for i in [1..14]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.date] = new Date(Date.UTC(2000+i%3, i%2, i))
                 pojos.push pojo
             db.batchSync pojos, (err, obj, infos) ->
@@ -77,7 +77,7 @@ describe 'Database.timeSeries()', ()->
         it 'should return the results grouped by year, month and day ', (done) ->
             pojos = []
             for i in [1..14]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.date] = new Date(Date.UTC(2000+i%3, i%2, i%2+1))
                 pojos.push pojo
             db.batchSync pojos, (err, obj, infos) ->

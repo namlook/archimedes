@@ -81,6 +81,10 @@ class Database extends DatabaseInterface
         unless callback?
             throw "callback required"
 
+        if query and query._type?
+            query = _.clone(query)
+            query._type = "#{@defaultClassesNamespace}/#{query._type}"
+
         try
             query = mongo2sparql(query)
         catch e
@@ -109,11 +113,59 @@ class Database extends DatabaseInterface
     # example:
     #   @_find query, options, (err, docs) ->
     _find: (query, options, callback) ->
-
-        # if _id is in the query, then we delegate to the _findByIds
+        # if _uri is in the query, then we delegate to the _findByURIs
         # method.
-        if query._id?
-            return @_findByIds query._id, options, callback
+        if query
+            if _.isString query
+                if _.str.startsWith(query, 'http://')
+                    return @_findByURI query, options, callback
+                else
+                    return callback "bad query: #{query}"
+                    # uri = @__buildURI(options.type, query)
+                    # return @_findByURI uri, options, callback
+            if _.isArray query
+                uris = []
+                for item in query
+                    if _.str.startsWith(item, 'http://')
+                        uris.push(item)
+                    else
+                        return callback "bad query: #{query}"
+                    # else if item._uri?
+                        # uris.push(item._uri)
+                    # else
+                        # if _.isString(item)
+                            # itemId = item
+                        # else if item._id?
+                            # itemId = item._id
+                        # else
+                            # return callback "bad query: #{query}"
+                        # uris.push(@__buildURI(options.type, itemId))
+                return @_findByURIs uris, options, callback
+            # else if query._uri?
+                # unless _.isArray(query._uri)
+                    # query._uri = [query._uri]
+                # return @_findByURIs query._uri, options, callback
+            else if query._id?
+                if _.isArray(query._id)
+                    uris = []
+                    for id in query._id
+                        if _.str.startsWith(id, 'http://')
+                            uris.push(id)
+                        else
+                            uris.push(@__buildURI(query._type, id))
+                    return @_findByURIs uris, options, callback
+                else if _.isString(query._id) and _.str.startsWith(query._id, 'http://')
+                    return @_findByURI query._id, options, callback
+                else
+                    unless query._type?
+                        return callback "bad query: #{query}"
+                    uri = @__buildURI(query._type, query._id)
+                    return @_findByURI uri, options, callback
+
+
+        query = _.clone(query)
+        if query._type?
+            query._type = "#{@defaultClassesNamespace}/#{query._type}"
 
         # otherwise, we have to convert the mongo-like query into a
         # sparql one.
@@ -126,7 +178,7 @@ class Database extends DatabaseInterface
             select distinct ?s from <#{@graphURI}> where #{query}
         """
 
-        # console.log sparqlQuery
+        # console.log 'find>>>', sparqlQuery
 
         @store.query sparqlQuery, (err, data) =>
             if err
@@ -136,7 +188,7 @@ class Database extends DatabaseInterface
             unless options.instances
                 return callback null, ids
             else
-                return @_findByIds ids, callback
+                return @_findByURIs ids, callback
 
 
     # ## _findByIds
@@ -144,8 +196,8 @@ class Database extends DatabaseInterface
     #
     # example:
     #   @_findByIds ids, options, (err, docs) ->
-    _findByIds: (ids, options, callback) ->
-        @store.describe ids, options, (err, results) =>
+    _findByURIs: (uris, options, callback) ->
+        @store.describe uris, options, (err, results) =>
             if err
                 return callback err
             return callback null, results
@@ -156,8 +208,8 @@ class Database extends DatabaseInterface
     #
     # example:
     #   @_findById id, options, (err, docs) ->
-    _findById: (id, options, callback) ->
-        @_findByIds [id], options, callback
+    _findByURI: (uri, options, callback) ->
+        @_findByURIs [uri], options, callback
 
 
     # ##### Sparql-like query (aka Sparqlite)
@@ -177,13 +229,19 @@ class Database extends DatabaseInterface
         # ...
 
     # ## delete
-    # Delete the item in database that match the id
+    # Delete the item in database that match the URI.
+    # Instead of the uri, the id and type can be passed:
     #
     # example:
     #       @remove uri, (err) ->
+    #       @remove {_id: .., _type: ..}, (err) ->
     delete: (uri, callback) =>
         unless uri
             return callback "id must not be null"
+
+        unless _.isString(uri)
+            if uri._id? and uri._type?
+                uri = @__buildURI(uri._type, uri._id)
 
         deleteQuery = """
             delete {graph <#{@graphURI}> {<#{uri}> ?p ?o .}}
@@ -317,7 +375,7 @@ class Database extends DatabaseInterface
             limit #{options.limit}
         """
 
-        # console.log sparqlQuery
+        # console.log 'timeSeries>>>', sparqlQuery
 
         @store.query sparqlQuery, (err, data) =>
             if err
@@ -335,8 +393,21 @@ class Database extends DatabaseInterface
     # Insert or update a pojo into the database. An `_id` attribute
     # will be added if there isn't already.
     #
+    # Note that the type must be passed in options.
+    #
+    # Options:
+    #   * type: the type of the pojo
+    #
+    # If `options` is a string, it is taken as a lang code.
+    #
+    # The callback takes the model and an information object which have the
+    # following form:
+    #
+    # * dbTouched: true if the database has been hit.
+    #
     # example:
-    #   @sync pojo, (err, obj) ->
+    #   @sync pojo, 'Test', (err, obj, infos) ->
+    #   @sync pojo, {type: 'Test'}, (err, obj, infos) ->
     sync: (pojo, options, callback) ->
         if typeof(options) is 'function' and not callback
             callback = options
@@ -344,8 +415,13 @@ class Database extends DatabaseInterface
         unless callback
             throw 'callback is required'
 
+        unless pojo._type?
+            callback "_type field not found in pojo"
+
         convertedPojo = @__fillPojoUri(pojo)
         sparqlQuery = @_getSparqlSyncQuery(convertedPojo)
+
+        # console.log sparqlQuery
 
         if sparqlQuery is null
             return callback null, pojo, {dbTouched: false}
@@ -356,14 +432,17 @@ class Database extends DatabaseInterface
             unless ok
                 return callback "error while syncing the data"
             # @_updateCache(convertedPojo)
+            convertedPojo._uri = @__buildURI(convertedPojo._type, convertedPojo._id)
             return callback null, convertedPojo, {dbTouched: true}
 
     # ## serialize
     # Convert a pojo into ntriples
     serialize: (pojo) ->
         unless pojo._id?
-            pojo._id = @__buildURI()
-        ntriples = @_pojo2nt(pojo._id, pojo)
+            pojo._id = @__buildId()
+        unless pojo._uri?
+            pojo._uri = @__buildURI(pojo._type, pojo._id)
+        ntriples = @_pojo2nt(pojo._uri, pojo)
         return ntriples.join(' .\n') + ' .\n'
 
 
@@ -385,8 +464,13 @@ class Database extends DatabaseInterface
         unless objects or not _.isArray(objects)
             throw 'an array of objects is required'
 
-        pojos = (pojo.toSerializableObject? and pojo.toSerializableObject() \
-            or pojo for pojo in objects)
+        pojos = []
+        for pojo in objects
+            if pojo.toSerializableObject?
+                pojo = pojo.toSerializableObject()
+            unless pojo._type?
+                callback "_type field not found in pojo: #{pojo}"
+            pojos.push pojo
 
         async.map pojos, ((pojo, cb) =>
             try
@@ -427,13 +511,17 @@ class Database extends DatabaseInterface
     # returns the sparql query in order to update the pojo
     _getSparqlSyncQuery: (pojo) ->
         sparqlQuery = []
-        if pojo._id?
-            sparqlQuery.push """delete {graph <#{@graphURI}> {<#{pojo._id}> ?p ?o .}}
-                where {<#{pojo._id}> ?p ?o .};"""
-        else
-            pojo._id = @__buildURI()
+        unless pojo._id?
+            pojo._id = @__buildId()
+        unless pojo._uri?
+            pojo._uri = @__buildURI(pojo._type, pojo._id)
 
-        ntriples = @_pojo2nt(pojo._id, pojo)
+        sparqlQuery.push """delete {graph <#{@graphURI}> {<#{pojo._uri}> ?p ?o .}}
+            where {<#{pojo._uri}> ?p ?o .};"""
+
+        pojo._class = "#{@defaultClassesNamespace}/#{pojo._type}"
+
+        ntriples = @_pojo2nt(pojo._uri, pojo)
 
         sparqlQuery.push """insert data {
             graph <#{@graphURI}> {#{ntriples.join(' .\n\t')} }
@@ -532,7 +620,7 @@ class Database extends DatabaseInterface
             model::meta.uri =  "#{@defaultClassesNamespace}/#{modelName}"
 
         # the model.meta.type is model.meta.uri
-        model::meta.type = model::meta.uri
+        # model::meta.type = model::meta.uri
 
         # if the model doesn't specify graphURI, we set it
         if not model::meta.graphURI
@@ -559,8 +647,12 @@ class Database extends DatabaseInterface
     # ## __buildURI
     #
     # Generate a unique URI for the model
-    __buildURI: () ->
-        return "#{@defaultInstancesNamespace}/#{@__buildId()}"
+    __buildURI: (type, id) ->
+        if type
+            type = type.toLowerCase()
+            return "#{@defaultInstancesNamespace}/#{type}/#{id}"
+        else
+            return "#{@defaultInstancesNamespace}/#{id}"
 
 
     # ## __fillPojoUri(pojo)
@@ -569,7 +661,7 @@ class Database extends DatabaseInterface
     __fillPojoUri: (pojo) ->
         newpojo = {}
         for fieldName, value of pojo
-            if fieldName in ['_id', '_type']
+            if fieldName in ['_id', '_type', '_uri', '_class']
                 newpojo[fieldName] = value
             else unless _.str.startsWith(fieldName, 'http://')
                 newpojo["#{@defaultPropertiesNamespace}/#{fieldName}"] = value
@@ -592,9 +684,9 @@ class Database extends DatabaseInterface
 
         # build the n-triples
         for property, value of changes
-            if property is '_id'
+            if property in ['_id', '_uri', '_type']
                 continue
-            else if property is '_type'
+            else if property in ['_class']
                 ntriples.push "<#{uri}> a <#{value}>"
                 continue
 

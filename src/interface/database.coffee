@@ -48,8 +48,8 @@ class Database
     find: (query, options, callback) ->
         if typeof(query) is 'function'
             callback = query
-            query = {}
             options = {}
+            query = {}
         else if typeof(options) is 'function' and not callback
             callback = options
             options = {}
@@ -60,19 +60,19 @@ class Database
         unless callback
             throw 'callback is required'
 
-        if _.isString query
-            @_findById query, options, callback
-        else if _.isArray query
-            @_findByIds query, options, callback
-        else
-            @_find query, options, callback
+        # if _.isString query
+        #     @_findById query, options, callback
+        # else if _.isArray query
+        #     @_findByIds query, options, callback
+        # else
+        @_find query, options, callback
 
 
-    _findById: (query, options, callback) ->
-        callback '_findById() is not implemented'
+    # _findById: (query, options, callback) ->
+    #     callback '_findById() is not implemented'
 
-    _findByIds: (query, options, callback) ->
-        callback '_findByIds() is not implemented'
+    # _findByIds: (query, options, callback) ->
+    #     callback '_findByIds() is not implemented'
 
     _find: (query, options, callback) ->
         callback '_find() is not implemented'
@@ -119,14 +119,26 @@ class Database
     # Insert or update a pojo into the database. An `_id` attribute
     # will be added if there isn't already.
     #
+    # Note that the pojo should have an _type field.
+    #
+    #
+    # The callback takes the model and an information object which have the
+    # following form:
+    #
+    # * dbTouched: true if the database has been hit.
+    #
     # example:
-    #   @sync pojo, (err, obj) ->
+    #   @sync pojo, 'Test', (err, obj, infos) ->
+    #   @sync pojo, {type: 'Test'}, (err, obj, infos) ->
     sync: (pojo, options, callback) ->
         if typeof(options) is 'function' and not callback
             callback = options
             options = {}
         unless callback
             throw 'callback is required'
+
+        unless pojo._type?
+            callback "_type field not found in pojo"
 
         changes = null
 

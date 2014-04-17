@@ -94,7 +94,7 @@ _convert = (sparqlQuery, query, validx) ->
 _buildProperty = (prop) ->
     if prop.indexOf('->') > -1
         prop = ("<#{_prop}>" for _prop in prop.split('->')).join('/')
-    else if prop is '_type'
+    else if prop in ['_type', '_class']
         prop = 'a'
     else
         prop = "<#{prop}>"

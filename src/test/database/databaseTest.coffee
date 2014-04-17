@@ -18,15 +18,15 @@ describe 'Database', ()->
 
     describe '.count()', () ->
         it 'should return the number of item of the db', (done) ->
-            pojo = {}
-            pojo[f.hello] = 'hello'
+            pojo = {_type: 'Test'}
+            pojo[f.title] = 'hello'
             db.sync pojo, (err, obj, infos) ->
                 expect(err).to.be.null
                 expect(infos.dbTouched).to.be.true
                 db.count (err, count) ->
                     expect(err).to.be.null
                     expect(count).to.be.equal 1
-                    pojo2 = {}
+                    pojo2 = {_type: 'Test'}
                     pojo2[f.index] = 'hello2'
                     db.sync pojo2, (err, obj, infos) ->
                         expect(err).to.be.null
@@ -34,7 +34,7 @@ describe 'Database', ()->
                         db.count (err, count) ->
                             expect(err).to.be.null
                             expect(count).to.be.equal 2
-                            pojo3 = {}
+                            pojo3 = {_type: 'Test'}
                             pojo3[f.index] = 'hello3'
                             db.sync pojo3, (err, obj, infos) ->
                                 expect(err).to.be.null
@@ -44,10 +44,37 @@ describe 'Database', ()->
                                     expect(count).to.be.equal 3
                                     done()
 
+        it 'should return the number of item of the specified type', (done) ->
+            pojo = {_type: 'Test'}
+            pojo[f.title] = 'hello'
+            db.sync pojo, (err, obj, infos) ->
+                expect(err).to.be.null
+                expect(infos.dbTouched).to.be.true
+                db.count (err, count) ->
+                    expect(err).to.be.null
+                    expect(count).to.be.equal 1
+                    pojo2 = {_type: 'Test2'}
+                    pojo2[f.index] = 'hello2'
+                    db.sync pojo2, (err, obj, infos) ->
+                        expect(err).to.be.null
+                        expect(infos.dbTouched).to.be.true
+                        db.count (err, count) ->
+                            expect(err).to.be.null
+                            expect(count).to.be.equal 2
+                            pojo3 = {_type: 'Test3'}
+                            pojo3[f.index] = 'hello3'
+                            db.sync pojo3, (err, obj, infos) ->
+                                expect(err).to.be.null
+                                expect(infos.dbTouched).to.be.true
+                                db.count {_type: 'Test'}, (err, count) ->
+                                    expect(err).to.be.null
+                                    expect(count).to.be.equal 1
+                                    done()
+
 
     describe '.delete()', () ->
-        it 'should delete an item from its id', (done) ->
-            pojo = {}
+        it 'should delete an item from its id and type', (done) ->
+            pojo = {_type: 'Test'}
             pojo[f.title] = 'bar'
             pojo[f.index] = 2
             db.sync pojo, (err, obj, infos) ->
@@ -56,11 +83,12 @@ describe 'Database', ()->
                 expect(obj._id).to.be.not.null
                 db.count (err, count) ->
                     expect(err).to.be.null
-                    db.delete obj._id, (err) ->
+                    db.delete {_id: obj._id, _type: obj._type}, (err) ->
                         expect(err).to.be.null
                         db.count (err, count) ->
                             expect(count).to.be.equal 0
                             done()
+
 
     describe.skip '.changes()', () ->
 

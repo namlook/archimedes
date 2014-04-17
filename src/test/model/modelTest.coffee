@@ -799,14 +799,12 @@ describe 'Model', ()->
             blogPost = new db.BlogPost
             blogPost.set 'title', 'hello world', 'en'
             blogPost.set 'keyword', ['foo', 'bar']
-            jsonObject = {
-                "_type": blogPost.get('_type')
-                "title":{"en":"hello world"}
-                "keyword":["foo","bar"]
-            }
-            expect(blogPost.toJSON()).to.be.equal JSON.stringify jsonObject
+            jsonObject = JSON.parse blogPost.toJSON()
+            expect(jsonObject._type).to.be.equal blogPost.get('_type')
+            expect(jsonObject.title.en).to.be.equal "hello world"
+            expect(jsonObject.keyword).to.include.members ["foo","bar"]
 
-        it 'should include the id', () ->
+        it 'should include the id', (done) ->
             blogPost = new db.BlogPost
             blogPost.set 'title', 'hello world', 'en'
             blogPost.set 'keyword', ['foo', 'bar']
@@ -815,6 +813,7 @@ describe 'Model', ()->
                 jsonBlogPost = JSON.parse blogPost.toJSON()
                 expect(jsonBlogPost._id).to.not.be.undefined
                 expect(jsonBlogPost.id).to.be.undefined
+                done()
 
     describe '.delete()', ()->
         it 'should remove a saved instance from the database', (done) ->

@@ -24,7 +24,7 @@ describe 'Database.find(options)', ()->
         it 'should return a limited number of docs', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 pojo[f.index] = i * 10
                 pojos.push pojo
@@ -32,7 +32,7 @@ describe 'Database.find(options)', ()->
                 expect(err).to.be.null
                 expect(results.length).to.be.equal 5
                 expect(_.every(r.options.dbTouched for r in results)).to.be.true
-                db.find {}, {limit: 2}, (err, results) ->
+                db.find {_type: 'Test'}, {limit: 2}, (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 2
                     done()
@@ -41,7 +41,7 @@ describe 'Database.find(options)', ()->
         it 'should sort the results in asc order by default', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 pojo[f.index] = i * 10
                 pojos.push pojo
@@ -61,7 +61,7 @@ describe 'Database.find(options)', ()->
         it 'should sort the results in desc order', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 pojo[f.index] = i * 10
                 pojos.push pojo
@@ -81,7 +81,7 @@ describe 'Database.find(options)', ()->
         it 'should sort the results by multiple field', (done) ->
             pojos = []
             for i in [1..10]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i%2
                 pojo[f.index] = i
                 pojos.push pojo
@@ -118,7 +118,7 @@ describe 'Database.find(options)', ()->
         it 'should sort the results by multiple field in different order', (done) ->
             pojos = []
             for i in [1..10]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i%2
                 pojo[f.index] = i
                 pojos.push pojo
@@ -155,7 +155,7 @@ describe 'Database.find(options)', ()->
         it 'should sort the results by multiple field in different order with query', (done) ->
             pojos = []
             for i in [1..10]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i%2
                 pojo[f.index] = i
                 pojos.push pojo
@@ -163,7 +163,7 @@ describe 'Database.find(options)', ()->
                 expect(err).to.be.null
                 expect(results.length).to.be.equal 10
                 expect(_.every(r.options.dbTouched for r in results)).to.be.true
-                query = {}
+                query = {_type: 'Test'}
                 query[f.index] = {$gt: 3}
                 db.find query, {sortBy: [f.title, '-'+f.index]}, (err, results) ->
                     expect(err).to.be.null
@@ -193,7 +193,7 @@ describe 'Database.find(options)', ()->
         it 'should sort the results by i18n field in asc order', (done) ->
             pojos = []
             for i in [5..1]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = {en: "#{i}", fr: "#{i%2}"}
                 pojo[f.index] = {en: "#{i * 10}"}
                 pojos.push pojo
@@ -214,7 +214,7 @@ describe 'Database.find(options)', ()->
         it 'should sort the results by i18n field in desc order', (done) ->
             pojos = []
             for i in [5..1]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = {en: "#{i}", fr: "#{i%2}"}
                 pojo[f.index] = {en: "#{i * 10}"}
                 pojos.push pojo
@@ -234,7 +234,7 @@ describe 'Database.find(options)', ()->
         it 'should sort the results by i18n fields in different order with query', (done) ->
             pojos = []
             for i in [5..1]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = {en: "#{i}", fr: "#{i%2}"}
                 pojo[f.index] = {en: "#{i * 10}"}
                 pojos.push pojo
@@ -265,7 +265,7 @@ describe 'Database.find(options)', ()->
         it.skip 'should sort the results when passing _id in query', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 pojo[f.index] = i * 10
                 pojos.push pojo

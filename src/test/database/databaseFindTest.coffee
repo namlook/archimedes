@@ -22,7 +22,7 @@ describe 'Database.find()', ()->
 
     describe '.find(id)', () ->
         it 'should return the doc that match the id [literal]', (done) ->
-            pojo = {}
+            pojo = {_type: 'Test'}
             pojo[f.title] = 'bar'
             pojo[f.index] = 2
             pojo[f.foo] = true
@@ -30,7 +30,7 @@ describe 'Database.find()', ()->
                 expect(err).to.be.null
                 expect(infos.dbTouched).to.be.true
                 expect(obj._id).to.be.not.null
-                db.find obj._id, (err, results) ->
+                db.find {_id: obj._id, _type: 'Test'}, (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 1
                     expect(results[0][f.title]).to.be.equal pojo[f.title]
@@ -41,7 +41,7 @@ describe 'Database.find()', ()->
 
     describe '.find(ids)', () ->
         it 'should return the docs that match the ids', (done) ->
-            pojo = {}
+            pojo = {_type: 'Test'}
             pojo[f.title] = 'bar'
             pojo[f.index] = 2
             pojo[f.foo] = true
@@ -49,7 +49,7 @@ describe 'Database.find()', ()->
                 expect(err).to.be.null
                 expect(infos.dbTouched).to.be.true
                 expect(obj._id).to.be.not.null
-                pojo2 = {}
+                pojo2 = {_type: 'Test'}
                 pojo2[f.title] = 'foo'
                 pojo2[f.index]= 3
                 pojo2[f.foo]= false
@@ -57,7 +57,7 @@ describe 'Database.find()', ()->
                     expect(err).to.be.null
                     expect(infos.dbTouched).to.be.true
                     expect(obj2._id).to.be.not.null
-                    db.find [obj._id, obj2._id], (err, results) ->
+                    db.find {_id: [obj._id, obj2._id], _type:'Test'}, (err, results) ->
                         expect(err).to.be.null
                         expect(results.length).to.be.equal 2
                         titles = (o[f.title] for o in results)
@@ -72,13 +72,13 @@ describe 'Database.find()', ()->
         it 'should return the docs that match a simple query', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 pojo[f.index] = i*10
                 pojos.push pojo
-            db.batchSync pojos, (err, results) ->
+            db.batchSync pojos, 'Test', (err, results) ->
                 expect(err).to.be.null
-                query = {}
+                query = {_type: 'Test'}
                 query[f.title] = 2
                 db.find query, (err, results) ->
                     expect(err).to.be.null
@@ -88,14 +88,14 @@ describe 'Database.find()', ()->
 
 
         it 'should handle date', (done) ->
-            pojo = {}
+            pojo = {_type: 'Test'}
             pojo[f.title] = 12
             pojo[f.index] = new Date(2014, 1, 1).toISOString()
             db.sync pojo, (err, obj, infos) ->
                 expect(err).to.be.null
                 expect(infos.dbTouched).to.be.true
                 expect(obj._id).to.be.not.null
-                db.find obj._id, (err, results) ->
+                db.find {_id: obj._id, _type: 'Test'}, (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 1
                     expect(results[0][f.title]).to.be.equal pojo[f.title]
@@ -106,21 +106,21 @@ describe 'Database.find()', ()->
         it 'should handle _type', (done) ->
             pojos = []
             for i in [1..4]
-                pojo = {_type: t.pojo1}
+                pojo = {_type: 'Pojo1'}
                 pojo[f.title] = i
                 pojo[f.index] = i*10
                 pojos.push pojo
             for i in [1..6]
-                pojo = {_type: t.pojo2}
+                pojo = {_type: 'Pojo2'}
                 pojo[f.title] = i
                 pojo[f.index] = i*10
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
-                db.count {_type: t.pojo1}, (err, total) ->
+                db.count {_type: 'Pojo1'}, (err, total) ->
                     expect(err).to.be.null
                     expect(total).to.be.equal 4
-                    db.count {_type: t.pojo2}, (err, total) ->
+                    db.count {_type: 'Pojo2'}, (err, total) ->
                         expect(err).to.be.null
                         expect(total).to.be.equal 6
                         done()
@@ -130,13 +130,13 @@ describe 'Database.find()', ()->
         it 'should handle boolean', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 pojo[f.index] = (if i % 2 is 0 then true else false)
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
-                query = {}
+                query = {_type: 'Test'}
                 query[f.index] = true
                 db.find query, (err, results) ->
                     expect(err).to.be.null
@@ -148,13 +148,13 @@ describe 'Database.find()', ()->
         it 'should handle date', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 pojo[f.index] = new Date(2014, 1, i)
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
-                query = {}
+                query = {_type: 'Test'}
                 query[f.index] = new Date(2014, 1, 3)
                 db.find query, (err, results) ->
                     expect(err).to.be.null
@@ -166,13 +166,13 @@ describe 'Database.find()', ()->
         it 'should return the docs that match a simple query', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 pojo[f.index] = i*10
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
-                query = {}
+                query = {_type: 'Test'}
                 query[f.title] = {$gt: 2}
                 db.find query, (err, results) ->
                     expect(err).to.be.null
@@ -182,13 +182,13 @@ describe 'Database.find()', ()->
         it 'should return the docs that match a complex query', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 pojo[f.index] = i*10
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
-                query = {}
+                query = {_type: 'Test'}
                 query[f.title] = {$gt: 2}
                 query[f.index] = {$gt: 30}
                 db.find query, (err, results) ->
@@ -199,13 +199,13 @@ describe 'Database.find()', ()->
         it 'should handle date', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 pojo[f.index] = new Date(2014, 1, i)
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
-                query = {}
+                query = {_type: 'Test'}
                 query[f.index] = {'$gt': new Date(2014, 1, 3)}
                 db.find query, (err, results) ->
                     expect(err).to.be.null
@@ -217,13 +217,13 @@ describe 'Database.find()', ()->
         it 'should return the docs that match a simple query', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 pojo[f.index] = i*10
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
-                query = {}
+                query = {_type: 'Test'}
                 query[f.title] = {$gte: 2}
                 db.find query, (err, results) ->
                     expect(err).to.be.null
@@ -233,13 +233,13 @@ describe 'Database.find()', ()->
         it 'should return the docs that match a complex query [$gte]', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 pojo[f.index] = i*10
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
-                query = {}
+                query = {_type: 'Test'}
                 query[f.title] = {$gte: 2}
                 query[f.index] = {$gte: 30}
                 db.find query, (err, results) ->
@@ -252,13 +252,13 @@ describe 'Database.find()', ()->
         it 'should return the docs that match a simple query [$lt]', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 pojo[f.index] = i*10
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
-                query = {}
+                query = {_type: 'Test'}
                 query[f.title] = {$lt: 2}
                 db.find query, (err, results) ->
                     expect(err).to.be.null
@@ -268,13 +268,13 @@ describe 'Database.find()', ()->
         it 'should return the docs that match a complex query', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 pojo[f.index] = i*10
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
-                query = {}
+                query = {_type: 'Test'}
                 query[f.title] = {$gt: 2}
                 query[f.index] = {$lt: 40}
                 db.find query, (err, results) ->
@@ -285,13 +285,13 @@ describe 'Database.find()', ()->
         it 'should handle date', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 pojo[f.index] = new Date(2014, 1, i)
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
-                query = {}
+                query = {_type: 'Test'}
                 query[f.index] = {'$lt': new Date(2014, 1, 4)}
                 db.find query, (err, results) ->
                     expect(err).to.be.null
@@ -302,13 +302,13 @@ describe 'Database.find()', ()->
         it 'should return the docs that match a simple query', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 pojo[f.index] = i*10
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
-                query = {}
+                query = {_type: 'Test'}
                 query[f.title] = {$lte: 2}
                 db.find query, (err, results) ->
                     expect(err).to.be.null
@@ -318,13 +318,13 @@ describe 'Database.find()', ()->
         it 'should return the docs that match a complex query', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 pojo[f.index] = i*10
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
-                query = {}
+                query = {_type: 'Test'}
                 query[f.title] = {$gt: 2}
                 query[f.index] = {$lte: 40}
                 db.find query, (err, results) ->
@@ -335,13 +335,13 @@ describe 'Database.find()', ()->
         it 'should handle date', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 pojo[f.index] = new Date(2014, 1, i)
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
-                query = {}
+                query = {_type: 'Test'}
                 query[f.index] = {'$lte': new Date(2014, 1, 3)}
                 db.find query, (err, results) ->
                     expect(err).to.be.null
@@ -353,13 +353,13 @@ describe 'Database.find()', ()->
         it 'should return the docs that match a simple query', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 pojo[f.index] = i*10
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
-                query = {}
+                query = {_type: 'Test'}
                 query[f.title] = {$ne: 2}
                 db.find query, (err, results) ->
                     expect(err).to.be.null
@@ -369,13 +369,13 @@ describe 'Database.find()', ()->
         it 'should return the docs that match a complex query', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 pojo[f.index] = i*10
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
-                query = {}
+                query = {_type: 'Test'}
                 query[f.title] = {$ne: 2}
                 query[f.index] = {$ne: 40}
                 db.find query, (err, results) ->
@@ -386,13 +386,13 @@ describe 'Database.find()', ()->
         it 'should handle date', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 pojo[f.index] = new Date(2014, 1, i)
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
-                query = {}
+                query = {_type: 'Test'}
                 query[f.index] = {'$ne': new Date(2014, 1, 3)}
                 db.find query, (err, results) ->
                     expect(err).to.be.null
@@ -403,14 +403,14 @@ describe 'Database.find()', ()->
         it 'should return the docs which field exists', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 if i%2 is 0
                     pojo[f.index] = i*10
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
-                query = {}
+                query = {_type: 'Test'}
                 query[f.index] = {$exists: true}
                 db.find query, (err, results) ->
                     expect(err).to.be.null
@@ -420,14 +420,14 @@ describe 'Database.find()', ()->
         it 'should return the docs which field not exists', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 if i%2 is 0
                     pojo[f.index] = i*10
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
-                query = {}
+                query = {_type: 'Test'}
                 query[f.index] = {$exists: false}
                 db.find query, (err, results) ->
                     expect(err).to.be.null
@@ -438,13 +438,13 @@ describe 'Database.find()', ()->
         it 'should return the docs that match a simple query on a multi-fields', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 pojo[f.index] = (j+i for j in [1..5])
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
-                query = {}
+                query = {_type: 'Test'}
                 query[f.index] = 4
                 db.find query, (err, results) ->
                     expect(err).to.be.null
@@ -454,13 +454,13 @@ describe 'Database.find()', ()->
         it 'should handle date', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 pojo[f.index] = (new Date(2014, j, i) for j in [1..5])
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
-                query = {}
+                query = {_type: 'Test'}
                 query[f.index] = new Date(2014, 1, 1)
                 db.find query, (err, results) ->
                     expect(err).to.be.null
@@ -473,13 +473,13 @@ describe 'Database.find()', ()->
         it 'should handle date [$ne]', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 pojo[f.index] = (new Date(2014, j, i) for j in [1..5])
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
-                query = {}
+                query = {_type: 'Test'}
                 query[f.index] = {'$gt': new Date(2014, 5, 1)}
                 db.find query, (err, results) ->
                     expect(err).to.be.null
@@ -489,13 +489,13 @@ describe 'Database.find()', ()->
         it 'should handle simple query [$all]', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 pojo[f.index] = (i*j for j in [1..5])
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
-                query = {}
+                query = {_type: 'Test'}
                 query[f.index] = {$all: [2, 4]}
                 db.find query, (err, results) ->
                     expect(err).to.be.null
@@ -506,13 +506,13 @@ describe 'Database.find()', ()->
         it 'should handle simple query [$nall]', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 pojo[f.index] = (i*j for j in [1..5])
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
-                query = {}
+                query = {_type: 'Test'}
                 query[f.index] = {$nall: [2, 4]}
                 db.find query, (err, results) ->
                     expect(err).to.be.null
@@ -522,13 +522,13 @@ describe 'Database.find()', ()->
         it 'should handle simple query [$in]', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 pojo[f.index] = (i*j for j in [1..5])
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
-                query = {}
+                query = {_type: 'Test'}
                 query[f.index] = {$in: [2, 4]}
                 db.find query, (err, results) ->
                     expect(err).to.be.null
@@ -538,13 +538,13 @@ describe 'Database.find()', ()->
         it 'should handle simple query [$nin]', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 pojo[f.index] = (i*j for j in [1..5])
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
-                query = {}
+                query = {_type: 'Test'}
                 query[f.index] = {$nin: [2, 4]}
                 db.find query, (err, results) ->
                     expect(err).to.be.null
@@ -555,12 +555,12 @@ describe 'Database.find()', ()->
         it 'should return the docs that match a simple query', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = {'en': "#{i}", 'fr': "#{i*3}"}
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
-                query = {}
+                query = {_type: 'Test'}
                 query[f.title+'@en'] = "4"
                 db.find query, (err, results) ->
                     expect(err).to.be.null
@@ -572,7 +572,7 @@ describe 'Database.find()', ()->
         it 'should return an error if the value is not a string', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = {'en': i, 'fr': i*3}
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
@@ -586,14 +586,14 @@ describe 'Database.find()', ()->
         it 'should return the docs that match a simple query', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = {'en': [], 'fr': []}
                 pojo[f.title]['en'] = ("#{i+j}" for j in [1..5])
                 pojo[f.title]['fr'] = ("#{i*j}" for j in [1..5])
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
-                query = {}
+                query = {_type: 'Test'}
                 query[f.title+'@fr'] = "10"
                 db.find query, (err, results) ->
                     expect(err).to.be.null
@@ -603,7 +603,7 @@ describe 'Database.find()', ()->
         it 'should return an error if the value is not a string', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = {'en': i, 'fr': i*3}
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
@@ -616,7 +616,7 @@ describe 'Database.find()', ()->
 
     describe 'other', () ->
         it 'should return the complex changed pojo', (done) ->
-            pojo = {}
+            pojo = {_type: 'Test'}
             pojo[f.title] = {en: 'foo', fr: 'toto'}
             pojo[f.index] = [1, 2, 3]
             pojo[f.foo] = {en: ['hello', 'hi'], fr: ['bonjour', 'salut']}
@@ -645,7 +645,7 @@ describe 'Database.find()', ()->
                     expect(newobj[f.foo].fr).to.include.members ['bonjour', 'salut']
                     expect(newobj._id).to.be.equal obj._id
 
-                    db.first newobj._id, (err, obj3) ->
+                    db.first {_id: newobj._id, _type: 'Test'}, (err, obj3) ->
                         expect(err).to.be.null
                         expect(obj3[f.title].fr).to.be.equal 'toto'
                         expect(obj3[f.title].en).to.be.equal 'changed'
@@ -663,7 +663,7 @@ describe 'Database.find()', ()->
 
     describe '.first(id)', () ->
         it 'should return the doc that match the id', (done) ->
-            pojo = {}
+            pojo = {_type: 'Test'}
             pojo[f.title] = 'bar'
             pojo[f.index] = 2
             pojo[f.foo] = true
@@ -671,7 +671,7 @@ describe 'Database.find()', ()->
                 expect(err).to.be.null
                 expect(infos.dbTouched).to.be.true
                 expect(obj._id).to.be.not.null
-                db.first obj._id, (err, doc) ->
+                db.first {_id: obj._id, _type: 'Test'}, (err, doc) ->
                     expect(err).to.be.null
                     expect(doc[f.title]).to.be.equal pojo[f.title]
                     expect(doc[f.index]).to.be.equal pojo[f.index]
@@ -683,13 +683,13 @@ describe 'Database.find()', ()->
         it 'should return the first doc that match the query', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 pojo[f.index] = i*10
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
-                query = {}
+                query = {_type: 'Test'}
                 query[f.title] = {'$gt': 2}
                 db.first query, (err, doc) ->
                     expect(err).to.be.null

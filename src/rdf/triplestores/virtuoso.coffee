@@ -106,12 +106,14 @@ module.exports = class Virtuoso
                 return callback err
             result = {}
             for item in data
-                result._id = item.s.value
+                result._uri = item.s.value
+                result._id = item.s.value.split('/').slice(-1)
                 prop = item.p.value
                 lang = item.o.lang
                 value = item.o.value
                 if prop is 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type'
-                    result._type = value
+                    result._class = value
+                    result._type = value.split('/').slice(-1)
                     continue
                 if item.o.type is 'uri'
                     value = {_uri: value}

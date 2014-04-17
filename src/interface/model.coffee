@@ -146,6 +146,10 @@ class Model
             @_validateQuery(@, query)
         catch e
             return callback e
+        if _.isString(query) or _.isArray(query)
+            query = {_id: query, _type: @::meta.type}
+        else
+            query._type = @::meta.type
         return callback null, query, options
 
 
@@ -209,9 +213,6 @@ class Model
         unless callback
             throw 'callback is required'
 
-        unless query._type?
-            query._type = @::meta.type
-
         # validate the query
         # try
         #     @_validateQuery(@, query)
@@ -241,20 +242,20 @@ class Model
                 else
                     return callback null, instances
 
-    # ## findURIs
-    # `findIDs query, [options], (err, ids) ->`
-    #
-    # Like `find` but returns only the object ids
-    @findIDs: (query, options, callback) ->
-        if typeof(options) is 'function' and not callback
-            callback = options
-            options = {}
+    # # ## findURIs
+    # # `findIDs query, [options], (err, ids) ->`
+    # #
+    # # Like `find` but returns only the object ids
+    # @findIDs: (query, options, callback) ->
+    #     if typeof(options) is 'function' and not callback
+    #         callback = options
+    #         options = {}
 
-        unless callback
-            throw 'callback is required'
+    #     unless callback
+    #         throw 'callback is required'
 
-        options.instance = false
-        @find query, options, callback
+    #     options.instance = false
+    #     @find query, options, callback
 
 
     # ## first
@@ -286,38 +287,38 @@ class Model
             return callback null, pojos[0]
 
 
-        # @db.first query, options, (err, pojo) =>
-        #     if err
-        #         return callback err
+    #     # @db.first query, options, (err, pojo) =>
+    #     #     if err
+    #     #         return callback err
 
-        #     obj = new @(pojo)
+    #     #     obj = new @(pojo)
 
-        #     if options.populate
-        #         populateOptions = {}
-        #         if _.isNumber options.populate
-        #             fields = (fname for fname, val of @schema when @db[val.type]?)
-        #         else # populate is a list of fields
-        #             fields = null
-        #             populateOptions.recursive = true
-        #         obj.populate fields, populateOptions, (err, populatedObj) ->
-        #             return callback null, populatedObj
-        #     else
-        #         return callback null, obj
+    #     #     if options.populate
+    #     #         populateOptions = {}
+    #     #         if _.isNumber options.populate
+    #     #             fields = (fname for fname, val of @schema when @db[val.type]?)
+    #     #         else # populate is a list of fields
+    #     #             fields = null
+    #     #             populateOptions.recursive = true
+    #     #         obj.populate fields, populateOptions, (err, populatedObj) ->
+    #     #             return callback null, populatedObj
+    #     #     else
+    #     #         return callback null, obj
 
-    # ## firstURI
-    # Like `first` but returns only the first object URI
-    #
-    # `firstURI query, [options], (err, URI) ->`
-    @firstID: (query, options, callback) ->
-        if typeof(options) is 'function' and not callback
-            callback = options
-            options = {}
+    # # ## firstURI
+    # # Like `first` but returns only the first object URI
+    # #
+    # # `firstURI query, [options], (err, URI) ->`
+    # @firstID: (query, options, callback) ->
+    #     if typeof(options) is 'function' and not callback
+    #         callback = options
+    #         options = {}
 
-        unless callback
-            throw 'callback is required'
-        options.instance = false
+    #     unless callback
+    #         throw 'callback is required'
+    #     options.instance = false
 
-        @first query, options, callback
+    #     @first query, options, callback
 
 
     # ## facets
@@ -400,8 +401,8 @@ class Model
 
             # instanciate relations
             for pojo in data
-                rinfo = relationInstances[pojo._id]
-                relationInstances[pojo._id].instance = new rinfo.model(pojo)
+                rinfo = relationInstances[pojo._uri]
+                relationInstances[pojo._uri].instance = new rinfo.model(pojo)
 
             # dispatch all related instances into the correct fields
             instancesToPopulate = []
@@ -946,9 +947,9 @@ class Model
     delete: (callback) =>
         unless callback
             throw 'callback is required'
-        unless @id
+        unless @uri
             return callback "can't delete a non-saved model"
-        @db.delete @id, (err) =>
+        @db.delete @uri, (err) =>
             if err
                 if callback
                     return callback err

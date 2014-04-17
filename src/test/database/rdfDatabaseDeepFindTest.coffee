@@ -33,64 +33,64 @@ describe 'Database deep find:', ()->
         it 'should be able to query relation fields', (done) ->
             data = []
             for i in [1..15]
-                embeded = {_id: "http://example.org/embeded#{i}"}
+                embeded = {_id: i, _type: 'Embed'}
                 embeded[f.index] = i
                 embeded[f.title] = "#{i%2}"
                 data.push embeded
-                pojo = {}
-                pojo[f.foo] = {_uri: embeded._id}
+                pojo = {_type: 'Pojo'}
+                pojo[f.foo] = {_uri: "http://data.example.org/embed/#{i}"}
                 data.push pojo
             db.batchSync data, (err, savedOne, infos) ->
                 expect(err).to.be.null
-                query = {}
+                query = {_type: 'Pojo'}
                 query["#{f.foo}->#{f.title}"] = "1"
                 db.find query, (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 8
                     expect(item[f.foo]._uri for item in results).to.include.members(
-                        "http://example.org/embeded#{i}" for i in [1, 3, 5, 7, 9, 11, 13, 15]
+                        "http://data.example.org/embed/#{i}" for i in [1, 3, 5, 7, 9, 11, 13, 15]
                     )
                     done()
 
         it 'should be able to query model fields and relations fields', (done) ->
-            db.count (err, total) ->
-                embededs = []
-                pojos = []
-                for i in [1..15]
-                    embeded = {_id: "http://example.org/embeded#{i}"}
-                    embeded[f.index] = i
-                    embeded[f.title] = "#{i%2}"
-                    embededs.push embeded
-                    pojo = {}
-                    pojo[f.foo] = {_uri: embeded._id}
-                    pojo[f.index] = i*2
-                    pojos.push pojo
-                db.batchSync embededs, (err, savedOne, infos) ->
+            embededs = []
+            pojos = []
+            for i in [1..15]
+                embeded = {_id: i, _type: 'Embed'}
+                embeded[f.index] = i
+                embeded[f.title] = "#{i%2}"
+                embededs.push embeded
+                pojo = {_type: 'Pojo'}
+                pojo[f.foo] = {_uri: "http://data.example.org/embed/#{i}"}
+                pojo[f.index] = i*2
+                pojos.push pojo
+            db.batchSync embededs, (err, savedOne, infos) ->
+                expect(err).to.be.null
+                db.batchSync pojos, (err, savedOne, infos) ->
                     expect(err).to.be.null
-                    db.batchSync pojos, (err, savedOne, infos) ->
+                    query = {_type: 'Pojo'}
+                    query["#{f.foo}->#{f.title}"] = "1"
+                    query[f.index] = {$gt: 10}
+                    db.find query, (err, results) ->
                         expect(err).to.be.null
-                        query = {}
-                        query["#{f.foo}->#{f.title}"] = "1"
-                        query[f.index] = {$gt: 10}
                         db.find query, (err, results) ->
-                            db.find query, (err, results) ->
-                                expect(err).to.be.null
-                                expect(results.length).to.be.equal 5
-                                expect(item[f.foo]._uri for item in results).to.include.members(
-                                    "http://example.org/embeded#{i}" for i in [7, 9, 11, 13, 15]
-                                )
-                                done()
+                            expect(err).to.be.null
+                            expect(results.length).to.be.equal 5
+                            expect(item[f.foo]._uri for item in results).to.include.members(
+                                "http://data.example.org/embed/#{i}" for i in [7, 9, 11, 13, 15]
+                            )
+                            done()
 
 
         it 'should be able to query relations fields [$gt]', (done) ->
             data = []
             for i in [1..15]
-                embeded = {_id: "http://example.org/embeded#{i}"}
+                embeded = {_id: i, _type: 'Embed'}
                 embeded[f.index] = i
                 embeded[f.title] = "#{i%2}"
                 data.push embeded
-                pojo = {}
-                pojo[f.foo] = {_uri: embeded._id}
+                pojo = {_type: 'Pojo'}
+                pojo[f.foo] = {_uri: "http://data.example.org/embed/#{i}"}
                 data.push pojo
             db.batchSync data, (err, savedOne, infos) ->
                 expect(err).to.be.null
@@ -100,7 +100,7 @@ describe 'Database deep find:', ()->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 8
                     expect(item[f.foo]._uri for item in results).to.include.members(
-                        "http://example.org/embeded#{i}" for i in [8...15]
+                        "http://data.example.org/embed/#{i}" for i in [8...15]
                     )
                     done()
 
@@ -109,12 +109,12 @@ describe 'Database deep find:', ()->
         it "should able to sort results via an embed model's field", (done) ->
             data = []
             for i in [1..15]
-                embeded = {_id: "http://example.org/embeded#{i}"}
+                embeded = {_id: i, _type: 'Embed'}
                 embeded[f.index] = i
                 embeded[f.title] = "#{i%2}"
                 data.push embeded
-                pojo = {}
-                pojo[f.foo] = {_uri: embeded._id}
+                pojo = {_type: 'Pojo'}
+                pojo[f.foo] = {_uri: "http://data.example.org/embed/#{i}"}
                 pojo[f.index] = i*2
                 data.push pojo
             db.batchSync data, (err, savedOne, infos) ->
@@ -127,7 +127,7 @@ describe 'Database deep find:', ()->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 5
                     expect(item[f.foo]._uri for item in results).to.include.members(
-                        "http://example.org/embeded#{i}" for i in [7, 9, 11, 13, 15]
+                        "http://data.example.org/embed/#{i}" for i in [7, 9, 11, 13, 15]
                     )
                     done()
 

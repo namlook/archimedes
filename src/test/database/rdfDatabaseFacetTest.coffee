@@ -35,7 +35,7 @@ describe 'Database.facets()', ()->
         it 'should return the facets on a specified field ', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = facetValues[i%3]
                 pojo[f.index] = i
                 pojo[f.foo] = i%2
@@ -56,7 +56,7 @@ describe 'Database.facets()', ()->
         it 'should return the facets on a specified field with a query', (done) ->
             pojos = []
             for i in [1..15]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = facetValues[i%3]
                 pojo[f.index] = i
                 pojo[f.foo] = i%2
@@ -80,12 +80,12 @@ describe 'Database.facets()', ()->
         it "should facet on relations", (done) ->
             data = []
             for i in [1..15]
-                embeded = {_id: "http://example.org/embeded#{i}"}
+                embeded = {_id: i, _type: 'Embed'}
                 embeded[f.index] = i
                 embeded[f.title] = "#{i%2}"
                 data.push embeded
-                pojo = {}
-                pojo[f.foo] = {_uri: embeded._id}
+                pojo = {_type: 'Pojo'}
+                pojo[f.foo] = {_uri: "http://data.example.org/embed/#{i}"}
                 pojo[f.index] = i*2
                 data.push pojo
             db.batchSync data, (err, savedOne, infos) ->
@@ -102,12 +102,12 @@ describe 'Database.facets()', ()->
         it "should facet on relations with query", (done) ->
             data = []
             for i in [1..15]
-                embeded = {_id: "http://example.org/embeded#{i}"}
+                embeded = {_id: i, _type: 'Embed'}
                 embeded[f.index] = i
                 embeded[f.title] = "#{i%2}"
                 data.push embeded
-                pojo = {}
-                pojo[f.foo] = {_uri: embeded._id}
+                pojo = {_type: 'Pojo'}
+                pojo[f.foo] = {_uri: "http://data.example.org/embed/#{i}"}
                 pojo[f.index] = i*2
                 data.push pojo
             db.batchSync data, (err, savedOne, infos) ->

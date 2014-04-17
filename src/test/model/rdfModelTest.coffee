@@ -122,24 +122,113 @@ describe 'RdfModel', ()->
 
         it 'should generate an URI as id when the is is passed to the constructor', () ->
             blog = new db.Blog {_id: 'test', 'title': 'test'}
-            expect(blog.get '_id').to.be.equal 'http://data.example.org/blog/test'
-            expect(blog.id).to.be.equal 'http://data.example.org/blog/test'
+            expect(blog.get '_id').to.be.equal 'test'
+            expect(blog.get '_type').to.be.equal 'Blog'
+            expect(blog.get '_uri').to.be.equal 'http://data.example.org/blog/test'
+            expect(blog.get '_class').to.be.equal 'http://onto.example.org/classes/Blog'
+            expect(blog.id).to.be.equal 'test'
+            expect(blog.uri).to.be.equal 'http://data.example.org/blog/test'
 
 
-    describe '.find(id)', () ->
-        it 'should fetch a model instance by its id', (done) ->
+    describe '.save()', () ->
+        it 'should save a model and fill the id, uri, type and class fields', (done) ->
             blog = new db.Blog
             blog.set 'title', 'hello world'
-            blog.save (err) ->
+            blog.save (err, blog2) ->
+                expect(err).to.be.null
+                expect(blog2.id).to.be.not.undefined
+                expect(blog.id).to.be.not.undefined
+                expect(blog2.id).to.be.equal blog.id
+                expect(blog.uri).to.be.equal "http://data.example.org/blog/#{blog.id}"
+                done()
+
+        it 'should generate a generic id if no id is set', (done) ->
+            blogPost = new db.BlogPost
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'title', 'salut monde', 'fr'
+            blogPost.set 'content', 'first post'
+            blogPost.set 'keyword', ['hello', 'world']
+            expect(blogPost.isNew()).to.be.true
+            expect(blogPost.id).to.be.undefined
+            blogPost.save (err, newBlogPost) ->
+                expect(err).to.be.null
+                expect(blogPost.isNew()).to.be.false
+                expect(newBlogPost.isNew()).to.be.false
+                expect(newBlogPost.get '_id').to.be.equal blogPost.id
+                expect(newBlogPost.id).to.be.equal blogPost.id
+                expect(blogPost.id).to.not.be.undefined
+                expect(blogPost.uri).to.match(/^http:\/\/data.example.org\//)
+                blogPost.db.count (err, total) ->
+                    expect(err).to.be.null
+                    expect(total).to.be.equal 1
+                    done()
+
+        it 'should generate an id from a specified field if no id is set', (done) ->
+            blogPost = new db.BlogPost
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'title', 'salut monde', 'fr'
+            blogPost.set 'content', 'first post'
+            blogPost.set 'keyword', ['hello', 'world']
+            blogPost.set '_id', 'HelloWorld'
+            expect(blogPost.isNew()).to.be.true
+            uri = 'http://data.example.org/blogpost/HelloWorld'
+            expect(blogPost.id).to.be.equal 'HelloWorld'
+            expect(blogPost.uri).to.be.equal uri
+            blogPost.save (err, newBlogPost) ->
+                expect(err).to.be.null
+                expect(newBlogPost.id).to.be.equal blogPost.id
+                expect(blogPost.id).to.be.equal 'HelloWorld'
+                expect(newBlogPost.uri).to.be.equal uri
+                done()
+
+    describe '.find()', () ->
+        it 'should fetch model of the same type if no query is specified', (done) ->
+            blog = new db.Blog
+            blog.set 'title', 'hello world'
+            blog.save (err, blog2) ->
+                expect(err).to.be.null
+                db.Blog.find (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 1
+                    newBlog = results[0]
+                    expect(blog.type).to.be.not.undefined
+                    expect(blog.type).to.be.equal newBlog.type
+                    expect(newBlog.id).to.be.equal blog.id
+                    expect(newBlog.get 'title').to.be.equal 'hello world'
+                    done()
+
+    describe '.find(id)', () ->
+        it 'should fetch model instance by its id', (done) ->
+            blog = new db.Blog
+            blog.set 'title', 'hello world'
+            blog.save (err, blog2) ->
                 expect(err).to.be.null
                 db.Blog.find blog.id, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 1
+                    newBlog = results[0]
+                    expect(blog.type).to.be.not.undefined
+                    expect(blog.type).to.be.equal newBlog.type
+                    expect(newBlog.id).to.be.equal blog.id
+                    expect(newBlog.get 'title').to.be.equal 'hello world'
+                    done()
+
+
+    describe '.find(uri)', () ->
+        it 'should fetch a model instance by its uri', (done) ->
+            blog = new db.Blog
+            blog.set 'title', 'hello world'
+            blog.save (err, blog2) ->
+                expect(err).to.be.null
+                db.Blog.find blog.uri, (err, results) ->
+                    expect(err).to.be.null
                     expect(results.length).to.be.equal 1
                     newBlog = results[0]
                     expect(newBlog.id).to.be.equal blog.id
                     expect(newBlog.get 'title').to.be.equal 'hello world'
                     done()
 
-        it 'should fetch a model instance with i18n fields by its id', (done) ->
+        it 'should fetch a model instance with i18n fields by its uri', (done) ->
             blogPost = new db.BlogPost
             blogPost.set 'title', 'hello world', 'en'
             blogPost.set 'title', 'salut monde', 'fr'
@@ -147,38 +236,27 @@ describe 'RdfModel', ()->
             blogPost.set 'keyword', ['hello', 'world']
             blogPost.save (err) ->
                 expect(err).to.be.null
-                db.BlogPost.find blogPost.id, (err, results) ->
+                db.BlogPost.find blogPost.uri, (err, results) ->
+                    expect(err).to.be.null
                     expect(results.length).to.be.equal 1
                     newBlogPost = results[0]
+                    expect(newBlogPost.id).to.not.be.undefined
                     expect(newBlogPost.id).to.be.equal blogPost.id
+                    expect(newBlogPost.uri).to.not.be.undefined
+                    expect(newBlogPost.uri).to.be.equal blogPost.uri
                     expect(newBlogPost.get('title', 'en')).to.be.equal 'hello world'
                     expect(newBlogPost.get('title', 'fr')).to.be.equal 'salut monde'
                     done()
 
-        it 'should fetch a model instance with i18n fields by its id', (done) ->
-            blogPost = new db.BlogPost
-            blogPost.set 'title', 'hello world', 'en'
-            blogPost.set 'title', 'salut monde', 'fr'
-            blogPost.set 'content', 'first post'
-            blogPost.set 'keyword', ['hello', 'world']
-            blogPost.save (err) ->
-                expect(err).to.be.null
-                db.BlogPost.find [blogPost.id], (err, results) ->
-                    expect(results.length).to.be.equal 1
-                    newBlogPost = results[0]
-                    expect(newBlogPost.id).to.be.equal blogPost.id
-                    expect(newBlogPost.get('title', 'en')).to.be.equal 'hello world'
-                    expect(newBlogPost.get('title', 'fr')).to.be.equal 'salut monde'
-                    done()
-
-        it 'should fetch a model instance with muti-i18n fields by its id', (done) ->
+        it 'should fetch a model instance with muti-i18n fields by its uri', (done) ->
             blog = new db.Blog
             blog.set 'title', 'test'
             blog.set 'i18ntags', ['hello', 'world'], 'en'
             blog.set 'i18ntags', ['salut', 'monde'], 'fr'
             blog.save (err) ->
                 expect(err).to.be.null
-                db.Blog.find [blog.id], (err, results) ->
+                db.Blog.find [blog.uri], (err, results) ->
+                    expect(err).to.be.null
                     expect(results.length).to.be.equal 1
                     newBlog = results[0]
                     expect(newBlog.id).to.be.equal blog.id
@@ -188,7 +266,7 @@ describe 'RdfModel', ()->
                     done()
 
 
-    describe '.find(ids)', () ->
+    describe '.find(uris)', () ->
 
         it 'should fetch a model instances by their ids', (done) ->
             blog = new db.Blog
@@ -198,13 +276,16 @@ describe 'RdfModel', ()->
                 blog2 = new db.Blog
                 blog2.set 'title', 'second blog'
                 blog2.save (err) ->
-                    db.Blog.find [blog.id, blog2.id], (err, results) ->
+                    db.Blog.find [blog.uri, blog2.uri], (err, results) ->
+                        expect(err).to.be.null
                         expect(results.length).to.be.equal 2
                         newBlog = results[0]
-                        expect(newBlog.id).to.be.equal blog.id
+                        expect(newBlog.uri).to.not.be.undefined
+                        expect(newBlog.uri).to.be.equal blog.uri
                         expect(newBlog.get 'title').to.be.equal 'hello world'
                         newBlog2 = results[1]
-                        expect(newBlog2.id).to.be.equal blog2.id
+                        expect(newBlog2.uri).to.not.be.undefined
+                        expect(newBlog2.uri).to.be.equal blog2.uri
                         expect(newBlog2.get 'title').to.be.equal 'second blog'
                         done()
 
@@ -289,43 +370,6 @@ describe 'RdfModel', ()->
     describe: '.validate()': ()->
         it 'should throw an error if a field marked as required is missing'
 
-    describe '.save()', ()->
-        it 'should generate a generic id if no id is set', (done) ->
-            blogPost = new db.BlogPost
-            blogPost.set 'title', 'hello world', 'en'
-            blogPost.set 'title', 'salut monde', 'fr'
-            blogPost.set 'content', 'first post'
-            blogPost.set 'keyword', ['hello', 'world']
-            expect(blogPost.isNew()).to.be.true
-            expect(blogPost.id).to.be.undefined
-            blogPost.save (err, newBlogPost) ->
-                expect(err).to.be.null
-                expect(blogPost.isNew()).to.be.false
-                expect(newBlogPost.isNew()).to.be.false
-                expect(newBlogPost.get '_id').to.be.equal blogPost.id
-                expect(newBlogPost.id).to.be.equal blogPost.id
-                expect(blogPost.id).to.match(/^http:\/\/data.example.org\//)
-                blogPost.db.count (err, total) ->
-                    expect(err).to.be.null
-                    expect(total).to.be.equal 1
-                    done()
-
-        it 'should generate an id from a specified field if no id is set', (done) ->
-            blogPost = new db.BlogPost
-            blogPost.set 'title', 'hello world', 'en'
-            blogPost.set 'title', 'salut monde', 'fr'
-            blogPost.set 'content', 'first post'
-            blogPost.set 'keyword', ['hello', 'world']
-            blogPost.set '_id', 'HelloWorld'
-            expect(blogPost.isNew()).to.be.true
-            id = 'http://data.example.org/blogpost/HelloWorld'
-            expect(blogPost.id).to.be.equal id
-            blogPost.save (err, newBlogPost) ->
-                expect(err).to.be.null
-                expect(blogPost.id).to.be.equal id
-                expect(newBlogPost.id).to.be.equal id
-                done()
-
 
 
     describe '.getSerializableObject()', () ->
@@ -363,7 +407,8 @@ describe 'RdfModel', ()->
             blogPost.set 'blog', blog
             blogPost.save (err, model, dbtouched) ->
                 expect(err).to.be.null
-                db.first  model.id, (err, rawBloPost) ->
+                db.first model.uri, (err, rawBloPost) ->
+                    expect(err).to.be.null
                     expect(rawBloPost['http://onto.example.org/properties/blog']).to.have.property '_uri'
                     expect(rawBloPost['http://onto.example.org/properties/author']).to.have.property '_uri'
                     expect(rawBloPost['http://onto.example.org/properties/title']).to.not.have.property '_uri'
@@ -386,4 +431,28 @@ describe 'RdfModel', ()->
 
 
     describe '.getJSON()', () ->
+        it 'should return a json string of the model', () ->
+            blogPost = new db.BlogPost
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'keyword', ['foo', 'bar']
+            jsonObject = {
+                "_type": blogPost.get('_type')
+                "_class": blogPost.get('_class')
+                "title":{"en":"hello world"}
+                "keyword":["foo","bar"]
+            }
+            expect(blogPost.toJSON()).to.be.equal JSON.stringify jsonObject
+
+        it 'should include the id', (done) ->
+            blogPost = new db.BlogPost
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'keyword', ['foo', 'bar']
+            blogPost.save (err) ->
+                expect(err).to.be.null
+                jsonBlogPost = JSON.parse blogPost.toJSON()
+                expect(jsonBlogPost._id).to.not.be.undefined
+                expect(jsonBlogPost._uri).to.not.be.undefined
+                expect(jsonBlogPost.id).to.be.undefined
+                done()
+
         it 'should return a json string of the model with related instance ids'

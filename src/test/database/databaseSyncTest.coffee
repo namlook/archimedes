@@ -19,7 +19,7 @@ describe 'Database synchronization', ()->
 
     describe '.sync()', () ->
         it 'should store a simple pojo and return it with _id', (done) ->
-            pojo = {}
+            pojo = {_type: 'Test'}
             pojo[f.title] = 'bar'
             pojo[f.index] = 2
             db.sync pojo, (err, obj, infos) ->
@@ -31,7 +31,7 @@ describe 'Database synchronization', ()->
                 done()
 
         it 'should update a simple pojo if it has changed', (done) ->
-            pojo = {}
+            pojo = {_type: 'Test'}
             pojo[f.title] = 'arf'
             pojo[f.index] = 2
             db.sync pojo, (err, obj, infos) ->
@@ -74,7 +74,7 @@ describe 'Database synchronization', ()->
                         done()
 
         it 'should update the multi pojo if changed', (done) ->
-            pojo = {}
+            pojo = {_type: 'Test'}
             pojo[f.index] = [1, 2, 3]
 
             db.sync pojo, (err, obj, infos) ->
@@ -101,7 +101,7 @@ describe 'Database synchronization', ()->
 
 
         it 'should update the i18n pojo if changed', (done) ->
-            pojo = {}
+            pojo = {_type: 'Test'}
             pojo[f.title] = {en: 'foo', fr: 'toto'}
 
             db.sync pojo, (err, obj, infos) ->
@@ -130,7 +130,7 @@ describe 'Database synchronization', ()->
                         done()
 
         it 'should update the multi-i18n pojo if changed', (done) ->
-            pojo = {}
+            pojo = {_type: 'Test'}
             pojo[f.foo] = {en: ['hello', 'hi'], fr: ['bonjour', 'salut']}
 
             db.sync pojo, (err, obj, infos) ->
@@ -160,7 +160,7 @@ describe 'Database synchronization', ()->
                         done()
 
         it 'should update the complex pojo if changed', (done) ->
-            pojo = {}
+            pojo = {_type: 'Test'}
             pojo[f.title] = {en: 'foo', fr: 'toto'}
             pojo[f.index] = [1, 2, 3]
             pojo[f.foo] = {en: ['hello', 'hi'], fr: ['bonjour', 'salut']}
@@ -197,7 +197,7 @@ describe 'Database synchronization', ()->
         it 'should sync a batch of pojos', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 pojo[f.index] = i * 10
                 pojos.push pojo
@@ -210,10 +210,26 @@ describe 'Database synchronization', ()->
                     expect(count).to.be.equal 5
                     done()
 
+        it 'should sync a batch of pojos of different types', (done) ->
+            pojos = []
+            for i in [1..5]
+                pojo = {_type: "Test#{i%2}"}
+                pojo[f.title] = i
+                pojo[f.index] = i * 10
+                pojos.push pojo
+            db.batchSync pojos, (err, results) ->
+                expect(err).to.be.null
+                expect(results.length).to.be.equal 5
+                expect(_.every(r.options.dbTouched for r in results)).to.be.true
+                db.count {_type: 'Test0'}, (err, count) ->
+                    expect(err).to.be.null
+                    expect(count).to.be.equal 2
+                    done()
+
         it 'should update modified pojos', (done) ->
             pojos = []
             for i in [1..5]
-                pojo = {}
+                pojo = {_type: 'Test'}
                 pojo[f.title] = i
                 pojo[f.index] = i * 10
                 pojos.push pojo

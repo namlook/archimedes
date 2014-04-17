@@ -15,13 +15,22 @@ class RdfModel extends ModelInterface
         _id:
             protected: true
             type: 'string'
+
+        _uri:
+            protected: true
+            type: 'string'
             compute: (value, attrs) ->
                 unless _.str.startsWith value, 'http://'
                    return "#{attrs.model.meta.instancesNamespace}/#{value}"
                 else
                     return value
-
         _type:
+            protected: true
+            type: 'string'
+            default: (model) ->
+                model.meta.name
+
+        _class:
             protected: true
             type: 'string'
             default: (model) ->
@@ -37,6 +46,8 @@ class RdfModel extends ModelInterface
 
         # convert the pojo (with uris as key) into regular pojo
         for key, value of properties
+            if key is '_id'
+                properties._uri = @db.__buildURI(@meta.name, value)
             if value in [null, undefined]
                 continue
             if _.str.startsWith(key, 'http://')
@@ -48,13 +59,58 @@ class RdfModel extends ModelInterface
                 properties[key] = value._uri
             else if _.isArray value
                 properties[key] = (val._uri? and val._uri or val for val in value)
+
         super properties
+
+
+    set: (fieldName, value, options) ->
+        super(fieldName, value, options)
+        if fieldName is '_id'
+            @set '_uri', @db.__buildURI(@meta.name, value)
+        if fieldName is '_uri'
+            @uri = value
+        if fieldName is '_class'
+            @['class'] = value
+
+
+    save: (callback) ->
+        super (err, model, options) =>
+            if err
+                return callback err
+            @set '_uri', @db.__buildURI(model.get('_type'), model.get('_id'))
+            @set '_class', model.get('_class')
+            return callback null, @, options
 
 
     @beforeQuery: (query, options, callback) ->
         super query, options, (err, query, options) =>
             if err
                 return callback err
+
+            # if _.isArray(query)
+            #     for item in query
+            #         if item._id?
+            #             if _.str.startsWith(item._id, 'http://')
+            #                 item._uri = item._id
+            #             else if item._type?
+            #                 item._uri = @db.__buildURI(item._type, item._id)
+            # else if query._id?
+            #     if _.str.startsWith(query._id, 'http://')
+            #         query._uri = query._id
+            #     else if query._type?
+            #         if _.isArray(query._id)
+            #             uris = []
+            #             for item in query._id
+            #                 if _.str.startsWith(item, 'http://')
+            #                     uris.push(item)
+            #                 else
+            #                     uris.push(@db.__buildURI(query._type, item))
+            #                 query._uri = uris
+            #         else
+            #             query._uri = @db.__buildURI(query._type, query._id)
+
+            query._type = @::meta.name
+
             # convert query's key into uris
             if not _.isString(query) and not _.isArray(query)
                 try
@@ -175,7 +231,6 @@ class RdfModel extends ModelInterface
         return @db.timeSeries field, step, query, options, callback
 
 
-
     # ## toSerializableObject
     #
     # convert the model into an object which will be passed to the database
@@ -183,7 +238,7 @@ class RdfModel extends ModelInterface
         jsonObj = super(options)
         result = {}
         for key, value of jsonObj
-            if key in ['_id', '_type']
+            if key in ['_id', '_type', '_class', '_uri']
                 result[key] = value
             else
                 propURI = field2uri(key, @db[@meta.name])
@@ -215,7 +270,7 @@ class RdfModel extends ModelInterface
     # convert query's key into uri
     @_convertQueryUri: (query) ->
         for key, value of query
-            if key in ['_id', '_type']
+            if key in ['_id', '_type', '_uri', '_class']
                 continue
             if key is '$and'
                 for val in value
