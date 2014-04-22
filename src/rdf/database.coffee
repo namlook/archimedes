@@ -698,7 +698,7 @@ class Database extends DatabaseInterface
 
         # build the n-triples
         for property, value of changes
-            if property in ['_id', '_ref', '_uri', '_type', '_class']
+            if property in ['_id', '_ref', '_uri', '_type']
                 continue
             else if property in ['_class']
                 ntriples.push "<#{uri}> a <#{value}>"
