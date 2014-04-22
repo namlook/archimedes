@@ -89,6 +89,16 @@ describe 'Database', ()->
                             expect(count).to.be.equal 0
                             done()
 
+    describe '.reference/.dereference', () ->
+        it 'should create a reference from a couple type/id', () ->
+            ref = db.reference('Test', 'test1')
+            expect(ref).to.be.string
+            expect(ref).to.be.not.null
+            deref = db.dereference(ref)
+            expect(deref).to.be.not.null
+            expect(deref._id).to.be.equal 'test1'
+            expect(deref._type).to.be.equal 'Test'
+
 
     describe.skip '.changes()', () ->
 

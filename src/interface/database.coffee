@@ -363,6 +363,36 @@ class Database
             if field.i18n and field.type isnt 'string'
                 throw "#{modelName}.#{fieldName} is i18n and must be of type string"
 
+    # ## reference
+    # build a unique string from a couple type/id. The reference is used
+    # to specify relationship between objects
+    reference: (type, id) ->
+        if not id?
+            throw "id is required"
+        if not type?
+            throw "type is required"
+        return "#{type}::#{id}"
+
+    # ## dereference
+    # take a reference and convert id into a pojo of the following form:
+    #  {
+    #     _id: 'the_object_id', _type: 'the_object_type'
+    #  }
+    dereference: (reference) ->
+        if not reference or reference.indexOf('::') is -1
+            throw "unknown reference"
+        splitedRef = reference.split('::')
+        return {
+            _id: splitedRef.slice(-1)[0],
+            _type: splitedRef.slice(0, -1).join('::')
+        }
+
+    # ## isReference
+    # Returns true if the string is reference
+    isReference: (str) ->
+        if str.split('::').length > 1
+            return true
+        return false
 
     #
     #

@@ -6,8 +6,8 @@ _ = require 'underscore'
 config = require('../config')
 db = config.Database()
 
-if db.dbtype isnt 'rdf'
-    console.log "Database is not an RDF database (got #{db.dbtype}). Skipping..."
+if db.type isnt 'rdf'
+    console.log "Database is not an RDF database (got #{db.type}). Skipping..."
     return
 
 
@@ -85,7 +85,7 @@ describe 'Database.facets()', ()->
                 embeded[f.title] = "#{i%2}"
                 data.push embeded
                 pojo = {_type: 'Pojo'}
-                pojo[f.foo] = {_uri: "http://data.example.org/embed/#{i}"}
+                pojo[f.foo] = {_ref: "http://data.example.org/embed/#{i}"}
                 pojo[f.index] = i*2
                 data.push pojo
             db.batchSync data, (err, savedOne, infos) ->
@@ -107,7 +107,7 @@ describe 'Database.facets()', ()->
                 embeded[f.title] = "#{i%2}"
                 data.push embeded
                 pojo = {_type: 'Pojo'}
-                pojo[f.foo] = {_uri: "http://data.example.org/embed/#{i}"}
+                pojo[f.foo] = {_ref: "http://data.example.org/embed/#{i}"}
                 pojo[f.index] = i*2
                 data.push pojo
             db.batchSync data, (err, savedOne, infos) ->

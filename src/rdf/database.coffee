@@ -12,7 +12,7 @@ triplestores = {
 
 class Database extends DatabaseInterface
 
-    dbtype: 'rdf'
+    type: 'rdf'
 
     # options:
     #
@@ -113,53 +113,37 @@ class Database extends DatabaseInterface
     # example:
     #   @_find query, options, (err, docs) ->
     _find: (query, options, callback) ->
-        # if _uri is in the query, then we delegate to the _findByURIs
-        # method.
+        if query in [undefined, null]
+            return callback "query cannot be #{query}"
         if query
-            if _.isString query
-                if _.str.startsWith(query, 'http://')
+            if _.isString(query)
+                if @isReference(query)
                     return @_findByURI query, options, callback
                 else
                     return callback "bad query: #{query}"
-                    # uri = @__buildURI(options.type, query)
-                    # return @_findByURI uri, options, callback
-            if _.isArray query
+            else if _.isArray(query)
                 uris = []
                 for item in query
-                    if _.str.startsWith(item, 'http://')
+                    if @isReference(item)
                         uris.push(item)
+                    else if item._id? and item._type?
+                        uris.push(@reference(item._type, item._id))
                     else
                         return callback "bad query: #{query}"
-                    # else if item._uri?
-                        # uris.push(item._uri)
-                    # else
-                        # if _.isString(item)
-                            # itemId = item
-                        # else if item._id?
-                            # itemId = item._id
-                        # else
-                            # return callback "bad query: #{query}"
-                        # uris.push(@__buildURI(options.type, itemId))
                 return @_findByURIs uris, options, callback
-            # else if query._uri?
-                # unless _.isArray(query._uri)
-                    # query._uri = [query._uri]
-                # return @_findByURIs query._uri, options, callback
             else if query._id?
                 if _.isArray(query._id)
                     uris = []
                     for id in query._id
-                        if _.str.startsWith(id, 'http://')
-                            uris.push(id)
+                        if query._type?
+                            uris.push(@reference(query._type, id))
                         else
-                            uris.push(@__buildURI(query._type, id))
+                            return callback "bad query: #{query}"
                     return @_findByURIs uris, options, callback
-                else if _.isString(query._id) and _.str.startsWith(query._id, 'http://')
-                    return @_findByURI query._id, options, callback
                 else
                     unless query._type?
                         return callback "bad query: #{query}"
-                    uri = @__buildURI(query._type, query._id)
+                    uri = @reference(query._type, query._id)
                     return @_findByURI uri, options, callback
 
 
@@ -241,7 +225,7 @@ class Database extends DatabaseInterface
 
         unless _.isString(uri)
             if uri._id? and uri._type?
-                uri = @__buildURI(uri._type, uri._id)
+                uri = @reference(uri._type, uri._id)
 
         deleteQuery = """
             delete {graph <#{@graphURI}> {<#{uri}> ?p ?o .}}
@@ -432,7 +416,8 @@ class Database extends DatabaseInterface
             unless ok
                 return callback "error while syncing the data"
             # @_updateCache(convertedPojo)
-            convertedPojo._uri = @__buildURI(convertedPojo._type, convertedPojo._id)
+            convertedPojo._ref = @reference(convertedPojo._type, convertedPojo._id)
+            convertedPojo._uri = convertedPojo._ref
             return callback null, convertedPojo, {dbTouched: true}
 
     # ## serialize
@@ -440,8 +425,9 @@ class Database extends DatabaseInterface
     serialize: (pojo) ->
         unless pojo._id?
             pojo._id = @__buildId()
-        unless pojo._uri?
-            pojo._uri = @__buildURI(pojo._type, pojo._id)
+        unless pojo._ref?
+            pojo._ref = @reference(pojo._type, pojo._id)
+            pojo._uri = pojo._ref
         ntriples = @_pojo2nt(pojo._uri, pojo)
         return ntriples.join(' .\n') + ' .\n'
 
@@ -513,15 +499,16 @@ class Database extends DatabaseInterface
         sparqlQuery = []
         unless pojo._id?
             pojo._id = @__buildId()
-        unless pojo._uri?
-            pojo._uri = @__buildURI(pojo._type, pojo._id)
+        unless pojo._ref?
+            pojo._ref = @reference(pojo._type, pojo._id)
+            pojo._uri = pojo._ref
 
-        sparqlQuery.push """delete {graph <#{@graphURI}> {<#{pojo._uri}> ?p ?o .}}
-            where {<#{pojo._uri}> ?p ?o .};"""
+        sparqlQuery.push """delete {graph <#{@graphURI}> {<#{pojo._ref}> ?p ?o .}}
+            where {<#{pojo._ref}> ?p ?o .};"""
 
         pojo._class = "#{@defaultClassesNamespace}/#{pojo._type}"
 
-        ntriples = @_pojo2nt(pojo._uri, pojo)
+        ntriples = @_pojo2nt(pojo._ref, pojo)
 
         sparqlQuery.push """insert data {
             graph <#{@graphURI}> {#{ntriples.join(' .\n\t')} }
@@ -628,31 +615,58 @@ class Database extends DatabaseInterface
 
         # if the model doesn't specify @propertiesNamespace, we set it
         if not model::meta.propertiesNamespace
-            loweredModelName = modelName.toLowerCase()
             model::meta.propertiesNamespace = @defaultPropertiesNamespace
 
         # if the model doesn't specify @instancesNamespace, we build it
         if not model::meta.instancesNamespace
-            loweredModelName = modelName.toLowerCase()
+            underscoredModelName = _.str.underscored(modelName)
             model::meta.instancesNamespace =  \
-                "#{@defaultInstancesNamespace}/#{loweredModelName}"
+                "#{@defaultInstancesNamespace}/#{underscoredModelName}"
 
+
+    # ## reference
+    # build an URI from a couple type/id.
+    reference: (type, id) ->
+        if not id?
+            throw "id is required"
+        if not type?
+            throw "type is required"
+        type = _.str.underscored(type)
+        return "#{@defaultInstancesNamespace}/#{type}/#{id}"
+
+
+    # ## dereference
+    # take a reference (URI) and convert id into a pojo of the following form:
+    #  {
+    #     _id: 'the_object_id', _type: 'the_object_type'
+    #  }
+    #
+    # Note that the URI should have the following structure:
+    #  http://<namespace>/<type>/<id>
+    dereference: (reference) ->
+        if not reference or not _.str.startsWith(reference, "http://")
+            throw "unknown reference"
+        splitedRef = reference.split('/')
+        return {
+            _id: splitedRef.slice(-1)[0],
+            _type: _.str.classify(splitedRef.slice(-2, -1)[0])
+        }
+
+    # ## isReference
+    # Returns true if the string is reference
+    isReference: (str) ->
+        try
+            if _.str.startsWith(str, 'http://') and str.split('/').length > 4
+                return true
+        catch e
+            # the string is obviously not a reference
+        return false
 
     #
     #
     # Private methods
     #
     #
-
-    # ## __buildURI
-    #
-    # Generate a unique URI for the model
-    __buildURI: (type, id) ->
-        if type
-            type = type.toLowerCase()
-            return "#{@defaultInstancesNamespace}/#{type}/#{id}"
-        else
-            return "#{@defaultInstancesNamespace}/#{id}"
 
 
     # ## __fillPojoUri(pojo)
@@ -661,7 +675,7 @@ class Database extends DatabaseInterface
     __fillPojoUri: (pojo) ->
         newpojo = {}
         for fieldName, value of pojo
-            if fieldName in ['_id', '_type', '_uri', '_class']
+            if fieldName in ['_id', '_type', '_ref', '_uri', '_class']
                 newpojo[fieldName] = value
             else unless _.str.startsWith(fieldName, 'http://')
                 newpojo["#{@defaultPropertiesNamespace}/#{fieldName}"] = value
@@ -674,8 +688,8 @@ class Database extends DatabaseInterface
         ntriples = []
 
         addTriple = (value, lang) =>
-            if _.isObject(value) and value._uri?
-                triple = "<#{uri}> <#{property}> <#{value._uri}>"
+            if _.isObject(value) and value._ref?
+                triple = "<#{uri}> <#{property}> <#{value._ref}>"
             else
                 value = value2rdf(value, lang)
                 triple = "<#{uri}> <#{property}> #{value}"
@@ -684,14 +698,14 @@ class Database extends DatabaseInterface
 
         # build the n-triples
         for property, value of changes
-            if property in ['_id', '_uri', '_type']
+            if property in ['_id', '_ref', '_uri', '_type', '_class']
                 continue
             else if property in ['_class']
                 ntriples.push "<#{uri}> a <#{value}>"
                 continue
 
-            if value._uri? and _.isArray(value._uri)
-                value = ({_uri: val} for val in value._uri)
+            if value._ref? and _.isArray(value._ref)
+                value = ({_ref: val} for val in value._ref)
 
             # multi field
             if _.isArray(value)
@@ -700,7 +714,7 @@ class Database extends DatabaseInterface
                         addTriple(val)
 
             # i18n field
-            else if _.isObject(value) and not value._uri? and not _.isDate(value)
+            else if _.isObject(value) and not value._ref? and not _.isDate(value)
                 for lang, val of value
                     if _.isArray(val) # multi-i18n field
                         for _val in val

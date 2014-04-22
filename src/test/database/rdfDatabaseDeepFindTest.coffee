@@ -4,8 +4,8 @@ _ = require 'underscore'
 config = require('../config')
 db = config.Database()
 
-if db.dbtype isnt 'rdf'
-    console.log "Database is not an RDF database (got #{db.dbtype}). Skipping..."
+if db.type isnt 'rdf'
+    console.log "Database is not an RDF database (got #{db.type}). Skipping..."
     return
 
 
@@ -38,7 +38,7 @@ describe 'Database deep find:', ()->
                 embeded[f.title] = "#{i%2}"
                 data.push embeded
                 pojo = {_type: 'Pojo'}
-                pojo[f.foo] = {_uri: "http://data.example.org/embed/#{i}"}
+                pojo[f.foo] = {_ref: "http://data.example.org/embed/#{i}"}
                 data.push pojo
             db.batchSync data, (err, savedOne, infos) ->
                 expect(err).to.be.null
@@ -47,7 +47,7 @@ describe 'Database deep find:', ()->
                 db.find query, (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 8
-                    expect(item[f.foo]._uri for item in results).to.include.members(
+                    expect(item[f.foo]._ref for item in results).to.include.members(
                         "http://data.example.org/embed/#{i}" for i in [1, 3, 5, 7, 9, 11, 13, 15]
                     )
                     done()
@@ -61,7 +61,7 @@ describe 'Database deep find:', ()->
                 embeded[f.title] = "#{i%2}"
                 embededs.push embeded
                 pojo = {_type: 'Pojo'}
-                pojo[f.foo] = {_uri: "http://data.example.org/embed/#{i}"}
+                pojo[f.foo] = {_ref: "http://data.example.org/embed/#{i}"}
                 pojo[f.index] = i*2
                 pojos.push pojo
             db.batchSync embededs, (err, savedOne, infos) ->
@@ -76,7 +76,7 @@ describe 'Database deep find:', ()->
                         db.find query, (err, results) ->
                             expect(err).to.be.null
                             expect(results.length).to.be.equal 5
-                            expect(item[f.foo]._uri for item in results).to.include.members(
+                            expect(item[f.foo]._ref for item in results).to.include.members(
                                 "http://data.example.org/embed/#{i}" for i in [7, 9, 11, 13, 15]
                             )
                             done()
@@ -90,7 +90,7 @@ describe 'Database deep find:', ()->
                 embeded[f.title] = "#{i%2}"
                 data.push embeded
                 pojo = {_type: 'Pojo'}
-                pojo[f.foo] = {_uri: "http://data.example.org/embed/#{i}"}
+                pojo[f.foo] = {_ref: "http://data.example.org/embed/#{i}"}
                 data.push pojo
             db.batchSync data, (err, savedOne, infos) ->
                 expect(err).to.be.null
@@ -99,7 +99,7 @@ describe 'Database deep find:', ()->
                 db.find query, (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 8
-                    expect(item[f.foo]._uri for item in results).to.include.members(
+                    expect(item[f.foo]._ref for item in results).to.include.members(
                         "http://data.example.org/embed/#{i}" for i in [8...15]
                     )
                     done()
@@ -114,7 +114,7 @@ describe 'Database deep find:', ()->
                 embeded[f.title] = "#{i%2}"
                 data.push embeded
                 pojo = {_type: 'Pojo'}
-                pojo[f.foo] = {_uri: "http://data.example.org/embed/#{i}"}
+                pojo[f.foo] = {_ref: "http://data.example.org/embed/#{i}"}
                 pojo[f.index] = i*2
                 data.push pojo
             db.batchSync data, (err, savedOne, infos) ->
@@ -126,7 +126,7 @@ describe 'Database deep find:', ()->
                 db.find query, options, (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 5
-                    expect(item[f.foo]._uri for item in results).to.include.members(
+                    expect(item[f.foo]._ref for item in results).to.include.members(
                         "http://data.example.org/embed/#{i}" for i in [7, 9, 11, 13, 15]
                     )
                     done()

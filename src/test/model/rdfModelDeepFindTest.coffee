@@ -6,8 +6,8 @@ async = require 'async'
 config = require('../config')
 db = config.Database()
 
-if db.dbtype isnt 'rdf'
-    console.log "Database is not an RDF database (got #{db.dbtype}). Skipping..."
+if db.type isnt 'rdf'
+    console.log "Database is not an RDF database (got #{db.type}). Skipping..."
     return
 
 describe 'model deep find', ()->
@@ -61,7 +61,7 @@ describe 'model deep find', ()->
                 ones.push new db.One {
                     literal: new db.Literal {integer: i, string: "#{i%2}"}
                 }
-             async.map ones, (one, cb) ->
+            async.map ones, (one, cb) ->
                 one.save cb
             , (err, results) ->
                 expect(err).to.be.null

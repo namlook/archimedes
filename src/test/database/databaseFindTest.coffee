@@ -68,6 +68,34 @@ describe 'Database.find()', ()->
                         expect(foos).to.include.members [false, true]
                         done()
 
+        it 'should return the docs that match the ids with different types', (done) ->
+            pojo = {_type: 'Test'}
+            pojo[f.title] = 'bar'
+            pojo[f.index] = 2
+            pojo[f.foo] = true
+            db.sync pojo, (err, obj, infos) ->
+                expect(err).to.be.null
+                expect(infos.dbTouched).to.be.true
+                expect(obj._id).to.be.not.null
+                pojo2 = {_type: 'Test2'}
+                pojo2[f.title] = 'foo'
+                pojo2[f.index]= 3
+                pojo2[f.foo]= false
+                db.sync pojo2, (err, obj2, infos) ->
+                    expect(err).to.be.null
+                    expect(infos.dbTouched).to.be.true
+                    expect(obj2._id).to.be.not.null
+                    db.find [{_id: obj._id, _type: 'Test'}, {_id: obj2._id, _type:'Test2'}], (err, results) ->
+                        expect(err).to.be.null
+                        expect(results.length).to.be.equal 2
+                        titles = (o[f.title] for o in results)
+                        expect(titles).to.include.members ['bar', 'foo']
+                        indexes = (o[f.index] for o in results)
+                        expect(indexes).to.include.members [2, 3]
+                        foos = (Boolean(o[f.foo]) for o in results)
+                        expect(foos).to.include.members [false, true]
+                        done()
+
     describe '.find(query)', () ->
         it 'should return the docs that match a simple query', (done) ->
             pojos = []
@@ -76,7 +104,7 @@ describe 'Database.find()', ()->
                 pojo[f.title] = i
                 pojo[f.index] = i*10
                 pojos.push pojo
-            db.batchSync pojos, 'Test', (err, results) ->
+            db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
                 query = {_type: 'Test'}
                 query[f.title] = 2
@@ -576,7 +604,7 @@ describe 'Database.find()', ()->
                 pojo[f.title] = {'en': i, 'fr': i*3}
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
-                if db.dbtype is 'rdf'
+                if db.type is 'rdf'
                     expect(err).to.be.equal 'i18n fields accept only strings'
                 else
                     expect(err).to.be.equal null
@@ -607,7 +635,7 @@ describe 'Database.find()', ()->
                 pojo[f.title] = {'en': i, 'fr': i*3}
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
-                if db.dbtype is 'rdf'
+                if db.type is 'rdf'
                     expect(err).to.be.equal 'i18n fields accept only strings'
                 else
                     expect(err).to.be.equal null

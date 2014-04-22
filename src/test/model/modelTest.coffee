@@ -189,10 +189,9 @@ describe 'Model', ()->
             expect(blogPost.get('blog').get('title')).to.be.equal 'the blog'
 
 
-        it 'should set the value of a relation field via its id', () ->
+        it "shouldn't set the value of a relation field via its id", () ->
             blogPost = new db.BlogPost
-            blogPost.set 'blog', 'TheBlog'
-            expect(blogPost.get('blog')).to.be.equal 'TheBlog'
+            expect(()-> blogPost.set 'blog', 'TheBlog').to.throw 'BlogPost.blog must be a Blog'
 
 
         it 'should set the values of a relation field'
@@ -456,15 +455,6 @@ describe 'Model', ()->
                 blogPost.isNew().should.be.false
                 done()
 
-        it 'should return false if the model is saved and has 0 as id', (done) ->
-            blogPost = new db.BlogPost
-            blogPost.set 'title', 'hello world', 'en'
-            blogPost.set 'keyword', ['foo', 'bar']
-            blogPost.id = 0
-            blogPost.save (err) ->
-                expect(err).to.be.null
-                blogPost.isNew().should.be.false
-                done()
 
         it 'should return true on a cloned model', (done) ->
             blogPost = new db.BlogPost
@@ -625,10 +615,9 @@ describe 'Model', ()->
                 done()
 
         it "shouldn't generate an id if the id is set", (done) ->
-            blogPost = new db.BlogPost
+            blogPost = new db.BlogPost {_id : 'blogPost'}
             blogPost.set 'title', 'hello world', 'en'
             blogPost.set 'keyword', ['foo', 'bar']
-            blogPost.id = 'blogPost'
             blogPost.save (err) ->
                 expect(err).to.be.null
                 expect(blogPost.id).to.be.equal 'blogPost'
@@ -636,10 +625,10 @@ describe 'Model', ()->
                 blogPost2 = new db.BlogPost
                 blogPost2.set 'title', 'hello world', 'en'
                 blogPost2.set 'keyword', ['foo', 'bar']
-                blogPost2.id = 0
+                blogPost2.id = '0'
                 blogPost2.save (err) ->
                     expect(err).to.be.null
-                    expect(blogPost2.id).to.be.equal 0
+                    expect(blogPost2.id).to.be.equal '0'
                     done()
 
         it 'should save all unsaved relations', (done) ->
@@ -711,15 +700,15 @@ describe 'Model', ()->
                     expect(obj.get('author').get('login')).to.be.equal 'bob'
                     expect(obj.get('blog').get('title')).to.be.equal 'the blog'
 
-                    db.Blog.first blog.id, (err, blog) ->
+                    db.Blog.first blog.ref, (err, blog) ->
                         expect(err).to.be.null
                         expect(blog.get('title')).to.be.equal 'the blog'
 
-                        db.Author.first author.id, (err, author) ->
+                        db.Author.first author.ref, (err, author) ->
                             expect(err).to.be.null
                             expect(author.get('login')).to.be.equal 'bob'
 
-                            db.BlogPost.first obj.id, (err, blogPost) ->
+                            db.BlogPost.first obj.ref, (err, blogPost) ->
                                 expect(err).to.be.null
                                 expect(obj.get('author').get('login')).to.be.equal(
                                     'bob')
@@ -780,11 +769,11 @@ describe 'Model', ()->
        it 'should have its multi-field to be an array', (done) ->
             group = new db.Group
             group.push 'authors', new db.Author {login: 'jimy'}
-            jsongroup = group.toJSONObject()
-            expect(jsongroup.authors).to.be.instanceof(Array)
-            expect(jsongroup.authors[0]).to.be.undefined
             group.save (err, model) ->
                 expect(err).to.be.null
+                jsongroup = group.toJSONObject()
+                expect(jsongroup.authors).to.be.instanceof(Array)
+                expect(jsongroup.authors[0]._ref).to.be.equal group.get('authors')[0].reference()
                 db.Group.find (err, results) ->
                     expect(err).to.be.null
                     item = results[0]

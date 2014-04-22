@@ -16,25 +16,16 @@ class RdfModel extends ModelInterface
             protected: true
             type: 'string'
 
-        _uri:
+        _ref:
             protected: true
             type: 'string'
-            compute: (value, attrs) ->
-                unless _.str.startsWith value, 'http://'
-                   return "#{attrs.model.meta.instancesNamespace}/#{value}"
-                else
-                    return value
+
         _type:
             protected: true
             type: 'string'
             default: (model) ->
                 model.meta.name
 
-        _class:
-            protected: true
-            type: 'string'
-            default: (model) ->
-                model.meta.uri
 
     # ## constructor
     # process some rdf related stuff
@@ -47,7 +38,7 @@ class RdfModel extends ModelInterface
         # convert the pojo (with uris as key) into regular pojo
         for key, value of properties
             if key is '_id'
-                properties._uri = @db.__buildURI(@meta.name, value)
+                properties._ref = @db.reference(@meta.name, value)
             if value in [null, undefined]
                 continue
             if _.str.startsWith(key, 'http://')
@@ -55,30 +46,27 @@ class RdfModel extends ModelInterface
                 key = @db._propertiesIndexURI[key]
                 delete properties[propURI]
                 properties[key] = value
-            if value._uri?
-                properties[key] = value._uri
+            if value._ref?
+                properties[key] = value._ref
             else if _.isArray value
-                properties[key] = (val._uri? and val._uri or val for val in value)
+                properties[key] = (val._ref? and val._ref or val for val in value)
 
         super properties
 
+        # defining some properties
+        Object.defineProperty(@, "uri", {
+            get : () -> @ref
+        })
 
-    set: (fieldName, value, options) ->
-        super(fieldName, value, options)
-        if fieldName is '_id'
-            @set '_uri', @db.__buildURI(@meta.name, value)
-        if fieldName is '_uri'
-            @uri = value
-        if fieldName is '_class'
-            @['class'] = value
+        Object.defineProperty(@, "class", {
+            get : () -> @meta.uri
+        })
 
 
     save: (callback) ->
         super (err, model, options) =>
             if err
                 return callback err
-            @set '_uri', @db.__buildURI(model.get('_type'), model.get('_id'))
-            @set '_class', model.get('_class')
             return callback null, @, options
 
 
@@ -87,29 +75,11 @@ class RdfModel extends ModelInterface
             if err
                 return callback err
 
-            # if _.isArray(query)
-            #     for item in query
-            #         if item._id?
-            #             if _.str.startsWith(item._id, 'http://')
-            #                 item._uri = item._id
-            #             else if item._type?
-            #                 item._uri = @db.__buildURI(item._type, item._id)
-            # else if query._id?
-            #     if _.str.startsWith(query._id, 'http://')
-            #         query._uri = query._id
-            #     else if query._type?
-            #         if _.isArray(query._id)
-            #             uris = []
-            #             for item in query._id
-            #                 if _.str.startsWith(item, 'http://')
-            #                     uris.push(item)
-            #                 else
-            #                     uris.push(@db.__buildURI(query._type, item))
-            #                 query._uri = uris
-            #         else
-            #             query._uri = @db.__buildURI(query._type, query._id)
-
-            query._type = @::meta.name
+            # if the query is not a reference (or an array of references), then
+            # we add the type of the model in order to get only the document of
+            # the correct type.
+            if not _.isArray(query) and not @db.isReference(query)
+                query._type = @::meta.name
 
             # convert query's key into uris
             if not _.isString(query) and not _.isArray(query)
@@ -238,26 +208,18 @@ class RdfModel extends ModelInterface
         jsonObj = super(options)
         result = {}
         for key, value of jsonObj
-            if key in ['_id', '_type', '_class', '_uri']
+            if key in ['_id', '_type', '_ref', '_class', '_uri']
                 result[key] = value
             else
                 propURI = field2uri(key, @db[@meta.name])
-                if @db[@schema[key].type]?
-                    unless _.isArray(value)
-                        value = [value]
-                    values = []
-                    for val in value
-                        unless _.str.startsWith(val, 'http://')
-                            nspace = @db[@schema[key].type]::meta.instancesNamespace
-                            val = "#{nspace}/#{val}"
-                        values.push val
-                    if @schema[key].multi
-                        result[propURI] = {_uri: values}
-                    else
-                        result[propURI] = {_uri: values[0]}
-                else
-                    result[propURI] = value
+                result[propURI] = value
         return result
+
+    toJSONObject: (options) ->
+        jsonObject = super(options)
+        jsonObject._class = @class
+        jsonObject._uri = @ref
+        return jsonObject
 
 
     # ## serialize
@@ -270,7 +232,7 @@ class RdfModel extends ModelInterface
     # convert query's key into uri
     @_convertQueryUri: (query) ->
         for key, value of query
-            if key in ['_id', '_type', '_uri', '_class']
+            if key in ['_id', '_type', '_ref', '_uri', '_class']
                 continue
             if key is '$and'
                 for val in value

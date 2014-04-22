@@ -57,6 +57,45 @@ describe 'model.find', ()->
     beforeEach (done) ->
         db.clear done
 
+    describe 'options.instances', () ->
+        it 'as true should returns the model instances', (done) ->
+            instances = [
+                new db.Literal {'string': 'foo'}
+                new db.Literal {'string': 'bar'}
+                new db.Literal {'string': 'baz'}
+                new db.Multi {'integer': [1, 2, 3]}
+                new db.Multi {'integer': [3, 4, 5]}
+                new db.I18n {'string': {'en': 'foo', 'fr': 'toto'}}
+            ]
+            db.batchSync instances, (err) ->
+                expect(err).to.be.null
+                db.Literal.find (err, literals) ->
+                    expect(err).to.be.null
+                    expect(literals.length).to.be.equal 3
+                    expect(literals[0]).to.be.an.instanceof(db.Literal)
+                    done()
+
+        it 'as false should returns the references', (done) ->
+            instances = [
+                new db.Literal {'string': 'foo'}
+                new db.Literal {'string': 'bar'}
+                new db.Literal {'string': 'baz'}
+                new db.Multi {'integer': [1, 2, 3]}
+                new db.Multi {'integer': [3, 4, 5]}
+                new db.I18n {'string': {'en': 'foo', 'fr': 'toto'}}
+            ]
+            db.batchSync instances, (err) ->
+                expect(err).to.be.null
+                db.Literal.find {}, {instances: false}, (err, literals) ->
+                    expect(err).to.be.null
+                    expect(literals.length).to.be.equal 3
+                    expect(literals[0]).to.be.a('string')
+                    deref = db.dereference(literals[0])
+                    expect(deref._id).to.not.be.undefined
+                    expect(deref._type).to.not.be.undefined
+                    done()
+
+
     describe '[type]', () ->
         it 'should return the doc of the same type', (done) ->
             instances = [
@@ -146,7 +185,7 @@ describe 'model.find', ()->
                 expect(err).to.be.null
                 expect(infos.dbTouched).to.be.true
                 expect(obj.id).to.be.not.null
-                db.Literal.find savedObj.id, (err, results) ->
+                db.Literal.find savedObj.reference(), (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 1
                     expect(results[0].get 'i18n', 'en').to.be.equal obj.get 'i18n', 'en'
@@ -205,7 +244,7 @@ describe 'model.find', ()->
                 expect(err).to.be.null
                 expect(infos.dbTouched).to.be.true
                 expect(obj.id).to.be.not.null
-                db.Literal.first savedObj.id, (err, result) ->
+                db.Literal.first savedObj.reference(), (err, result) ->
                     expect(err).to.be.null
                     expect(result.get 'i18n', 'en').to.be.equal obj.get 'i18n', 'en'
                     expect(result.get 'i18n', 'fr').to.be.equal obj.get 'i18n', 'fr'
@@ -510,7 +549,7 @@ describe 'model.find', ()->
                 expect(err).to.be.null
                 expect(infos.dbTouched).to.be.true
                 expect(obj.id).to.be.not.null
-                db.Multi.find savedObj.id, (err, results) ->
+                db.Multi.find savedObj.reference(), (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 1
                     result = results[0]
@@ -533,7 +572,7 @@ describe 'model.find', ()->
                 expect(err).to.be.null
                 expect(infos.dbTouched).to.be.true
                 expect(obj.id).to.be.not.null
-                db.Multi.first savedObj.id, (err, result) ->
+                db.Multi.first savedObj.reference(), (err, result) ->
                     expect(err).to.be.null
                     expect(result.get 'string').to.include.members ['hello', 'salut']
                     expect(result.get 'integer').to.include.members [1, 2, 3]
@@ -945,7 +984,7 @@ describe 'model.find', ()->
                 expect(err).to.be.null
                 expect(infos.dbTouched).to.be.true
                 expect(obj.id).to.be.not.null
-                db.I18n.find savedObj.id, (err, results) ->
+                db.I18n.find savedObj.reference(), (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 1
                     result = results[0]
@@ -968,7 +1007,7 @@ describe 'model.find', ()->
                 expect(err).to.be.null
                 expect(infos.dbTouched).to.be.true
                 expect(obj.id).to.be.not.null
-                db.I18n.first savedObj.id, (err, result) ->
+                db.I18n.first savedObj.reference(), (err, result) ->
                     expect(err).to.be.null
                     expect(result.get 'string', 'en').to.equal 'hello'
                     expect(result.get 'string', 'fr').to.equal 'salut'

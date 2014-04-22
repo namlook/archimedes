@@ -98,6 +98,9 @@ class Model
             type: 'string'
             default: (model) ->
                 model.meta.name
+        _ref:
+            protected: true
+            type: 'string'
     })
 
 
@@ -118,6 +121,8 @@ class Model
 
         # fill the model with the values passed to the constructor
         for key, value of properties
+            unless @schema[key]?
+                continue
             fieldType = @schema[key].type
             if _.isObject(key) and @db[fieldType]?
                 if _.isArray(value)
@@ -139,6 +144,23 @@ class Model
 
         @_updateCachedProperties()
 
+        # defining some properties
+        Object.defineProperty(@, "id", {
+            get : () -> @get('_id')
+            set : (value) -> @set('_id', value)
+        })
+
+
+        Object.defineProperty(@, "type", {
+            get : () -> @get('_type')
+        })
+
+        Object.defineProperty(@, "ref", {
+            get : () ->
+                if @id? and @type?
+                    return @reference()
+        })
+
 
     @beforeQuery: (query, options, callback) ->
         # validate the query
@@ -146,9 +168,7 @@ class Model
             @_validateQuery(@, query)
         catch e
             return callback e
-        if _.isString(query) or _.isArray(query)
-            query = {_id: query, _type: @::meta.type}
-        else
+        unless @db.isReference(query)
             query._type = @::meta.type
         return callback null, query, options
 
@@ -191,6 +211,8 @@ class Model
     #    sorted
     # - **order**: 1 or -1 (default null)
     # - **skip**: (default 0)
+    # - **instances**: (default true) if true, returns the instanciated model,
+    #    otherwise, returns the references
     # - **populate**: (default false) if true, fetch asynchronously all the
     #    related instance object (if they exists). If an array of field names
     #    is passed, fetch only those instances.
@@ -225,6 +247,8 @@ class Model
             @db.find query, options, (err, pojos) =>
                 if err
                     return callback err
+                unless options.instances
+                    return callback null, pojos
                 instances = (new @(pojo) for pojo in pojos)
                 if options.populate
                     async.map instances, (instance, cb) ->
@@ -246,16 +270,16 @@ class Model
     # # `findIDs query, [options], (err, ids) ->`
     # #
     # # Like `find` but returns only the object ids
-    # @findIDs: (query, options, callback) ->
-    #     if typeof(options) is 'function' and not callback
-    #         callback = options
-    #         options = {}
+    @findIDs: (query, options, callback) ->
+        if typeof(options) is 'function' and not callback
+            callback = options
+            options = {}
 
-    #     unless callback
-    #         throw 'callback is required'
+        unless callback
+            throw 'callback is required'
 
-    #     options.instance = false
-    #     @find query, options, callback
+        options.instance = false
+        @find query, options, callback
 
 
     # ## first
@@ -374,43 +398,51 @@ class Model
         unless _.isArray(fields) and fields.length > 0
             fields = (fname for fname, val of @schema when @db[val.type]?)
 
-
         # build relations index for each field
         relationFieldNames = {}
         relationInstances = {}
+
+        relationRefs = []
         for fieldName in fields
-            relationId = @get(fieldName)
-            if relationId
-                if _.isString relationId
-                    relationId = [relationId]
-                relationFieldNames[fieldName] = {
-                    id: relationId
-                    model: @db[@schema[fieldName].type]
-                }
-                for relId in relationId
-                    relationInstances[relId] = {
+            relationRef = @get(fieldName)
+            if relationRef
+                if _.isString relationRef
+                    relationRef = [relationRef]
+                for relRef in relationRef
+                    if @db.isReference(relRef)
+                        relationRefs.push(relRef)
+                        relationInstances[relRef] = {
+                            model: @db[@schema[fieldName].type]
+                        }
+                if relationRefs.length > 0
+                    relationFieldNames[fieldName] = {
+                        ref: relationRef
                         model: @db[@schema[fieldName].type]
                     }
 
-        relationIds = _.keys(relationInstances)
+        if relationRefs.length is 0
+            return process.nextTick () =>
+                return callback null, @
+
 
         # fetch the related instances
-        @db.find relationIds, (err, data) =>
+        @db.find relationRef, (err, data) =>
             if err
                 return callback err
 
             # instanciate relations
             for pojo in data
-                rinfo = relationInstances[pojo._uri]
-                relationInstances[pojo._uri].instance = new rinfo.model(pojo)
+                ref = @db.reference(pojo._type, pojo._id)
+                rinfo = relationInstances[ref]
+                relationInstances[ref].instance = new rinfo.model(pojo)
 
             # dispatch all related instances into the correct fields
             instancesToPopulate = []
             for fieldName, relinfo of relationFieldNames
                 if @schema[fieldName].multi
-                    instance = (relationInstances[id].instance for id in relinfo.id)
+                    instance = (relationInstances[ref].instance for ref in relinfo.ref)
                 else
-                    instance = relationInstances[relinfo.id].instance
+                    instance = relationInstances[relinfo.ref].instance
                 @set fieldName, instance
 
                 if options.recursive
@@ -608,11 +640,6 @@ class Model
                         @_properties[fieldName][lang] = val
             else
                 value = @__processValue(value, {fieldName: fieldName, model: @})
-
-                if fieldName is '_id'
-                    @id = value
-                else if fieldName is '_type'
-                    @type = value
 
                 @_properties[fieldName] = value
 
@@ -947,9 +974,9 @@ class Model
     delete: (callback) =>
         unless callback
             throw 'callback is required'
-        unless @uri
+        unless @ref
             return callback "can't delete a non-saved model"
-        @db.delete @uri, (err) =>
+        @db.delete @ref, (err) =>
             if err
                 if callback
                     return callback err
@@ -995,36 +1022,51 @@ class Model
         options = options or {}
         jsonObject = {}
         for key, value of @_properties
+            if value is undefined
+                continue
             if @schema[key].multi and not @schema[key].i18n
                 unless _.isArray(value)
                     value = [value]
+                jsonObject[key] = [] unless jsonObject[key]?
                 for val in value
-                    jsonObject[key] = [] unless jsonObject[key]?
-                    if val.meta?.name and val.toJSONObject?
+                    # if val.meta?.name and val.toJSONObject?
+                    #     if options.populate
+                    #         if options.populate is 'ref'
+                    #             jsonObject[key].push {_id: val.id, _type: val.type}
+                    #         else
+                    #             jsonObject[key].push val.toJSONObject(options)
+                    if @db[@schema[key].type]?
                         if options.populate
-                            if options.populate is 'ref'
-                                jsonObject[key].push {_id: val.id, _type: val.type}
-                            else
-                                jsonObject[key].push val.toJSONObject(options)
+                            jsonObject[key].push val.toJSONObject(options)
                         else
-                            jsonObject[key].push val.id
+                            if val.reference? and val.meta?.name
+                                reference = val.reference()
+                            else if @db.isReference(val)
+                                reference = val
+                            else
+                                throw "bad reference: #{val}"
+                            jsonObject[key].push {_ref: reference}
                     else
                         jsonObject[key].push val
-            else if _.isObject(value) and not _.isArray(value) and not _.isDate(value)
-                jsonObject[key] = {} unless jsonObject[key]?
-                if value.meta?.name and value.toJSONObject?
-                    if options.populate
-                        if options.populate is 'ref'
-                            jsonObject[key] = {_id: value.id, _type: value.type}
-                        else
-                            jsonObject[key] = value.toJSONObject(options)
-                    else
-                        jsonObject[key] = value.id
+            else if @db[@schema[key].type]?
+                if options.populate
+                    jsonObject[key] = value.toJSONObject(options)
                 else
-                    for lang, val of value
-                        jsonObject[key][lang] = val
+                    if value.meta?.name and value.reference?
+                        reference = value.reference()
+                    else if @db.isReference(value)
+                        reference = value
+                    else
+                        throw "bad reference: #{value}"
+                    jsonObject[key] = {_ref: reference}
+            else if @schema[key].i18n
+                jsonObject[key] = {} unless jsonObject[key]?
+                for lang, val of value
+                    jsonObject[key][lang] = val
             else
                 jsonObject[key] = value
+        if jsonObject._id
+            jsonObject._ref = @reference()
         return jsonObject
 
 
@@ -1053,6 +1095,11 @@ class Model
     toJSON: (options) =>
         return JSON.stringify @toJSONObject(options)
 
+
+    # ## reference
+    # Returns the reference of the model. See `Database.reference` for more details.
+    reference: () ->
+        return @db.reference(@type, @id)
 
     # # Private methods
     #
@@ -1130,9 +1177,11 @@ class Model
         if @db._types[type]?
             unless @db._types[type].validate(value)
                 ok = false
-        else if @db[type]? and type isnt value.meta?.name and \
-          not _.isString(value) and not value._id?
-            ok = false
+        else if @db[type]?
+            if (not _.isString(value) and type isnt value.meta?.name) or (
+                _.isString(value) and not @db.isReference(value))
+              # not _.isString(value) and not value._id?
+                ok = false
         unless ok
             throw new ValueError(
                 "#{@meta.name}.#{attrs.fieldName} must be a #{type}")

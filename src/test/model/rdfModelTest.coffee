@@ -6,9 +6,9 @@ config = require('../config')
 RdfModel = config.Model
 db = config.Database()
 
-if db.dbtype isnt 'rdf'
-    console.log db.dbtype
-    console.log "Database is not an RDF database (got #{db.dbtype}). Skipping..."
+if db.type isnt 'rdf'
+    console.log db.type
+    console.log "Database is not an RDF database (got #{db.type}). Skipping..."
     return
 
 describe 'RdfModel', ()->
@@ -124,8 +124,7 @@ describe 'RdfModel', ()->
             blog = new db.Blog {_id: 'test', 'title': 'test'}
             expect(blog.get '_id').to.be.equal 'test'
             expect(blog.get '_type').to.be.equal 'Blog'
-            expect(blog.get '_uri').to.be.equal 'http://data.example.org/blog/test'
-            expect(blog.get '_class').to.be.equal 'http://onto.example.org/classes/Blog'
+            expect(blog.class).to.be.equal 'http://onto.example.org/classes/Blog'
             expect(blog.id).to.be.equal 'test'
             expect(blog.uri).to.be.equal 'http://data.example.org/blog/test'
 
@@ -171,7 +170,7 @@ describe 'RdfModel', ()->
             blogPost.set 'keyword', ['hello', 'world']
             blogPost.set '_id', 'HelloWorld'
             expect(blogPost.isNew()).to.be.true
-            uri = 'http://data.example.org/blogpost/HelloWorld'
+            uri = 'http://data.example.org/blog_post/HelloWorld'
             expect(blogPost.id).to.be.equal 'HelloWorld'
             expect(blogPost.uri).to.be.equal uri
             blogPost.save (err, newBlogPost) ->
@@ -203,7 +202,7 @@ describe 'RdfModel', ()->
             blog.set 'title', 'hello world'
             blog.save (err, blog2) ->
                 expect(err).to.be.null
-                db.Blog.find blog.id, (err, results) ->
+                db.Blog.find {_id: blog.id}, (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 1
                     newBlog = results[0]
@@ -214,13 +213,13 @@ describe 'RdfModel', ()->
                     done()
 
 
-    describe '.find(uri)', () ->
-        it 'should fetch a model instance by its uri', (done) ->
+    describe '.find(reference)', () ->
+        it 'should fetch a model instance by its reference', (done) ->
             blog = new db.Blog
             blog.set 'title', 'hello world'
             blog.save (err, blog2) ->
                 expect(err).to.be.null
-                db.Blog.find blog.uri, (err, results) ->
+                db.Blog.find blog.reference(), (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 1
                     newBlog = results[0]
@@ -228,7 +227,7 @@ describe 'RdfModel', ()->
                     expect(newBlog.get 'title').to.be.equal 'hello world'
                     done()
 
-        it 'should fetch a model instance with i18n fields by its uri', (done) ->
+        it 'should fetch a model instance with i18n fields by its reference', (done) ->
             blogPost = new db.BlogPost
             blogPost.set 'title', 'hello world', 'en'
             blogPost.set 'title', 'salut monde', 'fr'
@@ -236,7 +235,7 @@ describe 'RdfModel', ()->
             blogPost.set 'keyword', ['hello', 'world']
             blogPost.save (err) ->
                 expect(err).to.be.null
-                db.BlogPost.find blogPost.uri, (err, results) ->
+                db.BlogPost.find blogPost.reference(), (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 1
                     newBlogPost = results[0]
@@ -248,14 +247,14 @@ describe 'RdfModel', ()->
                     expect(newBlogPost.get('title', 'fr')).to.be.equal 'salut monde'
                     done()
 
-        it 'should fetch a model instance with muti-i18n fields by its uri', (done) ->
+        it 'should fetch a model instance with muti-i18n fields by its reference', (done) ->
             blog = new db.Blog
             blog.set 'title', 'test'
             blog.set 'i18ntags', ['hello', 'world'], 'en'
             blog.set 'i18ntags', ['salut', 'monde'], 'fr'
             blog.save (err) ->
                 expect(err).to.be.null
-                db.Blog.find [blog.uri], (err, results) ->
+                db.Blog.find [blog.reference()], (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 1
                     newBlog = results[0]
@@ -266,9 +265,9 @@ describe 'RdfModel', ()->
                     done()
 
 
-    describe '.find(uris)', () ->
+    describe '.find(references)', () ->
 
-        it 'should fetch a model instances by their ids', (done) ->
+        it 'should fetch a model instances by their references', (done) ->
             blog = new db.Blog
             blog.set 'title', 'hello world'
             blog.save (err) ->
@@ -276,10 +275,11 @@ describe 'RdfModel', ()->
                 blog2 = new db.Blog
                 blog2.set 'title', 'second blog'
                 blog2.save (err) ->
-                    db.Blog.find [blog.uri, blog2.uri], (err, results) ->
+                    db.Blog.find [blog.reference(), blog2.reference()], (err, results) ->
                         expect(err).to.be.null
                         expect(results.length).to.be.equal 2
                         newBlog = results[0]
+                        expect(newBlog.uri).to.be.equal newBlog.reference()
                         expect(newBlog.uri).to.not.be.undefined
                         expect(newBlog.uri).to.be.equal blog.uri
                         expect(newBlog.get 'title').to.be.equal 'hello world'
@@ -305,22 +305,21 @@ describe 'RdfModel', ()->
 
     describe 'set()', ()->
         it 'should set the value of a relation field', () ->
-            blog = new db.Blog {title: 'the blog'}
-            blogPost = new db.BlogPost
+            blog = new db.Blog {_id: 'theblog', title: 'the blog'}
+            blogPost = new db.BlogPost {_id: 'theblogpost'}
             blogPost.set 'blog', blog
-            sblog = blogPost.toSerializableObject()['http://onto.example.org/properties/blog']
-            expect(sblog._uri).to.be.equal 'http://data.example.org/blog/undefined'
+            sblog = blogPost.toSerializableObject()
+            expect(sblog._ref).to.be.equal 'http://data.example.org/blog_post/theblogpost'
             expect(blogPost.get('blog').get('title')).to.be.equal 'the blog'
 
         it 'should set the value of a relation field via its id', () ->
-            blogPost = new db.BlogPost
-            blogPost.set 'blog', 'TheBlog'
-            sblog = blogPost.toSerializableObject()['http://onto.example.org/properties/blog']
-            expect(sblog._uri).to.be.equal 'http://data.example.org/blog/TheBlog'
+            blogPost = new db.BlogPost {_id: 'theblogpost'}
+            expect(()-> blogPost.set 'blog', 'TheBlog').to.throw "BlogPost.blog must be a Blog"
+            blogPost.set 'blog', new db.Blog({'_id': 'TheBlog'})
+            sblog = blogPost.toSerializableObject()
+            expect(sblog['http://onto.example.org/properties/blog']._ref).to.be.equal 'http://data.example.org/blog/TheBlog'
             expect(blogPost.serialize().indexOf('<http://data.example.org/blog/TheBlog>')).to.be.gt 0
-            expect(blogPost.get('blog')).to.be.equal 'TheBlog'
-
-        it 'should set the values of a relation field'
+            expect(blogPost.get('blog').id).to.be.equal 'TheBlog'
 
 
     describe 'unset()', ()->
@@ -387,9 +386,9 @@ describe 'RdfModel', ()->
 
         it 'should serialize an object with multi relations', () ->
             group = new db.Group
-            group.push 'authors', 'bob'
-            group.push 'authors', 'timy'
-            group.push 'authors', 'jimy'
+            group.push 'authors', new db.Author {_id: 'bob'}
+            group.push 'authors', new db.Author {_id: 'timy'}
+            group.push 'authors', new db.Author {_id: 'jimy'}
             raw = group.serialize()
             expect(raw.indexOf('<http://data.example.org/author/bob>')).to.be.gt -1
             expect(raw.indexOf('<http://data.example.org/author/timy>')).to.be.gt -1
@@ -409,9 +408,9 @@ describe 'RdfModel', ()->
                 expect(err).to.be.null
                 db.first model.uri, (err, rawBloPost) ->
                     expect(err).to.be.null
-                    expect(rawBloPost['http://onto.example.org/properties/blog']).to.have.property '_uri'
-                    expect(rawBloPost['http://onto.example.org/properties/author']).to.have.property '_uri'
-                    expect(rawBloPost['http://onto.example.org/properties/title']).to.not.have.property '_uri'
+                    expect(rawBloPost['http://onto.example.org/properties/blog']).to.have.property '_ref'
+                    expect(rawBloPost['http://onto.example.org/properties/author']).to.have.property '_ref'
+                    expect(rawBloPost['http://onto.example.org/properties/title']).to.not.have.property '_ref'
                     done()
 
     describe '.getJSONObject()', () ->
@@ -437,10 +436,12 @@ describe 'RdfModel', ()->
             blogPost.set 'keyword', ['foo', 'bar']
             jsonObject = {
                 "_type": blogPost.get('_type')
-                "_class": blogPost.get('_class')
                 "title":{"en":"hello world"}
                 "keyword":["foo","bar"]
             }
+            if db.type is 'rdf'
+                jsonObject._class = blogPost.class
+                jsonObject._uri = blogPost.uri
             expect(blogPost.toJSON()).to.be.equal JSON.stringify jsonObject
 
         it 'should include the id', (done) ->

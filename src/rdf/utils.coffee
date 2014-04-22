@@ -115,7 +115,7 @@ _getStatement = (prop, value, validx) ->
     if _.isRegExp(value)
         throw 'regex not implemented'
 
-    if _.isObject(value) and not _.isDate(value) and not value._uri?
+    if _.isObject(value) and not _.isDate(value) and not value._ref?
         for $op, val of value
 
             if $op in ['$gt', '$lt', '$gte', '$lte']

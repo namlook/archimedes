@@ -6,8 +6,8 @@ _ = require 'underscore'
 config = require('../config')
 db = config.Database()
 
-if db.dbtype isnt 'rdf'
-    console.log "Database is not an RDF database (got #{db.dbtype}). Skipping..."
+if db.type isnt 'rdf'
+    console.log "Database is not an RDF database (got #{db.type}). Skipping..."
     return
 
 

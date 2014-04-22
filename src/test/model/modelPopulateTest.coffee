@@ -60,7 +60,7 @@ describe 'model relations', ()->
                 expect(err).to.be.null
                 expect(infos.dbTouched).to.be.true
                 expect(one.id).to.be.not.null
-                db.One.find savedOne.id, (err, results) ->
+                db.One.find savedOne.reference(), (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 1
                     fetchedOne = results[0]
@@ -97,7 +97,7 @@ describe 'model relations', ()->
                 expect(infos.dbTouched).to.be.true
                 expect(one.id).to.be.not.null
 
-                db.One.find savedOne.id, (err, results) ->
+                db.One.find savedOne.reference(), (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 1
                     fetchedOne = results[0]
@@ -130,7 +130,7 @@ describe 'model relations', ()->
                 expect(err).to.be.null
                 expect(infos.dbTouched).to.be.true
                 expect(one.id).to.be.not.null
-                db.One.first savedOne.id, {populate: true}, (err, result) ->
+                db.One.first savedOne.reference(), {populate: true}, (err, result) ->
                     expect(err).to.be.null
                     obj = result.get 'literal'
                     expect(obj.get 'i18n', 'en').to.be.equal 'hello'
@@ -161,7 +161,7 @@ describe 'model relations', ()->
                 expect(infos.dbTouched).to.be.true
                 expect(one.id).to.be.not.null
 
-                db.One.first savedOne.id, {populate: true}, (err, fetchedOne) ->
+                db.One.first savedOne.reference(), {populate: true}, (err, fetchedOne) ->
                     expect(err).to.be.null
                     obj = fetchedOne.get('literal')
                     expect(obj.get('inner').get('string')).to.be.equal 'foo'
@@ -188,7 +188,7 @@ describe 'model relations', ()->
                 expect(err).to.be.null
                 expect(infos.dbTouched).to.be.true
                 expect(one.id).to.be.not.null
-                db.One.find savedOne.id, {populate: true}, (err, results) ->
+                db.One.find savedOne.reference(), {populate: true}, (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 1
                     obj = results[0].get 'literal'
@@ -221,7 +221,7 @@ describe 'model relations', ()->
                 expect(infos.dbTouched).to.be.true
                 expect(one.id).to.be.not.null
 
-                db.One.find savedOne.id, {populate: true}, (err, results) ->
+                db.One.find savedOne.reference(), {populate: true}, (err, results) ->
                     expect(err).to.be.null
                     fetchedOne = results[0]
                     obj = fetchedOne.get('literal')
@@ -259,7 +259,7 @@ describe 'model relations', ()->
                 expect(err).to.be.null
                 expect(infos.dbTouched).to.be.true
                 expect(multi.id).to.be.not.null
-                db.Multi.find savedMulti.id, (err, results) ->
+                db.Multi.find savedMulti.reference(), (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 1
                     fetchedMulti = results[0]
@@ -307,7 +307,7 @@ describe 'model relations', ()->
                 expect(err).to.be.null
                 expect(infos.dbTouched).to.be.true
                 expect(multi.id).to.be.not.null
-                db.Multi.find savedMulti.id, (err, results) ->
+                db.Multi.find savedMulti.reference(), (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 1
                     fetchedMulti = results[0]
@@ -357,7 +357,7 @@ describe 'model relations', ()->
                 expect(err).to.be.null
                 expect(infos.dbTouched).to.be.true
                 expect(multi.id).to.be.not.null
-                db.Multi.first savedMulti.id, {populate: true}, (err, populatedMulti) ->
+                db.Multi.first savedMulti.reference(), {populate: true}, (err, populatedMulti) ->
                     expect(err).to.be.null
                     literals = populatedMulti.get('literals')
                     i18nen = (l.get('i18n', 'en') for l in literals)
@@ -400,7 +400,7 @@ describe 'model relations', ()->
                 expect(err).to.be.null
                 expect(infos.dbTouched).to.be.true
                 expect(multi.id).to.be.not.null
-                db.Multi.first savedMulti.id, {populate: true}, (err, populatedMulti) ->
+                db.Multi.first savedMulti.reference(), {populate: true}, (err, populatedMulti) ->
                     expect(err).to.be.null
                     literals = populatedMulti.get('literals')
                     inners = (l.get('inner').get('string') for l in literals)
@@ -443,7 +443,7 @@ describe 'model relations', ()->
             multi.save (err, saved, infos) ->
                 expect(err).to.be.null
                 expect(infos.dbTouched).to.be.true
-                db.Multi.find multi.id, {populate: true}, (err, results) ->
+                db.Multi.find multi.reference(), {populate: true}, (err, results) ->
                     expect(err).to.be.null
                     populatedMulti = results[0]
                     literals = populatedMulti.get('literals')
@@ -487,7 +487,7 @@ describe 'model relations', ()->
                 expect(err).to.be.null
                 expect(infos.dbTouched).to.be.true
                 expect(multi.id).to.be.not.null
-                db.Multi.find savedMulti.id, {populate: true}, (err, results) ->
+                db.Multi.find savedMulti.reference(), {populate: true}, (err, results) ->
                     expect(err).to.be.null
                     populatedMulti = results[0]
                     literals = populatedMulti.get('literals')

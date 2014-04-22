@@ -106,7 +106,8 @@ module.exports = class Virtuoso
                 return callback err
             result = {}
             for item in data
-                result._uri = item.s.value
+                result._ref = item.s.value
+                result._uri = result._ref
                 result._id = item.s.value.split('/').slice(-1)
                 prop = item.p.value
                 lang = item.o.lang
@@ -116,7 +117,7 @@ module.exports = class Virtuoso
                     result._type = value.split('/').slice(-1)
                     continue
                 if item.o.type is 'uri'
-                    value = {_uri: value}
+                    value = {_ref: value}
                 if lang?
                     result[prop] = {} unless result[prop]?
                     result[prop][lang] = [] unless result[prop][lang]?
