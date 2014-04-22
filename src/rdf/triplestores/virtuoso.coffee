@@ -30,7 +30,6 @@ module.exports = class Virtuoso
         unless callback?
             throw "callback required"
 
-
         opts = {
             uri: @endpoint
             headers: {

@@ -272,11 +272,9 @@ describe 'Database.find(options)', ()->
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
                 expect(results.length).to.be.equal 5
-                console.log results
                 expect(_.every(r.options.dbTouched for r in results)).to.be.true
                 db.find {_id: (i.result._id for i in results)}, {sortBy: '-'+f.title}, (err, results) ->
                     expect(err).to.be.null
-                    console.log 'oooo', results
                     expect(results[0][f.title]).to.be.equal 5
                     expect(results[1][f.title]).to.be.equal 4
                     expect(results[2][f.title]).to.be.equal 3
