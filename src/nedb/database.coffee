@@ -91,7 +91,15 @@ class Database extends DatabaseInterface
     # example:
     #   @_find query, options, (err, docs) ->
     _find: (query, options, callback) ->
-        if query._id? and _.isArray(query._id)
+        if _.isArray(query)
+            ids = []
+            for item in query
+                if item._id?
+                    ids.push item._id
+                else if _.isString(item)
+                    ids.push item
+            query = {_id: {'$in': ids}}
+        else if query._id? and _.isArray(query._id)
             query._id = {'$in': query._id}
 
         query = @_convertQuery(query)
