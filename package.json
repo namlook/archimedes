@@ -4,6 +4,8 @@
   "description": "A simple ORDFM",
   "main": "lib",
   "scripts": {
+    "preinstall": "coffee -co lib src/",
+    "build": "coffee -co lib src/",
     "test": "mocha"
   },
   "keywords": [],
