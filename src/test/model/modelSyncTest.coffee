@@ -193,6 +193,13 @@ describe 'Model synchronization', ()->
                         expect(count).to.be.equal 1
                         done()
 
+        it 'should deal with undefined values', (done) ->
+            multi = new db.Multi {integer: [1, 2, 3]}
+            multi.set 'literals', undefined
+            multi.save (err, obj, infos) ->
+                expect(err).to.be.null
+                done()
+
 
     describe.skip '.batchSync()', () ->
         it 'should sync a batch of pojos', (done) ->

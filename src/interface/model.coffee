@@ -426,7 +426,7 @@ class Model
 
 
         # fetch the related instances
-        @db.find relationRef, (err, data) =>
+        @db.find relationRefs, (err, data) =>
             if err
                 return callback err
 
@@ -1038,6 +1038,14 @@ class Model
                     if @db[@schema[key].type]?
                         if options.populate
                             jsonObject[key].push val.toJSONObject(options)
+                        else if options.dereference
+                            if val.reference? and val.meta?.name
+                                dereference = {_id: val.id, _type: val.type}
+                            else if @db.isReference(val)
+                                dereference = @db.dereference(val)
+                            else
+                                throw "bad reference: #{val}"
+                            jsonObject[key].push dereference
                         else
                             if val.reference? and val.meta?.name
                                 reference = val.reference()
@@ -1051,6 +1059,14 @@ class Model
             else if @db[@schema[key].type]?
                 if options.populate
                     jsonObject[key] = value.toJSONObject(options)
+                else if options.dereference
+                    if value.reference? and value.meta?.name
+                        dereference = {_id: value.id, _type: value.type}
+                    else if @db.isReference(value)
+                        dereference = @db.dereference(value)
+                    else
+                        throw "bad reference: #{value}"
+                    jsonObject[key] = dereference
                 else
                     if value.meta?.name and value.reference?
                         reference = value.reference()

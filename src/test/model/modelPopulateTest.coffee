@@ -12,6 +12,11 @@ describe 'model relations', ()->
             string:
                 type: 'string'
 
+    class models.Inner2 extends config.Model
+        schema:
+            string:
+                type: 'string'
+
     class models.Literal extends config.Model
         schema:
             i18n:
@@ -25,6 +30,9 @@ describe 'model relations', ()->
                 type: 'date'
             inner:
                 type: 'Inner'
+            inner2:
+                type: 'Inner2'
+                multi: true
 
 
     class models.One extends config.Model
@@ -115,6 +123,50 @@ describe 'model relations', ()->
                             literal.get('date').toISOString())
                         done()
 
+        it 'should populate inner relation fields from differents type', (done) ->
+            inner = new db.Inner
+            inner.set 'string', 'foo'
+
+            inner2 = new db.Inner2
+            inner2.set 'string', 'bar'
+
+            inner2bis = new db.Inner2
+            inner2bis.set 'string', 'bar bis'
+
+            literal = new db.Literal
+            literal.set 'i18n', 'hello', 'en'
+            literal.set 'i18n', 'salut', 'fr'
+            literal.set 'string', 'hello'
+            literal.set 'integer', 2
+            literal.set 'date', new Date(2014, 1, 1)
+            literal.set 'inner', inner
+            literal.set 'inner2', [inner2, inner2bis]
+
+            one = new db.One
+            one.set 'literal', literal
+
+            one.save (err, savedOne, infos) ->
+                expect(err).to.be.null
+                expect(infos.dbTouched).to.be.true
+                expect(one.id).to.be.not.null
+
+                db.One.find savedOne.reference(), (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 1
+                    fetchedOne = results[0]
+                    expect(fetchedOne.get('literal')).to.be.string
+
+                    fetchedOne.populate {recursive: true}, (err, populatedOne) ->
+                        expect(err).to.be.null
+                        obj = populatedOne.get('literal')
+                        expect(obj.get('inner').get('string')).to.be.equal 'foo'
+                        expect(obj.get 'i18n', 'en').to.be.equal 'hello'
+                        expect(obj.get 'i18n', 'fr').to.be.equal 'salut'
+                        expect(obj.get 'string').to.be.equal 'hello'
+                        expect(obj.get 'integer').to.be.equal 2
+                        expect(obj.get('date').toISOString()).to.be.equal(
+                            literal.get('date').toISOString())
+                        done()
 
     describe '.first() [One]', () ->
         it 'should populate the first doc that match the id', (done) ->

@@ -739,7 +739,7 @@ describe 'Model', ()->
             blogpost.getLabel('title', 'en').should.be.equal 'title'
             blogpost.getLabel('title', 'fr').should.be.equal 'titre'
 
-    describe '.getJSONObject()', () ->
+    describe '.toJSONObject()', () ->
         it 'should return a jsonable object', () ->
             blogPost = new db.BlogPost
             blogPost.set 'title', 'hello world', 'en'
@@ -756,6 +756,7 @@ describe 'Model', ()->
                 expect(err).to.be.null
                 jsonBlogPost = blogPost.toJSONObject()
                 expect(jsonBlogPost._id).to.not.be.undefined
+                expect(jsonBlogPost._id).to.be.equal blogPost.id
 
         it 'should not be modified if the model changes', () ->
             blogPost = new db.BlogPost
@@ -764,7 +765,6 @@ describe 'Model', ()->
             jsonBlogPost = blogPost.toJSONObject()
             blogPost.set 'title', 'salut monde', 'fr'
             expect(jsonBlogPost.title.fr).to.be.undefined
-
 
        it 'should have its multi-field to be an array', (done) ->
             group = new db.Group
@@ -781,6 +781,29 @@ describe 'Model', ()->
                     expect(itemobject.authors).to.be.instanceof(Array)
                     expect(itemobject.authors.length).to.be.equal 1
                     done()
+
+        it 'should return relations as references', (done) ->
+            blogPost = new db.BlogPost
+            blogPost.set 'title', 'hello world', 'en'
+            blog = new db.Blog {_id: 'theblog'}
+            blogPost.set 'blog', blog
+            blogPost.save (err, model) ->
+                expect(err).to.be.null
+                jsonBlogPost = blogPost.toJSONObject()
+                expect(jsonBlogPost.blog._ref).to.be.equal db.reference(blog.type, blog.id)
+                done()
+
+        it 'with options.dereference, it should return id and the type of the reference', (done) ->
+            blogPost = new db.BlogPost
+            blogPost.set 'title', 'hello world', 'en'
+            blog = new db.Blog {_id: 'theblog'}
+            blogPost.set 'blog', blog
+            blogPost.save (err, model) ->
+                expect(err).to.be.null
+                jsonBlogPost = blogPost.toJSONObject({dereference: true})
+                expect(jsonBlogPost.blog._id).to.be.equal blog.id
+                expect(jsonBlogPost.blog._type).to.be.equal blog.type
+                done()
 
 
     describe '.getJSON()', () ->
