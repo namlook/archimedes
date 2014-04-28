@@ -2,6 +2,7 @@
 chai = require('chai')
 chai.Assertion.includeStack = true;
 expect = chai.expect
+
 _ = require 'underscore'
 config = require('../config')
 db = config.Database()

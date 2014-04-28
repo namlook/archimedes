@@ -1,5 +1,6 @@
 
 chai = require('chai')
+chai.Assertion.includeStack = true;
 expect = chai.expect
 
 config = require('../config')
