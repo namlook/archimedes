@@ -123,11 +123,17 @@ class Model
         for key, value of properties
             unless @schema[key]?
                 continue
+            if @schema[key].multi
+                if @schema[key].i18n
+                    for lang, val of value
+                        unless _.isArray(val)
+                            value[lang] = [val]
+                else
+                    unless _.isArray(value)
+                        value = [value]
             fieldType = @schema[key].type
             if @db[fieldType]? and not _.isEmpty(value)
                 if @schema[key].multi
-                    unless _.isArray(value)
-                        value = [value]
                     values = []
                     for val in value
                         if _.isObject(val) and not val.meta?.name?

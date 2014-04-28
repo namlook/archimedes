@@ -26,6 +26,34 @@ describe 'Model.schema', ()->
             date:
                 type: 'date'
 
+
+    class models.Multi extends config.Model
+        schema:
+            string:
+                type: 'string'
+                multi: true
+            integer:
+                type: 'integer'
+                multi: true
+            date:
+                type: 'date'
+                multi: true
+            literal:
+                type: 'Literal'
+                multi: true
+
+
+    class models.I18n extends config.Model
+        schema:
+            string:
+                type: 'string'
+                i18n: true
+            strings:
+                type: 'string'
+                i18n: true
+                multi: true
+
+
     class models.A extends config.Model
         schema:
             defaultValue:
@@ -81,12 +109,29 @@ describe 'Model.schema', ()->
                 multi: true
                 i18n: true
 
+
     db = null
 
     beforeEach (next) ->
         db = config.Database()
         db.registerModels models
         next()
+
+
+    describe 'constructor', () ->
+        it 'should convert non array values if multi-fields', () ->
+            multi = new db.Multi {
+                string: 'foo',
+                integer: 3,
+                literal: {string: 'bar'}
+            }
+            expect(multi.get('string')).to.be.instanceof(Array)
+            expect(multi.get('integer')).to.be.instanceof(Array)
+            expect(multi.get('literal')).to.be.instanceof(Array)
+
+            expect(multi.get('string')[0]).to.be.equal 'foo'
+            expect(multi.get('integer')[0]).to.be.equal 3
+            expect(multi.get('literal')[0].get('string')).to.be.equal 'bar'
 
     describe 'type validation', () ->
         it 'should throw an error if the value is not an integer', () ->
