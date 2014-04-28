@@ -124,7 +124,7 @@ class Model
             unless @schema[key]?
                 continue
             fieldType = @schema[key].type
-            if _.isObject(key) and @db[fieldType]?
+            if _.isObject(value) and @db[fieldType]?
                 if _.isArray(value)
                     value = (_.isObject(val) and @db[fieldType](val) or val for val in value)
                 else

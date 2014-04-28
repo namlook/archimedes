@@ -200,6 +200,43 @@ describe 'Model synchronization', ()->
                 expect(err).to.be.null
                 done()
 
+        it 'should save an object created from a json string', (done) ->
+            literal = new db.Literal {integer: 2, string: "foo"}
+            jsonLiteral = literal.toJSON()
+            newLiteral = new db.Literal JSON.parse(jsonLiteral)
+            newLiteral.save (err, obj, info) ->
+                expect(err).to.be.null
+                expect(info.dbTouched).to.be.true
+                jsonObject = obj.toJSONObject()
+                expect(obj.get('integer')).to.be.equal 2
+                expect(obj.get('string')).to.be.equal 'foo'
+                expect(jsonObject.integer).to.be.equal 2
+                expect(jsonObject.string).to.be.equal 'foo'
+                expect(jsonObject._id).to.not.be.null
+                done()
+
+
+        it 'should save an object with relation created from a json string', (done) ->
+            jsonLiteral = JSON.stringify {
+                integer: 2,
+                string: "foo",
+                inner: {string: 'bar'}
+            }
+            newLiteral = new db.Literal JSON.parse(jsonLiteral)
+            newLiteral.save (err, obj, info) ->
+                expect(err).to.be.null
+                expect(info.dbTouched).to.be.true
+
+                expect(obj.get('integer')).to.be.equal 2
+                expect(obj.get('string')).to.be.equal 'foo'
+                expect(obj.get('inner').get('string')).to.be.equal 'bar'
+
+                jsonObject = obj.toJSONObject({populate: true})
+                expect(jsonObject.integer).to.be.equal 2
+                expect(jsonObject.string).to.be.equal 'foo'
+                expect(jsonObject.inner.string).to.be.equal 'bar'
+                expect(jsonObject._id).to.not.be.null
+                done()
 
     describe.skip '.batchSync()', () ->
         it 'should sync a batch of pojos', (done) ->
