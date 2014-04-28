@@ -172,7 +172,7 @@ class Database extends DatabaseInterface
             unless options.instances
                 return callback null, ids
             else
-                return @_findByURIs ids, callback
+                return @_findByURIs ids, options, callback
 
 
     # ## _findByIds
