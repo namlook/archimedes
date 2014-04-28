@@ -46,13 +46,14 @@ class Database
     # example
     #   @find {title: foo, age: {$gt: 1}}, options, (err, docs) ->
     find: (query, options, callback) ->
-        if typeof(query) is 'function'
+        if not callback and typeof(options) is 'function'
+            callback = options
+            options = {}
+        else if not callback and typeof(query) is 'function'
             callback = query
             options = {}
             query = {}
-        else if typeof(options) is 'function' and not callback
-            callback = options
-            options = {}
+
 
         unless options.instances?
             options.instances = true
