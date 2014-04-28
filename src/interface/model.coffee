@@ -124,12 +124,23 @@ class Model
             unless @schema[key]?
                 continue
             fieldType = @schema[key].type
-            if _.isObject(value) and @db[fieldType]?
-                if _.isArray(value)
-                    value = (_.isObject(val) and @db[fieldType](val) or val for val in value)
+            if @db[fieldType]? and not _.isEmpty(value)
+                if @schema[key].multi
+                    unless _.isArray(value)
+                        value = [value]
+                    values = []
+                    for val in value
+                        if _.isObject(val) and not val.meta?.name?
+                            values.push new @db[fieldType](val)
+                        else
+                            values.push val
+                    value = values
                 else
-                    value = new @db[fieldType](value)
+                    if _.isObject(value) and not value.meta?.name
+                        value = new @db[fieldType](value)
             @set key, value
+
+
 
 
         # set all other properties to their default values if specified
@@ -608,40 +619,46 @@ class Model
                 throw new ValueError("#{@meta.name}.#{fieldName} is read-only")
 
         # if the value is an array, delegate to @push
-        if _.isArray(value)
-            unless @schema[fieldName].multi
+        if @schema[fieldName].multi and not @schema[fieldName].i18n
+            unless _.isArray(value)
                 throw new ValueError(
-                    "#{@meta.name}.#{fieldName} doesn't accept array")
+                    "#{@meta.name}.#{fieldName} must be an array of #{@schema[fieldName].type}")
             options.quietReadOnly = true
             @unset fieldName, options
             for item in value
                 @push fieldName, item, options
-        else
-            # set the value
-            if @schema[fieldName].i18n
-                unless @_properties[fieldName]?
-                    @_properties[fieldName] = {}
 
-                if isPojo(value) and not value.meta?.name
-                    i18nValue = value
-                else
-                    lang = options.lang
-                    i18nValue = {}
-                    i18nValue[lang] = value
+        # if it is an i18n field
+        else if @schema[fieldName].i18n
+            unless @_properties[fieldName]?
+                @_properties[fieldName] = {}
 
-                for lang, val of i18nValue
-                    if isPojo(value) and @schema[fieldName].multi
-                        for valitem in val
-                            @push fieldName, valitem, lang # XXX options not passed
-                    else
-                        val = @__processValue(val,
-                            {fieldName: fieldName, lang: lang, model: @})
-
-                        @_properties[fieldName][lang] = val
+            if isPojo(value) and not value.meta?.name
+                i18nValue = value
             else
-                value = @__processValue(value, {fieldName: fieldName, model: @})
+                lang = options.lang
+                i18nValue = {}
+                i18nValue[lang] = value
 
-                @_properties[fieldName] = value
+            for lang, val of i18nValue
+                if @schema[fieldName].multi
+                    options.quietReadOnly = true
+                    options.lang = lang
+                    @unset fieldName, options
+                    for _val in val
+                        @push fieldName, _val, options
+                else
+                    val = @__processValue(val,
+                        {fieldName: fieldName, lang: lang, model: @})
+
+                    @_properties[fieldName][lang] = val
+        else
+            if _.isArray(value)
+                throw new ValueError(
+                    "#{@meta.name}.#{fieldName} doesn't support array")
+            value = @__processValue(value, {fieldName: fieldName, model: @})
+
+            @_properties[fieldName] = value
 
 
     # ## push
@@ -959,8 +976,10 @@ class Model
             if _.isArray value
                 @_properties[key] = _.clone(value)
             else if _.isObject(value) and not _.isArray(value)
-                @_properties[key] = {} unless @_properties[key]
+                @_properties[key] = {} unless @_properties[key]?
                 for lang, val of value
+                    if _.isArray(val)
+                        val = _.clone(val)
                     @_properties[key][lang] = val
             else
                 @_properties[key] = value
@@ -1191,8 +1210,13 @@ class Model
         type = @schema[attrs.fieldName].type
         ok = true
         if @db._types[type]?
-            unless @db._types[type].validate(value)
-                ok = false
+            if @schema[attrs.fieldName].multi
+                for val in value
+                    unless @db._types[type].validate(val)
+                        ok = false
+            else
+                unless @db._types[type].validate(value)
+                    ok = false
         else if @db[type]?
             if (not _.isString(value) and type isnt value.meta?.name) or (
                 _.isString(value) and not @db.isReference(value))
@@ -1247,8 +1271,10 @@ class Model
             if _.isArray value
                 @_cachedProperties[key] = _.clone(value)
             else if _.isObject(value) and not _.isArray(value)
-                @_cachedProperties[key] = {} unless @_cachedProperties[key]
+                @_cachedProperties[key] = {} unless @_cachedProperties[key]?
                 for lang, val of value
+                    if _.isArray(val)
+                        val = _.clone(val)
                     @_cachedProperties[key][lang] = val
             else
                 @_cachedProperties[key] = value

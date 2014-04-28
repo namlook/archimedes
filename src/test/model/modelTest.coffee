@@ -139,8 +139,11 @@ describe 'Model', ()->
 
         it 'should set the values of a multi field', ()->
             blogPost = new db.BlogPost
+            expect(-> blogPost.set 'keyword', 'blah').to.throw 'BlogPost.keyword must be an array of string'
             blogPost.set 'keyword', ['foo', 'bar']
             blogPost.get('keyword').should.include 'foo', 'bar'
+            blogPost.set 'keyword', ['arf', 'erf']
+            expect(blogPost.get('keyword')).to.not.include.members ['foo', 'bar']
 
 
         it 'should set the value of an i18n field (options is object)', () ->
@@ -180,6 +183,8 @@ describe 'Model', ()->
             blog.set 'i18ntags', ['toto', 'tata'], {lang: 'fr'}
             blog.get('i18ntags', {lang: 'en'}).should.include 'foo', 'bar', 'baz'
             blog.get('i18ntags', {lang: 'fr'}).should.include 'toto', 'tata'
+            blog.set 'i18ntags', ['arf', 'erf'], {lang: 'en'}
+            expect(blog.get('i18ntags', 'en')).to.not.include.members ['foo', 'bar', 'baz']
 
 
         it 'should set the value of a relation field', () ->
@@ -202,7 +207,7 @@ describe 'Model', ()->
             expect(-> blogPost.set('title', ['foo', 'bar'])).to.throw(
                 /BlogPost.title is i18n and need a language/)
             expect(-> blogPost.set('title', ['foo', 'bar'], 'en')).to.throw(
-                /BlogPost.title doesn't accept array/)
+                /BlogPost.title must be a string/)
 
         it "should throw an error when the field which don't exists", () ->
             blogPost = new db.BlogPost

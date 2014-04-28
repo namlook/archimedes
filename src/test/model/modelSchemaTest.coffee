@@ -170,12 +170,12 @@ describe 'Model.schema', ()->
             a = new db.A
             a.set 'computedMultiI18nValue', [1, 2], 'en'
             a.set 'computedMultiI18nValue', [4, 2], 'fr'
-            expect(a.get 'computedMultiI18nValue', 'en').to.include '1@en', '2@en'
-            expect(a.get 'computedMultiI18nValue', 'fr').to.include '4@fr', '2@fr'
+            expect(a.get 'computedMultiI18nValue', 'en').to.include.members ['1@en', '2@en']
+            expect(a.get 'computedMultiI18nValue', 'fr').to.include.members ['4@fr', '2@fr']
             a.push 'computedMultiI18nValue', 4, 'en'
             a.push 'computedMultiI18nValue', 8, 'fr'
-            expect(a.get 'computedMultiI18nValue', 'en').to.include '1@en', '2@en', '4@en'
-            expect(a.get 'computedMultiI18nValue', 'fr').to.include '4@fr', '2@fr', '8@fr'
+            expect(a.get 'computedMultiI18nValue', 'en').to.include.members ['1@en', '2@en', '4@en']
+            expect(a.get 'computedMultiI18nValue', 'fr').to.include.members ['4@fr', '2@fr', '8@fr']
 
 
     describe 'read only field', () ->

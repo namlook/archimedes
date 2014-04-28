@@ -1,5 +1,8 @@
 
-expect = require('chai').expect
+chai = require('chai')
+chai.Assertion.includeStack = true;
+expect = chai.expect
+
 _ = require 'underscore'
 config = require('../config')
 
@@ -235,6 +238,41 @@ describe 'Model synchronization', ()->
                 expect(jsonObject.integer).to.be.equal 2
                 expect(jsonObject.string).to.be.equal 'foo'
                 expect(jsonObject.inner.string).to.be.equal 'bar'
+                expect(jsonObject._id).to.not.be.null
+                done()
+
+        it 'should save an object with relation created from a json string', (done) ->
+            jsonLiterals = []
+            for i in [1..5]
+                jsonLiterals.push {
+                    integer: i,
+                    string: "#{i}-foo",
+                    inner: {string: "#{i}-bar"}
+                }
+            jsonMulti = JSON.stringify {
+                integer: [3],
+                literals: jsonLiterals
+            }
+            newMulti = new db.Multi JSON.parse(jsonMulti)
+            newMulti.save (err, obj, info) ->
+                expect(err).to.be.null
+                expect(info.dbTouched).to.be.true
+
+                expect(obj.get('integer')).to.include.members [3]
+                literals = obj.get('literals')
+                expect(literals.length).to.be.equal 5
+                expect(i.get('integer') for i in literals).to.include.members [1,2,3,4,5]
+                expect(i.get('inner').get('string') for i in literals).to.include.members [
+                    "1-bar", "2-bar", "3-bar", "4-bar", "5-bar"
+                ]
+
+                jsonObject = obj.toJSONObject({populate: true})
+                expect(jsonObject.integer).to.include.members [3]
+                literals = jsonObject.literals
+                expect(i.integer for i in literals).to.include.members [1,2,3,4,5]
+                expect(i.inner.string for i in literals).to.include.members [
+                    "1-bar", "2-bar", "3-bar", "4-bar", "5-bar"
+                ]
                 expect(jsonObject._id).to.not.be.null
                 done()
 
