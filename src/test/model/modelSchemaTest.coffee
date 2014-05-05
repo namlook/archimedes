@@ -25,6 +25,8 @@ describe 'Model.schema', ()->
                 type: 'float'
             date:
                 type: 'date'
+            literal:
+                type: 'Literal'
 
 
     class models.Multi extends config.Model
@@ -132,6 +134,49 @@ describe 'Model.schema', ()->
             expect(multi.get('string')[0]).to.be.equal 'foo'
             expect(multi.get('integer')[0]).to.be.equal 3
             expect(multi.get('literal')[0].get('string')).to.be.equal 'bar'
+
+        it 'should accept null values for multi-fields', () ->
+            multi = new db.Multi {
+                string: 'foo',
+                integer: null,
+                literal: null
+            }
+            expect(multi.get('string')).to.be.instanceof(Array)
+            expect(multi.get('integer')).to.be.undefined
+            expect(multi.get('literal')).to.be.undefined
+
+        it 'should accept model references', (done) ->
+            embedliteral = new db.Literal {'integer': 9}
+            embedliteral.save (err, model) ->
+                expect(err).to.be.null
+                literal = new db.Literal {
+                    string: 'foo',
+                    literal: {_id: embedliteral.id, _type: embedliteral.type}
+                }
+                literal.save (err, literal) ->
+                    expect(err).to.be.null
+                    expect(literal.get('literal')).to.be.equal db.reference(embedliteral.type, embedliteral.id)
+                    literal.populate 'literal', (err, newLiteral) ->
+                        expect(err).to.be.null
+                        expect(newLiteral.get('literal').get('integer')).to.be.equal 9
+                        done()
+
+
+        it 'should accept multiple model references', (done) ->
+            literal = new db.Literal {'integer': 9}
+            literal.save (err, model) ->
+                expect(err).to.be.null
+                multi = new db.Multi {
+                    string: ['foo'],
+                    literal: [{_id: literal.id, _type: literal.type}]
+                }
+                multi.save (err, multi) ->
+                    expect(err).to.be.null
+                    expect(multi.get('literal')[0]).to.be.equal db.reference(literal.type, literal.id)
+                    multi.populate 'literal', (err, newMulti) ->
+                        expect(err).to.be.null
+                        expect(newMulti.get('literal')[0].get('integer')).to.be.equal 9
+                        done()
 
     describe 'type validation', () ->
         it 'should throw an error if the value is not an integer', () ->

@@ -123,6 +123,8 @@ class Model
         for key, value of properties
             unless @schema[key]?
                 continue
+            if value is null
+                continue
             if @schema[key].multi
                 if @schema[key].i18n
                     for lang, val of value
@@ -137,13 +139,22 @@ class Model
                     values = []
                     for val in value
                         if _.isObject(val) and not val.meta?.name?
-                            values.push new @db[fieldType](val)
-                        else
-                            values.push val
+                            if (val._id? and val._type)
+                                val = @db.reference(val._type, val._id)
+                            else if (val._ref)
+                                val = val._ref
+                            else
+                                val = new @db[fieldType](val)
+                        values.push val
                     value = values
                 else
                     if _.isObject(value) and not value.meta?.name
-                        value = new @db[fieldType](value)
+                        if (value._id? and value._type)
+                            value = @db.reference(value._type, value._id)
+                        else if (value._ref)
+                            value = value._ref
+                        else
+                            value = new @db[fieldType](value)
             @set key, value
 
 
@@ -1255,15 +1266,18 @@ class Model
         for fieldName, value of @_properties
             schema = @schema[fieldName]
             if @db[schema.type]?
-                if schema.i18n
-                    for lang, val of value
-                        if schema.multi
-                            pendings = _.union(pendings, val)
-                        else
-                            pendings.push val
-                else if schema.multi
-                    pendings = _.union(pendings, value)
-                else
+                # i18n fields cannot be a relation (only string)
+                # if schema.i18n
+                #     for lang, val of value
+                #         if schema.multi
+                #             if val.meta?.name
+                #                 pendings = _.union(pendings, val)
+                #         else if val.meta?.name
+                #             pendings.push val
+                if schema.multi and value.meta?.name
+                    values = (val for val in value when val.meta?.name)
+                    pendings = _.union(pendings, values)
+                else if value.meta?.name
                     pendings.push value
         return pendings
 
