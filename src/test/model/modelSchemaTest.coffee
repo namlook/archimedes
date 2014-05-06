@@ -135,6 +135,23 @@ describe 'Model.schema', ()->
             expect(multi.get('integer')[0]).to.be.equal 3
             expect(multi.get('literal')[0].get('string')).to.be.equal 'bar'
 
+        it 'should accept values for multi-fields', (done) ->
+            multi = new db.Multi {
+                string: 'foo',
+                integer: 3,
+                literal: [{string: 'bar'}]
+            }
+            expect(multi.get('string')).to.be.instanceof(Array)
+            expect(multi.get('integer')).to.be.instanceof(Array)
+            expect(multi.get('literal')).to.be.instanceof(Array)
+
+            expect(multi.get('string')[0]).to.be.equal 'foo'
+            expect(multi.get('integer')[0]).to.be.equal 3
+            expect(multi.get('literal')[0].get('string')).to.be.equal 'bar'
+            multi.save (err) ->
+                expect(err).to.be.null
+                done()
+
         it 'should accept null values for multi-fields', () ->
             multi = new db.Multi {
                 string: 'foo',

@@ -139,7 +139,7 @@ class Model
                     values = []
                     for val in value
                         if _.isObject(val) and not val.meta?.name?
-                            if (val._id? and val._type)
+                            if (val._id? and val._type?)
                                 val = @db.reference(val._type, val._id)
                             else if (val._ref)
                                 val = val._ref
@@ -149,14 +149,13 @@ class Model
                     value = values
                 else
                     if _.isObject(value) and not value.meta?.name
-                        if (value._id? and value._type)
+                        if (value._id? and value._type?)
                             value = @db.reference(value._type, value._id)
                         else if (value._ref)
                             value = value._ref
                         else
                             value = new @db[fieldType](value)
             @set key, value
-
 
 
 
@@ -1274,7 +1273,7 @@ class Model
                 #                 pendings = _.union(pendings, val)
                 #         else if val.meta?.name
                 #             pendings.push val
-                if schema.multi and value.meta?.name
+                if schema.multi
                     values = (val for val in value when val.meta?.name)
                     pendings = _.union(pendings, values)
                 else if value.meta?.name
