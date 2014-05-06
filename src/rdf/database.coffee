@@ -628,9 +628,9 @@ class Database extends DatabaseInterface
     # build an URI from a couple type/id.
     reference: (type, id) ->
         if not id?
-            throw "id is required"
+            throw "id is required to build reference"
         if not type?
-            throw "type is required"
+            throw "type is required to build reference"
         type = _.str.underscored(type)
         return "#{@defaultInstancesNamespace}/#{type}/#{id}"
 

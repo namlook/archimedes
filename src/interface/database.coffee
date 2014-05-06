@@ -369,9 +369,9 @@ class Database
     # to specify relationship between objects
     reference: (type, id) ->
         if not id?
-            throw "id is required"
+            throw "id is required to build reference"
         if not type?
-            throw "type is required"
+            throw "type is required to build reference"
         return "#{type}::#{id}"
 
     # ## dereference
