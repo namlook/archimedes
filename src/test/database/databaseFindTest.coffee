@@ -465,6 +465,71 @@ describe 'Database.find()', ()->
                     expect(results.length).to.be.equal 3
                     done()
 
+    describe 'query[$regex]', () ->
+        it 'should return the docs that match a simple query', (done) ->
+            pojos = []
+            for i in [1..5]
+                pojo = {_type: 'Test'}
+                title = if i%2 is 0 then 'bar' else 'foo'
+                pojo[f.title] = "title #{i%2} #{i} #{title}"
+                pojo[f.index] = i*10
+                pojos.push pojo
+            db.batchSync pojos, (err, results) ->
+                expect(err).to.be.null
+                query = {_type: 'Test'}
+                query[f.title] = {$regex: "^title 1"}
+                db.find query, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 3
+                    query[f.title] = {$regex: 'bar$'}
+                    db.find query, (err, results) ->
+                        expect(err).to.be.null
+                        expect(results.length).to.be.equal 2
+                        done()
+
+        it 'should return the docs that match a simple query with triple quotes', (done) ->
+            pojos = []
+            for i in [1..5]
+                pojo = {_type: 'Test'}
+                title = if i%2 is 0 then 'bar' else 'foo'
+                pojo[f.title] = "title\'\'\' #{i%2} #{i} #{title}"
+                pojo[f.index] = i*10
+                pojos.push pojo
+            db.batchSync pojos, (err, results) ->
+                expect(err).to.be.null
+                query = {_type: 'Test'}
+                query[f.title] = {$regex: "^title''' 1"}
+                db.find query, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 3
+                    query[f.title] = {$regex: 'bar$'}
+                    db.find query, (err, results) ->
+                        expect(err).to.be.null
+                        expect(results.length).to.be.equal 2
+                        done()
+
+    describe 'query[$iregex]', () ->
+        it 'should return the docs that match a simple query', (done) ->
+            pojos = []
+            for i in [1..5]
+                pojo = {_type: 'Test'}
+                title = if i%2 is 0 then 'bar' else 'foo'
+                pojo[f.title] = "Title #{i%2} #{i} #{title}"
+                pojo[f.index] = i*10
+                pojos.push pojo
+            db.batchSync pojos, (err, results) ->
+                expect(err).to.be.null
+                query = {_type: 'Test'}
+                query[f.title] = {$iregex: "^title 1"}
+                db.find query, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 3
+                    query[f.title] = {$iregex: 'BAR$'}
+                    db.find query, (err, results) ->
+                        expect(err).to.be.null
+                        expect(results.length).to.be.equal 2
+                        done()
+
     describe 'query multi-fields', () ->
         it 'should return the docs that match a simple query on a multi-fields', (done) ->
             pojos = []

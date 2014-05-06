@@ -125,6 +125,15 @@ _getStatement = (prop, value, validx) ->
                 op = operators[$op]
                 sparqlQuery.push "filter (#{variable} #{op} #{_val})"
 
+            else if $op in ['$regex', '$iregex']
+                iregex = ''
+                if $op is '$iregex'
+                    iregex = ', "i"'
+                if val.indexOf("'''") > -1
+                    sparqlQuery.push """filter regex(#{variable}, \"\"\"#{val}\"\"\"#{iregex})"""
+                else
+                    sparqlQuery.push """filter regex(#{variable}, '''#{val}'''#{iregex})"""
+
             else if $op in ['$in', '$nin']
                 if $op is '$nin'
                     isNot = true
