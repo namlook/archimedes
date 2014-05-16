@@ -158,7 +158,6 @@ class Model
             @set key, value
 
 
-
         # set all other properties to their default values if specified
         for fieldName, field of @schema
             if field.default? and not properties[fieldName]?
@@ -276,14 +275,24 @@ class Model
                     return callback err
                 unless options.instances
                     return callback null, pojos
-                instances = (new @(pojo) for pojo in pojos)
+                try
+                    instances = (new @(pojo) for pojo in pojos)
+                catch e
+                    return callback e
                 if options.populate
                     async.map instances, (instance, cb) ->
                         populateOptions = {}
-                        if _.isNumber options.populate
-                            fields = (fname for fname, val of @schema when @db[val.type]?)
+                        if _.isNumber(options.populate)
+                            populateOptions.recursive = options.populate
+                            fields = []
+                            # fields = (fname for fname, val of @schema when @db[val.type]?)
+                        else if _.isBoolean(options.populate)
+                            populateOptions.recursive = true
+                            fields = []
                         else # populate is a list of fields
-                            fields = null
+                            fields = _.clone(options.populate)
+                            unless _.isArray(fields)
+                                fields = [fields]
                             populateOptions.recursive = true
                         instance.populate fields, populateOptions, cb
                     , (err, data) =>
@@ -411,7 +420,7 @@ class Model
         if typeof(fields) is 'function' and not callback
             callback = fields
             options = {}
-            fields = null
+            fields = []
 
         if typeof(options) is 'function' and not callback
             callback = options
@@ -419,7 +428,8 @@ class Model
 
         if _.isObject(fields) and not _.isArray(fields)
             options = fields
-            fields = null
+            fields = []
+
 
         # if no fields are specified, build it from the schema
         unless _.isArray(fields) and fields.length > 0
@@ -431,7 +441,10 @@ class Model
 
         relationRefs = []
         for fieldName in fields
-            relationRef = @get(fieldName)
+            try
+                relationRef = @get(fieldName)
+            catch e
+                return callback e
             if relationRef
                 if _.isString relationRef
                     relationRef = [relationRef]
@@ -453,7 +466,7 @@ class Model
 
 
         # fetch the related instances
-        @db.find relationRefs, (err, data) =>
+        @db.find relationRefs, options, (err, data) =>
             if err
                 return callback err
 
@@ -475,7 +488,13 @@ class Model
                 if options.recursive
                     instancesToPopulate = _.union(instancesToPopulate, instance)
 
+
+
             # if recursive, populate the inner instances
+            if _.isNumber(options.recursive)
+                options.recursive -= 1
+
+
             if options.recursive
                 async.map instancesToPopulate, (instance, cb) ->
                     instance.populate options, cb
@@ -1071,7 +1090,7 @@ class Model
                     #         else
                     #             jsonObject[key].push val.toJSONObject(options)
                     if @db[@schema[key].type]?
-                        if options.populate
+                        if options.populate and val.toJSONObject?
                             jsonObject[key].push val.toJSONObject(options)
                         else if options.dereference
                             if val.reference? and val.meta?.name
@@ -1092,7 +1111,7 @@ class Model
                     else
                         jsonObject[key].push val
             else if @db[@schema[key].type]?
-                if options.populate
+                if options.populate and value.toJSONObject?
                     jsonObject[key] = value.toJSONObject(options)
                 else if options.dereference
                     if value.reference? and value.meta?.name
@@ -1257,7 +1276,7 @@ class Model
         return value
 
 
-    # ## __getPendingRelations()
+    # ## _getPendingRelations()
     #
     # returns all the pending relations of the model
     _getPendingRelations: () ->

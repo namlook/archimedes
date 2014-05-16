@@ -14,11 +14,15 @@ describe 'model relations', ()->
         schema:
             string:
                 type: 'string'
+            inner2:
+                type: 'Inner2'
 
     class models.Inner2 extends config.Model
         schema:
             string:
                 type: 'string'
+            inner:
+                type: 'Inner'
 
     class models.Literal extends config.Model
         schema:
@@ -75,7 +79,7 @@ describe 'model relations', ()->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 1
                     fetchedOne = results[0]
-                    expect(fetchedOne.get('literal')).to.be.string
+                    expect(fetchedOne.get('literal')).to.be.a('string')
 
                     fetchedOne.populate (err, populatedOne) ->
                         expect(err).to.be.null
@@ -112,7 +116,7 @@ describe 'model relations', ()->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 1
                     fetchedOne = results[0]
-                    expect(fetchedOne.get('literal')).to.be.string
+                    expect(fetchedOne.get('literal')).to.be.a('string')
 
                     fetchedOne.populate {recursive: true}, (err, populatedOne) ->
                         expect(err).to.be.null
@@ -157,7 +161,7 @@ describe 'model relations', ()->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 1
                     fetchedOne = results[0]
-                    expect(fetchedOne.get('literal')).to.be.string
+                    expect(fetchedOne.get('literal')).to.be.a('string')
 
                     fetchedOne.populate {recursive: true}, (err, populatedOne) ->
                         expect(err).to.be.null
@@ -170,6 +174,88 @@ describe 'model relations', ()->
                         expect(obj.get('date').toISOString()).to.be.equal(
                             literal.get('date').toISOString())
                         done()
+
+        it 'should populate only specified fields', (done) ->
+            inner2 = new db.Inner2
+            inner2.set 'string', 'bar'
+
+            inner = new db.Inner
+            inner.set 'string', 'foo'
+            inner.set 'inner2', inner2
+
+            literal = new db.Literal
+            literal.set 'inner', inner
+
+            literal.save (err) ->
+                expect(err) .to.be.null
+                db.Literal.first literal.reference(), (err, fetchLiteral) ->
+                    expect(err).to.be.null
+                    expect(fetchLiteral.get('inner')).to.be.a('string')
+                    fetchLiteral.populate ['inner'], (err) ->
+                        expect(err).to.be.null
+                        expect(fetchLiteral.get('inner').get('string')).to.be.equal 'foo'
+                        expect(fetchLiteral.get('inner').get('inner2')).to.be.a('string')
+                        return done();
+
+        it 'should populate recursively only specified fields', (done) ->
+            inner2 = new db.Inner2
+            inner2.set 'string', 'bar'
+
+            inner = new db.Inner
+            inner.set 'string', 'foo'
+            inner.set 'inner2', inner2
+
+            literal = new db.Literal
+            literal.set 'inner', inner
+
+            literal.save (err) ->
+                expect(err) .to.be.null
+                db.Literal.first literal.reference(), (err, fetchLiteral) ->
+                    expect(err).to.be.null
+                    expect(fetchLiteral.get('inner')).to.be.a('string')
+                    fetchLiteral.populate ['inner'], {recursive: true}, (err) ->
+                        expect(err).to.be.null
+                        expect(fetchLiteral.get('inner').get('string')).to.be.equal 'foo'
+                        expect(fetchLiteral.get('inner').get('inner2').get('string')).to.be.equal 'bar'
+                        return done();
+
+        it 'should populate into a specific level of recursivity', (done) ->
+            inner = new db.Inner
+            inner.set 'string', 'foo'
+
+            inner2 = new db.Inner2
+            inner2.set 'string', 'bar'
+            inner2.set 'inner', new db.Inner({string: 'foo2'})
+
+            inner.set 'inner2', inner2
+
+            literal = new db.Literal
+            literal.set 'inner', inner
+
+            literal.save (err, savedLiteral) ->
+                expect(err) .to.be.null
+                db.Literal.first savedLiteral.reference(), (err, fetchLiteral) ->
+                    expect(err).to.be.null
+                    expect(fetchLiteral.get('inner')).to.be.a('string')
+                    fetchLiteral.populate ['inner'], {recursive: 3}, (err, fetchLiteral) ->
+                        expect(err).to.be.null
+                        expect(fetchLiteral.get('inner').get('string')).to.be.equal 'foo'
+                        expect(fetchLiteral.get('inner').get('inner2').get('string')).to.be.equal 'bar'
+                        expect(fetchLiteral.get('inner').get('inner2').get('inner')).to.not.be.a('string')
+                        expect(fetchLiteral.get('inner').get('inner2').get('inner').get('string')).to.be.equal 'foo2'
+                        db.Literal.first savedLiteral.reference(), (err, fetchLiteral2) ->
+                            expect(err).to.be.null
+                            expect(fetchLiteral2.get('inner')).to.be.a('string')
+                            fetchLiteral2.populate ['inner'], {recursive: 2}, (err) ->
+                                expect(err).to.be.null
+                                expect(fetchLiteral2.get('inner').get('string')).to.be.equal 'foo'
+                                expect(fetchLiteral2.get('inner').get('inner2').get('string')).to.be.equal 'bar'
+                                expect(fetchLiteral2.get('inner').get('inner2').get('inner')).to.be.a('string')
+                                fetchLiteral2.get('inner').get('inner2').populate ['inner'], {recursive: 1}, (err) ->
+                                    expect(err).to.be.null
+                                    expect(fetchLiteral2.get('inner').get('inner2').get('inner').get('string')).to.be.equal 'foo2'
+                                    return done();
+
 
     describe '.first() [One]', () ->
         it 'should populate the first doc that match the id', (done) ->
@@ -228,6 +314,34 @@ describe 'model relations', ()->
                         literal.get('date').toISOString())
                     done()
 
+
+        it 'should populate into a specific level of recursivity', (done) ->
+            inner = new db.Inner
+            inner.set 'string', 'foo'
+
+            inner2 = new db.Inner2
+            inner2.set 'string', 'bar'
+            inner2.set 'inner', new db.Inner({string: 'foo2'})
+
+            inner.set 'inner2', inner2
+
+            literal = new db.Literal
+            literal.set 'inner', inner
+
+            literal.save (err, savedLiteral) ->
+                expect(err) .to.be.null
+                db.Literal.first savedLiteral.reference(), {populate: 2}, (err, fetchLiteral) ->
+                    expect(err).to.be.null
+                    expect(fetchLiteral.get('inner').get('string')).to.be.equal 'foo'
+                    expect(fetchLiteral.get('inner').get('inner2').get('string')).to.be.equal 'bar'
+                    expect(fetchLiteral.get('inner').get('inner2').get('inner')).to.be.a('string')
+                    db.Literal.first savedLiteral.reference(), {populate: 3}, (err, fetchLiteral) ->
+                        expect(err).to.be.null
+                        expect(fetchLiteral.get('inner').get('string')).to.be.equal 'foo'
+                        expect(fetchLiteral.get('inner').get('inner2').get('string')).to.be.equal 'bar'
+                        expect(fetchLiteral.get('inner').get('inner2').get('inner')).to.not.be.a('string')
+                        expect(fetchLiteral.get('inner').get('inner2').get('inner').get('string')).to.be.equal 'foo2'
+                        done()
 
     describe '.find() [One]', () ->
         it 'should populate all docs that match the query', (done) ->
@@ -289,6 +403,34 @@ describe 'model relations', ()->
                         literal.get('date').toISOString())
                     done()
 
+        it 'should populate into a specific level of recursivity', (done) ->
+            inner = new db.Inner
+            inner.set 'string', 'foo'
+
+            inner2 = new db.Inner2
+            inner2.set 'string', 'bar'
+            inner2.set 'inner', new db.Inner({string: 'foo2'})
+
+            inner.set 'inner2', inner2
+
+            literal = new db.Literal
+            literal.set 'inner', inner
+
+            literal.save (err, savedLiteral) ->
+                expect(err) .to.be.null
+                db.Literal.find savedLiteral.reference(), {populate: 2}, (err, fetchLiterals) ->
+                    expect(err).to.be.null
+                    expect(fetchLiterals[0].get('inner').get('string')).to.be.equal 'foo'
+                    expect(fetchLiterals[0].get('inner').get('inner2').get('string')).to.be.equal 'bar'
+                    expect(fetchLiterals[0].get('inner').get('inner2').get('inner')).to.be.a('string')
+                    db.Literal.find savedLiteral.reference(), {populate: 3}, (err, fetchLiterals) ->
+                        expect(err).to.be.null
+                        expect(fetchLiterals[0].get('inner').get('string')).to.be.equal 'foo'
+                        expect(fetchLiterals[0].get('inner').get('inner2').get('string')).to.be.equal 'bar'
+                        expect(fetchLiterals[0].get('inner').get('inner2').get('inner')).to.not.be.a('string')
+                        expect(fetchLiterals[0].get('inner').get('inner2').get('inner').get('string')).to.be.equal 'foo2'
+                        done()
+
 
     describe '.populate() [Multi]', () ->
         it 'should populate the relation fields', (done) ->
@@ -318,7 +460,7 @@ describe 'model relations', ()->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 1
                     fetchedMulti = results[0]
-                    (expect(i).to.be.string for i in fetchedMulti.get('literals'))
+                    (expect(i).to.be.a('string') for i in fetchedMulti.get('literals'))
 
                     fetchedMulti.populate {recursive: true}, (err, populatedMulti) ->
                         literals = populatedMulti.get('literals')
@@ -366,7 +508,7 @@ describe 'model relations', ()->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 1
                     fetchedMulti = results[0]
-                    (expect(i).to.be.string for i in fetchedMulti.get('literals'))
+                    (expect(i).to.be.a('string') for i in fetchedMulti.get('literals'))
 
                     fetchedMulti.populate {recursive: true}, (err, populatedMulti) ->
                         literals = populatedMulti.get('literals')
@@ -387,6 +529,47 @@ describe 'model relations', ()->
                         ]
                         done()
 
+        it 'should populate into a specific level of recursivity', (done) ->
+            literal = new db.Literal
+            literal.set 'i18n', 'hello', 'en'
+            literal.set 'i18n', 'salut', 'fr'
+            literal.set 'string', 'hello'
+            literal.set 'integer', 2
+            literal.set 'date', new Date(2014, 1, 1)
+            literal.set 'inner', new db.Inner {string: 'foo'}
+
+            literal2 = new db.Literal
+            literal2.set 'i18n', 'bye', 'en'
+            literal2.set 'i18n', 'au revoir', 'fr'
+            literal2.set 'string', 'hi'
+            literal2.set 'integer', 3
+            literal2.set 'date', new Date(2014, 1, 2)
+            literal2.set 'inner', new db.Inner {string: 'bar'}
+
+            multi = new db.Multi
+            multi.push 'literals', literal
+            multi.push 'literals', literal2
+
+            multi.save (err, savedMulti, infos) ->
+                expect(err).to.be.null
+                expect(infos.dbTouched).to.be.true
+                expect(multi.id).to.be.not.null
+                db.Multi.find savedMulti.reference(), {populate: 1}, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 1
+                    fetchedMulti = results[0]
+                    for literal in fetchedMulti.get('literals')
+                        expect(literal).to.not.be.a('string')
+                        expect(literal.get('inner')).to.be.a('string')
+                    db.Multi.find savedMulti.reference(), {populate: 2}, (err, results) ->
+                        expect(err).to.be.null
+                        expect(results.length).to.be.equal 1
+                        fetchedMulti = results[0]
+                        for literal in fetchedMulti.get('literals')
+                            expect(literal).to.not.be.a('string')
+                            expect(literal.get('inner')).to.not.be.a('string')
+                            expect(literal.get('inner').get('string')).to.be.a('string')
+                        done()
 
     describe '.first() [Multi]', () ->
         it 'should populate the first doc that match the id', (done) ->
