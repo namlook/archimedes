@@ -4,7 +4,7 @@ _ = require 'underscore'
 
 
 
-exports.defaultTypes = {
+defaultTypes = {
     'string':
         validate: _.isString
     'integer':
@@ -53,7 +53,10 @@ exports.defaultTypes = {
             uuid(value, 3) or uuid(value, 4) or uuid(value, 5)
 }
 
+# aliases
+defaultTypes['bool'] = defaultTypes['boolean']
 
+exports.defaultTypes = defaultTypes
 
 class exports.Type
 
