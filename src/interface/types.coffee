@@ -14,7 +14,10 @@ defaultTypes = {
     'float':
         validate: check.isFloat
         compute: (value, attrs) ->
-            parseFloat(value)
+            precision = attrs.model.schema[attrs.fieldName].precision
+            if precision is undefined
+                precision = 3
+            parseFloat(value.toPrecision(precision))
     'boolean':
         compute: (value, attrs) ->
             unless _.isBoolean(value) or value in [0, 1]
