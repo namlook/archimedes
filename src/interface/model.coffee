@@ -133,7 +133,17 @@ class Model
                 else
                     unless _.isArray(value)
                         value = [value]
+
+                    # sorting 'asc' by default
+                    # use `schema.sortBy` as sorting function if not null.
+                    # It follow the `_.sortBy()` style
+                    value = _.sortBy(value, @schema[key].sortBy)
+                    if (@schema[key].orderBy is 'desc')
+                        value.reverse()
+
             fieldType = @schema[key].type
+
+            # the value is a relation
             if @db[fieldType]? and not _.isEmpty(value)
                 if @schema[key].multi
                     values = []
@@ -186,7 +196,6 @@ class Model
                 if @id? and @type?
                     return @reference()
         })
-
 
     @beforeQuery: (query, options, callback) ->
         # validate the query

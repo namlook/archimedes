@@ -33,7 +33,8 @@ describe 'model.find', ()->
                 multi: true
             date:
                 type: 'date'
-                multi: true
+                multi: true,
+                orderBy: 'desc'
 
     class models.I18n extends config.Model
         schema:
@@ -541,13 +542,14 @@ describe 'model.find', ()->
 
 
     describe '[multi]', () ->
-        it 'should return the doc that match the id', (done) ->
+        it.only 'should return the doc that match the id', (done) ->
             obj = new db.Multi
-            obj.push 'string', 'hello'
             obj.push 'string', 'salut'
-            obj.set 'integer', [1, 2, 3]
-            obj.push 'date', new Date(2014, 1, 1)
+            obj.push 'string', 'hello'
+            obj.set 'integer', [3, 1, 2]
+            obj.push 'date', new Date(1984, 1, 20)
             obj.push 'date', new Date(2014, 2, 1)
+            obj.push 'date', new Date(1983, 1, 1)
             obj.save (err, savedObj, infos) ->
                 expect(err).to.be.null
                 expect(infos.dbTouched).to.be.true
@@ -557,11 +559,12 @@ describe 'model.find', ()->
                     expect(results.length).to.be.equal 1
                     result = results[0]
                     expect(result.get 'string').to.include.members ['hello', 'salut']
-                    expect(result.get 'integer').to.include.members [1, 2, 3]
-                    expect(d.toISOString() for d in result.get('date')).to.include.members [
-                        new Date(2014, 1, 1).toISOString()
-                        new Date(2014, 2, 1).toISOString()
-                    ]
+                    expect(result.get('integer')[0]).to.be.equal 1
+                    expect(result.get('integer')[1]).to.be.equal 2
+                    expect(result.get('integer')[2]).to.be.equal 3
+                    expect(result.get('date')[0].toISOString()).to.be.equal new Date(2014, 2, 1).toISOString()
+                    expect(result.get('date')[1].toISOString()).to.be.equal new Date(1984, 1, 20).toISOString()
+                    expect(result.get('date')[2].toISOString()).to.be.equal new Date(1983, 1, 1).toISOString()
                     done()
 
         it 'should return the first doc that match the id', (done) ->

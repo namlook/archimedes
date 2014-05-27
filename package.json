@@ -6,7 +6,7 @@
   "scripts": {
     "preinstall": "coffee -co lib src/",
     "build": "coffee -co lib src/",
-    "test": "mocha"
+    "test": "mocha lib/test/model lib/test/database"
   },
   "keywords": [],
   "author": "Namlook",
@@ -18,7 +18,7 @@
     "coffeeify": "~0.6.0"
   },
   "dependencies": {
-    "underscore": "~1.5.2",
+    "underscore": "^1.6.0",
     "stardog": "~0.1.0",
     "underscore.string": "~2.3.3",
     "objectdiff": "~1.1.0",
