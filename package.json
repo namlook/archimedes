@@ -4,18 +4,28 @@
   "description": "A simple ORDFM",
   "main": "lib",
   "scripts": {
-    "preinstall": "coffee -co lib src/",
+    "preinstall": "npm run build",
     "build": "coffee -co lib src/",
-    "test": "mocha lib/test/model lib/test/database"
+    "test": "mocha lib/test/model lib/test/database",
+    "coverage": "npm run build && mocha -r blanket -R html-cov lib/test/database lib/test/model > coverage.html && open coverage.html"
   },
   "keywords": [],
   "author": "Namlook",
   "license": "MIT",
+  "config": {
+    "blanket": {
+      "pattern": [
+        "lib/interface",
+        "lib/rdf"
+      ]
+    }
+  },
   "devDependencies": {
     "chai": "~1.8.1",
     "mocha": "~1.14.0",
     "sinon": "~1.7.3",
-    "coffeeify": "~0.6.0"
+    "coffeeify": "~0.6.0",
+    "blanket": "^1.1.6"
   },
   "dependencies": {
     "underscore": "^1.6.0",
