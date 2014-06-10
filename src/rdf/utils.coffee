@@ -32,8 +32,10 @@ exports.mongo2sparql = (mongoQuery, queryOptions, options) ->
     sparqlQuery = []
     sparqlOrder = []
     sparqlLimit = ''
+    searchAllProperties = false
 
     if _.isEmpty(mongoQuery) and not queryOptions.sortBy?
+        searchAllProperties = true
         sparqlQuery.push '?s ?p ?o .'
     else
         validx = 0
@@ -41,6 +43,8 @@ exports.mongo2sparql = (mongoQuery, queryOptions, options) ->
 
     if (1 for s in sparqlQuery when _.str.startsWith(s, 'MINUS')).length is sparqlQuery.length
         sparqlQuery.push '?s ?p ?o .'
+        searchAllProperties = true
+
 
     if options.queryOnly
         return sparqlQuery.join('\n')
@@ -61,13 +65,17 @@ exports.mongo2sparql = (mongoQuery, queryOptions, options) ->
                     prop = prop[1..]
                 if prop.indexOf('@') > -1
                     [prop, lang] = prop.split('@')
-                if not mongoQuery[prop]? or not (1 for v in mongoQuery['$and']? or [] when v[prop]?).length
+                propuri = "#{_.str.classify _buildProperty(prop)}#{lang}1"
+                if not mongoQuery[prop]? and not (1 for v in mongoQuery['$and']? or [] when v[prop]?).length
                     prop = _buildProperty(prop)
-                    propuri = "#{_.str.classify prop}#{lang}"
+                    unless searchAllProperties
+                        sparqlQuery.push "optional {"
                     sparqlQuery.push "?s #{prop} ?#{propuri} ."
                     if lang
                         sparqlQuery.push "filter (lang(?#{propuri}) = '#{lang}')"
-                sparqlOrder.push "#{order}(?#{_.str.classify prop}#{lang})"
+                    unless searchAllProperties
+                        sparqlQuery.push '}'
+                sparqlOrder.push "#{order}(?#{propuri})"
 
 
     # build limit
@@ -153,7 +161,7 @@ _getStatement = (prop, value, validx) ->
                 varidx = 0
                 for _val in val
                     unless _variable is variable
-                        sparqlQuery.push "?s #{prop} #{_variable}"
+                        sparqlQuery.push "?s #{prop} #{_variable} ."
                     if prop is 'a'
                         _val = {_id: _val}
                     _val = value2rdf(_val, lang)
@@ -166,7 +174,7 @@ _getStatement = (prop, value, validx) ->
                 addVariableStatement = false
                 unless val
                     notExists = 'not'
-                sparqlQuery.push "?s ?p ?o"
+                sparqlQuery.push "?s ?p ?o ."
                 sparqlQuery.push "filter (#{notExists} exists {?s #{prop} #{variable}})"
 
             else if $op is '$ne'
@@ -185,14 +193,14 @@ _getStatement = (prop, value, validx) ->
         sparqlQuery.push "filter (#{variable} = #{value})"
 
     if addVariableStatement
-        sparqlQuery.push "?s #{prop} #{variable}"
+        sparqlQuery.push "?s #{prop} #{variable} ."
 
 
-    sparqlQuery = sparqlQuery.join(' .\n')
+    sparqlQuery = sparqlQuery.join('\n')
     minus = ''
     if isNot
         minus = "MINUS "
-    sparqlQuery = "#{minus}{#{sparqlQuery}}"
+        sparqlQuery = "#{minus}{#{sparqlQuery}}"
     return sparqlQuery
 
 

@@ -155,6 +155,37 @@ describe 'Database.find(options)', ()->
                     expect(results[9][f.index]).to.be.equal 1
                     done()
 
+        it 'should sort the results by multiple field even if a sorting field is not present in documents', (done) ->
+            pojos = []
+            for i in [1..10]
+                pojo = {_type: 'Test'}
+                pojo[f.title] = i
+                pojo[f.index] = i%2
+                if i%3 is 0
+                    pojo[f.foo] = i+0.5
+                pojos.push pojo
+            db.batchSync pojos, (err, results) ->
+                expect(err).to.be.null
+                expect(results.length).to.be.equal 10
+                expect(_.every(r.options.dbTouched for r in results)).to.be.true
+                query = {}
+                query[f.index] = 0
+                db.find query, {sortBy: ['-'+f.foo, f.title]}, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 5
+                    expect(results[0][f.title]).to.be.equal 6
+                    expect(results[0][f.index]).to.be.equal 0
+                    expect(results[0][f.foo]).to.be.equal 6.5
+                    expect(results[1][f.title]).to.be.equal 2
+                    expect(results[1][f.index]).to.be.equal 0
+                    expect(results[2][f.title]).to.be.equal 4
+                    expect(results[2][f.index]).to.be.equal 0
+                    expect(results[3][f.title]).to.be.equal 8
+                    expect(results[3][f.index]).to.be.equal 0
+                    expect(results[4][f.title]).to.be.equal 10
+                    expect(results[4][f.index]).to.be.equal 0
+                    done()
+
         it 'should sort the results by multiple field in different order with query', (done) ->
             pojos = []
             for i in [1..10]
