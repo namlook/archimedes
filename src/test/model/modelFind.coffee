@@ -542,7 +542,7 @@ describe 'model.find', ()->
 
 
     describe '[multi]', () ->
-        it.only 'should return the doc that match the id', (done) ->
+        it 'should return the doc that match the id', (done) ->
             obj = new db.Multi
             obj.push 'string', 'salut'
             obj.push 'string', 'hello'
