@@ -251,6 +251,7 @@ class Model
     # - **populate**: (default false) if true, fetch asynchronously all the
     #    related instance object (if they exists). If an array of field names
     #    is passed, fetch only those instances.
+    # - **populateOptions**: options to pass to populate
     # - **hide**: (default true) if true, hide all hidden-fields. An array can be
     #    passed to specified other fields to hide.
     #    If fields are hiden a 'field hidden' error will be throw if their value
@@ -290,7 +291,7 @@ class Model
                     return callback e
                 if options.populate
                     async.map instances, (instance, cb) ->
-                        populateOptions = {}
+                        populateOptions = options.populateOptions or {}
                         if _.isNumber(options.populate)
                             populateOptions.recursive = options.populate
                             fields = []
@@ -412,6 +413,8 @@ class Model
     #
     # options:
     #   - recursive: (default false) if true, populate all inner relations
+    #   - ignoreUnknownRelations: (default false) if true, populate won't
+    #     raise an error if the relation cannot been reached (deleted relations)
     #
     # **example**:
     #
@@ -492,17 +495,21 @@ class Model
                     instance = (relationInstances[ref].instance for ref in relinfo.ref)
                 else
                     instance = relationInstances[relinfo.ref].instance
-                @set fieldName, instance
+                unless instance
+                    console.log "cannot populate #{fieldName}: #{relinfo.ref} not found"
+                    if not options.ignoreUnknownRelations
+                        return callback "cannot populate #{fieldName}: #{relinfo.ref} not found"
+                else
+                    @set fieldName, instance
 
-                if options.recursive
-                    instancesToPopulate = _.union(instancesToPopulate, instance)
+                    if options.recursive
+                        instancesToPopulate = _.union(instancesToPopulate, instance)
 
 
 
             # if recursive, populate the inner instances
             if _.isNumber(options.recursive)
                 options.recursive -= 1
-
 
             if options.recursive
                 async.map instancesToPopulate, (instance, cb) ->
