@@ -706,7 +706,7 @@ class Model
         else
             if _.isArray(value)
                 throw new ValueError(
-                    "#{@meta.name}.#{fieldName} doesn't support array")
+                    "#{@meta.name}.#{fieldName} doesn't support array (got #{value})")
             value = @__processValue(value, {fieldName: fieldName, model: @})
 
             @_properties[fieldName] = value
