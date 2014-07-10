@@ -6,7 +6,7 @@
   "scripts": {
     "preinstall": "npm run build",
     "build": "coffee -co lib src/",
-    "test": "mocha lib/test/model lib/test/database",
+    "test": "npm run build && mocha lib/test/model lib/test/database",
     "coverage": "npm run build && mocha -r blanket -R html-cov lib/test/database lib/test/model > coverage.html && open coverage.html"
   },
   "keywords": [],
