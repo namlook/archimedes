@@ -140,6 +140,8 @@ class Model
                     value = _.sortBy(value, @schema[key].sortBy)
                     if (@schema[key].orderBy is 'desc')
                         value.reverse()
+            else if _.isArray(value)
+                throw "#{@meta.name}.#{key} is not a multi field (got #{value}): #{JSON.stringify(properties)}"
 
             fieldType = @schema[key].type
 
@@ -486,7 +488,10 @@ class Model
             for pojo in data
                 ref = @db.reference(pojo._type, pojo._id)
                 rinfo = relationInstances[ref]
-                relationInstances[ref].instance = new rinfo.model(pojo)
+                try
+                    relationInstances[ref].instance = new rinfo.model(pojo)
+                catch e
+                    return callback e
 
             # dispatch all related instances into the correct fields
             instancesToPopulate = []
@@ -1275,7 +1280,7 @@ class Model
                 ok = false
         unless ok
             throw new ValueError(
-                "#{@meta.name}.#{attrs.fieldName} must be a #{type}")
+                "#{@meta.name}.#{attrs.fieldName} must be a #{type} (got #{typeof(value)}: #{value})")
 
 
     # ## __computeValue

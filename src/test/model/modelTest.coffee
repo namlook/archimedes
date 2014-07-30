@@ -76,8 +76,8 @@ describe 'Model', ()->
     beforeEach (done) ->
         db.clear done
 
-    afterEach (done) ->
-        db.clear done
+    # afterEach (done) ->
+        # db.clear done
 
     describe '.constructor()', () ->
 
@@ -110,6 +110,15 @@ describe 'Model', ()->
         it 'should accept null values', () ->
             blogPost = new db.BlogPost {content: null, blog: null}
             expect(blogPost.toJSONObject().content).to.be.undefined
+
+        it 'should throw an error if the data passed to a non-multi field is an array', (done) ->
+            data = {
+                '_type': 'Author',
+                'login': ['nichjo', 'namlook']
+            }
+            db.sync data, (err, obj, infos) ->
+                expect(-> new db.Author(obj)).to.throw("Author.login is not a multi field (got nichjo,namlook)")
+                done()
 
     describe 'meta', () ->
         it 'should have the model name', () ->
