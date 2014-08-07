@@ -15,7 +15,9 @@ module.exports = class Virtuoso
     #   * credentials.password: the password
     #   * database: the database name (or graph URI ?)
     constructor: (options) ->
-        @endpoint = options.endpoint or 'http://localhost:8890/sparql'
+        host = options.host or 'localhost'
+        port = options.port or '8890'
+        @endpoint = options.endpoint or "http://#{host}:#{port}/sparql"
         unless @endpoint
             throw "endpoint is required"
 
