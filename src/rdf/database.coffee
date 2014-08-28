@@ -310,8 +310,10 @@ class Database extends DatabaseInterface
                     facet: item.facet.value,
                     count: parseInt(item.count.value, 10)
                 }
-                # sort the result by facet names
-                results = _.sortBy(results, (item)-> item.facet)
+                # sort the result by facet count and then by facet name
+                results = _(results).chain()
+                  .sortBy((item)-> item.count)
+                  .sortBy((item)-> item.facet).value()
             return callback null, results
 
 
