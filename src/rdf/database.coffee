@@ -295,7 +295,7 @@ class Database extends DatabaseInterface
                 #{langSection}
             }
             group by ?facet
-            order by #{options.order}(?count) asc(?facet)
+            order by #{options.order}(?count) str(?facet)
             limit #{options.limit}
         """
 
@@ -310,10 +310,6 @@ class Database extends DatabaseInterface
                     facet: item.facet.value,
                     count: parseInt(item.count.value, 10)
                 }
-                # sort the result by facet count and then by facet name
-                results = _(results).chain()
-                  .sortBy((item)-> item.count)
-                  .sortBy((item)-> item.facet).value()
             return callback null, results
 
 

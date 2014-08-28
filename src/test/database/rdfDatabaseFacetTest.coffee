@@ -48,10 +48,10 @@ describe 'Database.facets()', ()->
                     expect(results.length).to.be.equal 3
                     expect(results[0].facet).to.be.equal 'arf'
                     expect(results[0].count).to.be.equal 2
-                    expect(results[1].facet).to.be.equal 'bar'
-                    expect(results[1].count).to.be.equal 1
-                    expect(results[2].facet).to.be.equal 'foo'
-                    expect(results[2].count).to.be.equal 2
+                    expect(results[1].facet).to.be.equal 'foo'
+                    expect(results[1].count).to.be.equal 2
+                    expect(results[2].facet).to.be.equal 'bar'
+                    expect(results[2].count).to.be.equal 1
                     done()
 
         it 'should return the facets on a specified field with a query', (done) ->
@@ -69,12 +69,12 @@ describe 'Database.facets()', ()->
                 db.facets f.title, query, (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 3
-                    expect(results[0].facet).to.be.equal 'arf'
-                    expect(results[0].count).to.be.equal 2
-                    expect(results[1].facet).to.be.equal 'bar'
+                    expect(results[0].facet).to.be.equal 'bar'
+                    expect(results[0].count).to.be.equal 3
+                    expect(results[1].facet).to.be.equal 'foo'
                     expect(results[1].count).to.be.equal 3
-                    expect(results[2].facet).to.be.equal 'foo'
-                    expect(results[2].count).to.be.equal 3
+                    expect(results[2].facet).to.be.equal 'arf'
+                    expect(results[2].count).to.be.equal 2
                     done()
 
     describe '[i18n]', () ->
@@ -93,16 +93,16 @@ describe 'Database.facets()', ()->
                     expect(results.length).to.be.equal 6
                     expect(results[0].facet).to.be.equal 'enarf'
                     expect(results[0].count).to.be.equal 2
-                    expect(results[1].facet).to.be.equal 'enbar'
-                    expect(results[1].count).to.be.equal 1
-                    expect(results[2].facet).to.be.equal 'enfoo'
+                    expect(results[1].facet).to.be.equal 'enfoo'
+                    expect(results[1].count).to.be.equal 2
+                    expect(results[2].facet).to.be.equal 'frarf'
                     expect(results[2].count).to.be.equal 2
-                    expect(results[3].facet).to.be.equal 'frarf'
+                    expect(results[3].facet).to.be.equal 'frfoo'
                     expect(results[3].count).to.be.equal 2
-                    expect(results[4].facet).to.be.equal 'frbar'
+                    expect(results[4].facet).to.be.equal 'enbar'
                     expect(results[4].count).to.be.equal 1
-                    expect(results[5].facet).to.be.equal 'frfoo'
-                    expect(results[5].count).to.be.equal 2
+                    expect(results[5].facet).to.be.equal 'frbar'
+                    expect(results[5].count).to.be.equal 1
                     done()
 
         it 'should return the facets on a specified i18n field', (done) ->
@@ -120,10 +120,10 @@ describe 'Database.facets()', ()->
                     expect(results.length).to.be.equal 3
                     expect(results[0].facet).to.be.equal 'enarf'
                     expect(results[0].count).to.be.equal 2
-                    expect(results[1].facet).to.be.equal 'enbar'
-                    expect(results[1].count).to.be.equal 1
-                    expect(results[2].facet).to.be.equal 'enfoo'
-                    expect(results[2].count).to.be.equal 2
+                    expect(results[1].facet).to.be.equal 'enfoo'
+                    expect(results[1].count).to.be.equal 2
+                    expect(results[2].facet).to.be.equal 'enbar'
+                    expect(results[2].count).to.be.equal 1
                     done()
 
         it 'should return the facets on a specified i18n field with a query', (done) ->
@@ -141,12 +141,12 @@ describe 'Database.facets()', ()->
                 db.facets f.title+'@fr', query, (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 3
-                    expect(results[0].facet).to.be.equal 'frarf'
-                    expect(results[0].count).to.be.equal 2
-                    expect(results[1].facet).to.be.equal 'frbar'
+                    expect(results[0].facet).to.be.equal 'frbar'
+                    expect(results[0].count).to.be.equal 3
+                    expect(results[1].facet).to.be.equal 'frfoo'
                     expect(results[1].count).to.be.equal 3
-                    expect(results[2].facet).to.be.equal 'frfoo'
-                    expect(results[2].count).to.be.equal 3
+                    expect(results[2].facet).to.be.equal 'frarf'
+                    expect(results[2].count).to.be.equal 2
                     done()
 
 
@@ -167,10 +167,10 @@ describe 'Database.facets()', ()->
                 db.facets "#{f.foo}->#{f.title}", (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 2
-                    expect(results[0].facet).to.be.equal '0'
-                    expect(results[0].count).to.be.equal 7
-                    expect(results[1].facet).to.be.equal '1'
-                    expect(results[1].count).to.be.equal 8
+                    expect(results[0].facet).to.be.equal '1'
+                    expect(results[0].count).to.be.equal 8
+                    expect(results[1].facet).to.be.equal '0'
+                    expect(results[1].count).to.be.equal 7
                     done()
 
         it "should facet on relations with query", (done) ->
@@ -191,8 +191,8 @@ describe 'Database.facets()', ()->
                 db.facets "#{f.foo}->#{f.title}", query, (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 2
-                    expect(results[0].facet).to.be.equal '0'
-                    expect(results[0].count).to.be.equal 3
-                    expect(results[1].facet).to.be.equal '1'
-                    expect(results[1].count).to.be.equal 4
+                    expect(results[0].facet).to.be.equal '1'
+                    expect(results[0].count).to.be.equal 4
+                    expect(results[1].facet).to.be.equal '0'
+                    expect(results[1].count).to.be.equal 3
                     done()
