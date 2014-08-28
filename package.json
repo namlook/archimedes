@@ -6,6 +6,7 @@
   "scripts": {
     "preinstall": "npm install coffee-script && npm run build",
     "build": "coffee -co lib src/",
+    "live": "coffee -wco lib src/",
     "test": "npm run build && mocha lib/test/model lib/test/database",
     "coverage": "npm run build && mocha -r blanket -R html-cov lib/test/database lib/test/model > coverage.html && open coverage.html"
   },
@@ -29,14 +30,12 @@
   },
   "dependencies": {
     "underscore": "^1.6.0",
-    "stardog": "~0.1.0",
     "underscore.string": "~2.3.3",
     "objectdiff": "~1.1.0",
     "validator": "~3.1.0",
     "async": "~0.2.9",
     "extendonclass": "~1.0.0",
     "request": "~2.33.0",
-    "nedb": "~0.10.3",
     "superagent": "^0.17.0"
   }
 }
