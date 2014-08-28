@@ -147,12 +147,10 @@ class RdfModel extends ModelInterface
                 field = field2uri(field, @)
             catch e
                 return callback e
-
         try
             @_convertQueryUri(query)
         catch e
             return callback e
-
         @db.facets field, query, options, callback
 
     # ## timeSeries

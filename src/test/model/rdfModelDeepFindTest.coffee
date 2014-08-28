@@ -74,6 +74,24 @@ describe 'model deep find', ()->
                     ).to.be.equal 8
                     done()
 
+        it 'should be able to query on relations via _id', (done) ->
+            ones  = []
+            for i in [1..15]
+                ones.push new db.One {
+                    literal: new db.Literal {_id: 'lit'+i%3, integer: i%3, string: "#{i%3}"}
+                }
+            async.map ones, (one, cb) ->
+                one.save cb
+            , (err, results) ->
+                expect(err).to.be.null
+                db.One.find {'literal._id': "lit1"}, {populate: true}, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 5
+                    expect(
+                        (1 for r in results when r.get('literal').get('string') is "1").length
+                    ).to.be.equal 5
+                    done()
+
 
         it 'should return an error if quering a unknown field', (done) ->
             ones  = []

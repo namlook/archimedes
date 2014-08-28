@@ -48,10 +48,10 @@ describe 'Database.facets()', ()->
                     expect(results.length).to.be.equal 3
                     expect(results[0].facet).to.be.equal 'arf'
                     expect(results[0].count).to.be.equal 2
-                    expect(results[1].facet).to.be.equal 'foo'
-                    expect(results[1].count).to.be.equal 2
-                    expect(results[2].facet).to.be.equal 'bar'
-                    expect(results[2].count).to.be.equal 1
+                    expect(results[1].facet).to.be.equal 'bar'
+                    expect(results[1].count).to.be.equal 1
+                    expect(results[2].facet).to.be.equal 'foo'
+                    expect(results[2].count).to.be.equal 2
                     done()
 
         it 'should return the facets on a specified field with a query', (done) ->
@@ -69,13 +69,86 @@ describe 'Database.facets()', ()->
                 db.facets f.title, query, (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 3
-                    expect(results[0].facet).to.be.equal 'bar'
-                    expect(results[0].count).to.be.equal 3
-                    expect(results[1].facet).to.be.equal 'foo'
+                    expect(results[0].facet).to.be.equal 'arf'
+                    expect(results[0].count).to.be.equal 2
+                    expect(results[1].facet).to.be.equal 'bar'
                     expect(results[1].count).to.be.equal 3
-                    expect(results[2].facet).to.be.equal 'arf'
+                    expect(results[2].facet).to.be.equal 'foo'
+                    expect(results[2].count).to.be.equal 3
+                    done()
+
+    describe '[i18n]', () ->
+        it 'should return the facets for all languages on a specified i18n field', (done) ->
+            pojos = []
+            for i in [1..5]
+                pojo = {_type: 'Test'}
+                pojo[f.title] = {en: 'en'+facetValues[i%3], fr: 'fr'+facetValues[i%3]}
+                pojo[f.index] = i
+                pojo[f.foo] = i%2
+                pojos.push pojo
+            db.batchSync pojos, (err, obj, infos) ->
+                expect(err).to.be.null
+                db.facets f.title, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 6
+                    expect(results[0].facet).to.be.equal 'enarf'
+                    expect(results[0].count).to.be.equal 2
+                    expect(results[1].facet).to.be.equal 'enbar'
+                    expect(results[1].count).to.be.equal 1
+                    expect(results[2].facet).to.be.equal 'enfoo'
+                    expect(results[2].count).to.be.equal 2
+                    expect(results[3].facet).to.be.equal 'frarf'
+                    expect(results[3].count).to.be.equal 2
+                    expect(results[4].facet).to.be.equal 'frbar'
+                    expect(results[4].count).to.be.equal 1
+                    expect(results[5].facet).to.be.equal 'frfoo'
+                    expect(results[5].count).to.be.equal 2
+                    done()
+
+        it 'should return the facets on a specified i18n field', (done) ->
+            pojos = []
+            for i in [1..5]
+                pojo = {_type: 'Test'}
+                pojo[f.title] = {en: 'en'+facetValues[i%3], fr: 'fr'+facetValues[i%3]}
+                pojo[f.index] = i
+                pojo[f.foo] = i%2
+                pojos.push pojo
+            db.batchSync pojos, (err, obj, infos) ->
+                expect(err).to.be.null
+                db.facets f.title+'@en', (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 3
+                    expect(results[0].facet).to.be.equal 'enarf'
+                    expect(results[0].count).to.be.equal 2
+                    expect(results[1].facet).to.be.equal 'enbar'
+                    expect(results[1].count).to.be.equal 1
+                    expect(results[2].facet).to.be.equal 'enfoo'
                     expect(results[2].count).to.be.equal 2
                     done()
+
+        it 'should return the facets on a specified i18n field with a query', (done) ->
+            pojos = []
+            for i in [1..15]
+                pojo = {_type: 'Test'}
+                pojo[f.title] = {en: 'en'+facetValues[i%3], fr: 'fr'+facetValues[i%3]}
+                pojo[f.index] = i
+                pojo[f.foo] = i%2
+                pojos.push pojo
+            db.batchSync pojos, (err, obj, infos) ->
+                expect(err).to.be.null
+                query = {}
+                query[f.foo] = 1
+                db.facets f.title+'@fr', query, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 3
+                    expect(results[0].facet).to.be.equal 'frarf'
+                    expect(results[0].count).to.be.equal 2
+                    expect(results[1].facet).to.be.equal 'frbar'
+                    expect(results[1].count).to.be.equal 3
+                    expect(results[2].facet).to.be.equal 'frfoo'
+                    expect(results[2].count).to.be.equal 3
+                    done()
+
 
     describe '[deep]', () ->
         it "should facet on relations", (done) ->
@@ -94,10 +167,10 @@ describe 'Database.facets()', ()->
                 db.facets "#{f.foo}->#{f.title}", (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 2
-                    expect(results[0].facet).to.be.equal '1'
-                    expect(results[0].count).to.be.equal 8
-                    expect(results[1].facet).to.be.equal '0'
-                    expect(results[1].count).to.be.equal 7
+                    expect(results[0].facet).to.be.equal '0'
+                    expect(results[0].count).to.be.equal 7
+                    expect(results[1].facet).to.be.equal '1'
+                    expect(results[1].count).to.be.equal 8
                     done()
 
         it "should facet on relations with query", (done) ->
@@ -118,8 +191,8 @@ describe 'Database.facets()', ()->
                 db.facets "#{f.foo}->#{f.title}", query, (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 2
-                    expect(results[0].facet).to.be.equal '1'
-                    expect(results[0].count).to.be.equal 4
-                    expect(results[1].facet).to.be.equal '0'
-                    expect(results[1].count).to.be.equal 3
+                    expect(results[0].facet).to.be.equal '0'
+                    expect(results[0].count).to.be.equal 3
+                    expect(results[1].facet).to.be.equal '1'
+                    expect(results[1].count).to.be.equal 4
                     done()

@@ -275,14 +275,24 @@ class Database extends DatabaseInterface
             catch e
                 return callback e
 
+        lang = null
+        if field.indexOf('@')
+            [field, lang] = field.split('@')
+
         if field.indexOf('->') > -1
             propURI = ("<#{_prop}>" for _prop in field.split('->')).join('/')
         else
             propURI = "<#{field}>"
+
+        langSection = ''
+        if lang
+            langSection = "FILTER(langMatches(lang(?facet), '#{lang}'))"
+
         sparqlQuery = """
             select ?facet, (count(?facet) as ?count) from <#{@graphURI}> where {
                 ?s #{propURI} ?facet .
                 #{sparqlQuery}
+                #{langSection}
             }
             group by ?facet
             order by #{options.order}(?count) asc(?facet)
@@ -300,6 +310,8 @@ class Database extends DatabaseInterface
                     facet: item.facet.value,
                     count: parseInt(item.count.value, 10)
                 }
+                # sort the result by facet names
+                results = _.sortBy(results, (item)-> item.facet)
             return callback null, results
 
 

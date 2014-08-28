@@ -85,10 +85,10 @@ describe 'model.facets', ()->
                     expect(results.length).to.be.equal 3
                     expect(results[0].facet).to.be.equal 'arf'
                     expect(results[0].count).to.be.equal 2
-                    expect(results[1].facet).to.be.equal 'foo'
-                    expect(results[1].count).to.be.equal 2
-                    expect(results[2].facet).to.be.equal 'bar'
-                    expect(results[2].count).to.be.equal 1
+                    expect(results[1].facet).to.be.equal 'bar'
+                    expect(results[1].count).to.be.equal 1
+                    expect(results[2].facet).to.be.equal 'foo'
+                    expect(results[2].count).to.be.equal 2
                     done()
 
         it 'should return the facets on a specified field with a query', (done) ->
@@ -100,12 +100,12 @@ describe 'model.facets', ()->
                 db.Literal.facets 'string', {integer: 1}, (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 3
-                    expect(results[0].facet).to.be.equal 'bar'
-                    expect(results[0].count).to.be.equal 3
-                    expect(results[1].facet).to.be.equal 'foo'
+                    expect(results[0].facet).to.be.equal 'arf'
+                    expect(results[0].count).to.be.equal 2
+                    expect(results[1].facet).to.be.equal 'bar'
                     expect(results[1].count).to.be.equal 3
-                    expect(results[2].facet).to.be.equal 'arf'
-                    expect(results[2].count).to.be.equal 2
+                    expect(results[2].facet).to.be.equal 'foo'
+                    expect(results[2].count).to.be.equal 3
                     done()
 
     describe '[deep]', () ->
@@ -145,10 +145,10 @@ describe 'model.facets', ()->
                 db.One.facets 'literal.inner.string', (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 2
-                    expect(results[0].facet).to.be.equal '1'
-                    expect(results[0].count).to.be.equal 8
-                    expect(results[1].facet).to.be.equal '0'
-                    expect(results[1].count).to.be.equal 7
+                    expect(results[0].facet).to.be.equal '0'
+                    expect(results[0].count).to.be.equal 7
+                    expect(results[1].facet).to.be.equal '1'
+                    expect(results[1].count).to.be.equal 8
                     done()
 
 
@@ -171,8 +171,8 @@ describe 'model.facets', ()->
                 db.One.facets 'literal.inner.string', query, (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 2
-                    expect(results[0].facet).to.be.equal '1'
-                    expect(results[0].count).to.be.equal 4
-                    expect(results[1].facet).to.be.equal '0'
-                    expect(results[1].count).to.be.equal 3
+                    expect(results[0].facet).to.be.equal '0'
+                    expect(results[0].count).to.be.equal 3
+                    expect(results[1].facet).to.be.equal '1'
+                    expect(results[1].count).to.be.equal 4
                     done()

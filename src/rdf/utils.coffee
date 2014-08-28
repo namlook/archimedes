@@ -117,83 +117,89 @@ _getStatement = (prop, value, validx) ->
     if prop.indexOf('@') > -1
         [prop, lang] = prop.split('@')
 
-    variable = "?#{_.str.classify prop}#{lang}#{validx}"
-    prop = _buildProperty(prop)
-
-    if _.isRegExp(value)
-        throw 'regex not implemented'
-
-    if _.isObject(value) and not _.isDate(value) and not value._ref?
-        for $op, val of value
-
-            if $op in ['$gt', '$lt', '$gte', '$lte']
-                if prop is 'a'
-                    val = {_id: val}
-                _val = value2rdf(val, lang)
-                op = operators[$op]
-                sparqlQuery.push "filter (#{variable} #{op} #{_val})"
-
-            else if $op in ['$regex', '$iregex']
-                iregex = ''
-                if $op is '$iregex'
-                    iregex = ', "i"'
-                if val.indexOf("'''") > -1
-                    sparqlQuery.push """filter regex(#{variable}, \"\"\"#{val}\"\"\"#{iregex})"""
-                else
-                    sparqlQuery.push """filter regex(#{variable}, '''#{val}'''#{iregex})"""
-
-            else if $op in ['$in', '$nin']
-                if $op is '$nin'
-                    isNot = true
-                unless _.isArray val
-                    val = [val]
-                val = (prop is 'a' and {_id: v} or v for v in val)
-                vals = (value2rdf(v, lang) for v in val)
-                filter = ("#{variable} = #{v}" for v in vals)
-                sparqlQuery.push "filter (#{filter.join(' || ')})"
-
-            else if $op in ['$all', '$nall']
-                if $op is '$nall'
-                    isNot = true
-                unless _.isArray val
-                    val = [val]
-                _variable = variable
-                varidx = 0
-                for _val in val
-                    unless _variable is variable
-                        sparqlQuery.push "?s #{prop} #{_variable} ."
-                    if prop is 'a'
-                        _val = {_id: _val}
-                    _val = value2rdf(_val, lang)
-                    sparqlQuery.push "filter (#{_variable} = #{_val})"
-                    varidx += 1
-                    _variable = "#{variable}#{varidx}"
-
-            else if $op is '$exists'
-                notExists = ''
-                addVariableStatement = false
-                unless val
-                    notExists = 'not'
-                sparqlQuery.push "?s ?p ?o ."
-                sparqlQuery.push "filter (#{notExists} exists {?s #{prop} #{variable}})"
-
-            else if $op is '$ne'
-                isNot = true
-                if prop is 'a'
-                    val = {_id: val}
-                _val = value2rdf(val, lang)
-                sparqlQuery.push "filter (#{variable} = #{_val})"
-
-            else
-                throw "unknown operator #{$op}"
+    if prop.indexOf('->_id::') > -1
+        [path, instancesNamespace] = prop.split('->_id::')
+        path = _buildProperty(path)
+        sparqlQuery.push("?s #{path} <#{instancesNamespace}/#{value}> .")
     else
-        if prop is 'a'
-            value = {_id: value}
-        value = value2rdf(value, lang)
-        sparqlQuery.push "filter (#{variable} = #{value})"
+        prop = _buildProperty(prop)
 
-    if addVariableStatement
-        sparqlQuery.push "?s #{prop} #{variable} ."
+        variable = "?#{_.str.classify prop}#{lang}#{validx}"
+
+        if _.isRegExp(value)
+            throw 'regex not implemented'
+
+        if _.isObject(value) and not _.isDate(value) and not value._ref?
+            for $op, val of value
+
+                if $op in ['$gt', '$lt', '$gte', '$lte']
+                    if prop is 'a'
+                        val = {_id: val}
+                    _val = value2rdf(val, lang)
+                    op = operators[$op]
+                    sparqlQuery.push "filter (#{variable} #{op} #{_val})"
+
+                else if $op in ['$regex', '$iregex']
+                    iregex = ''
+                    if $op is '$iregex'
+                        iregex = ', "i"'
+                    if val.indexOf("'''") > -1
+                        sparqlQuery.push """filter regex(#{variable}, \"\"\"#{val}\"\"\"#{iregex})"""
+                    else
+                        sparqlQuery.push """filter regex(#{variable}, '''#{val}'''#{iregex})"""
+
+                else if $op in ['$in', '$nin']
+                    if $op is '$nin'
+                        isNot = true
+                    unless _.isArray val
+                        val = [val]
+                    val = (prop is 'a' and {_id: v} or v for v in val)
+                    vals = (value2rdf(v, lang) for v in val)
+                    filter = ("#{variable} = #{v}" for v in vals)
+                    sparqlQuery.push "filter (#{filter.join(' || ')})"
+
+                else if $op in ['$all', '$nall']
+                    if $op is '$nall'
+                        isNot = true
+                    unless _.isArray val
+                        val = [val]
+                    _variable = variable
+                    varidx = 0
+                    for _val in val
+                        unless _variable is variable
+                            sparqlQuery.push "?s #{prop} #{_variable} ."
+                        if prop is 'a'
+                            _val = {_id: _val}
+                        _val = value2rdf(_val, lang)
+                        sparqlQuery.push "filter (#{_variable} = #{_val})"
+                        varidx += 1
+                        _variable = "#{variable}#{varidx}"
+
+                else if $op is '$exists'
+                    notExists = ''
+                    addVariableStatement = false
+                    unless val
+                        notExists = 'not'
+                    sparqlQuery.push "?s ?p ?o ."
+                    sparqlQuery.push "filter (#{notExists} exists {?s #{prop} #{variable}})"
+
+                else if $op is '$ne'
+                    isNot = true
+                    if prop is 'a'
+                        val = {_id: val}
+                    _val = value2rdf(val, lang)
+                    sparqlQuery.push "filter (#{variable} = #{_val})"
+
+                else
+                    throw "unknown operator #{$op}"
+        else
+            if prop is 'a'
+                value = {_id: value}
+            value = value2rdf(value, lang)
+            sparqlQuery.push "filter (#{variable} = #{value})"
+
+        if addVariableStatement
+            sparqlQuery.push "?s #{prop} #{variable} ."
 
 
     sparqlQuery = sparqlQuery.join('\n')
@@ -259,6 +265,8 @@ exports.field2uri = field2uri = (fieldName, model) ->
         uri = schema[fieldName].uri or "#{meta.propertiesNamespace}/#{fieldName}"
         return "#{uri}->#{field2uri(newfieldName, newmodel)}"
     else
+        if name is '_id'
+            return "_id::#{meta.instancesNamespace}" # BIG UGLY HACK !!! it passes the instancesNamespace to _getStatement
         unless schema[name]?
             throw "Unknown field #{meta.name}.#{name}"
         return schema[name].uri or "#{meta.propertiesNamespace}/#{fieldName}"

@@ -156,6 +156,25 @@ describe 'Database.find()', ()->
                         expect(total).to.be.equal 6
                         done()
 
+    it 'should handle _id', (done) ->
+        pojos = []
+        for i in [1..5]
+            pojo = {_type: 'Test', _id: 'ID'+i}
+            pojo[f.title] = i
+            pojo[f.index] = (if i % 2 is 0 then true else false)
+            pojos.push pojo
+        db.batchSync pojos, (err, results) ->
+            expect(err).to.be.null
+            query = {_type: 'Test', _id: 'ID2'}
+            db.find query, (err, results) ->
+                expect(err).to.be.null
+                expect(results.length).to.be.equal 1
+                obj = results[0]
+                expect(obj._id).to.be.equal 'ID2'
+                expect(Boolean(obj[f.index])).to.be.equal true
+                expect(obj[f.title]).to.be.equal 2
+                done()
+
 
     describe 'query', () ->
         it 'should handle boolean', (done) ->
