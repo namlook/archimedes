@@ -4,11 +4,15 @@ _.str = require 'underscore.string'
 {defaultTypes} = require '../interface/types'
 
 
-operators = {
+sparqlFilterOperators = {
     '$gt': '>'
     '$gte': '>='
     '$lt': '<'
     '$lte': '<='
+    '$eq': '='
+    '$ne': '!='
+    # '$in': 'IN' # DOESNT WORK IN VIRTUOSO WITH $exits
+    # '$nin': 'NOT IN'
 }
 
 # ## mongo2sparql
@@ -38,7 +42,7 @@ exports.mongo2sparql = (mongoQuery, queryOptions, options) ->
         searchAllProperties = true
         sparqlQuery.push '?s ?p ?o .'
     else
-        validx = 0
+        validx = {index: 0}
         _convert(sparqlQuery, mongoQuery, validx)
 
     if (1 for s in sparqlQuery when _.str.startsWith(s, 'MINUS')).length is sparqlQuery.length
@@ -82,9 +86,11 @@ exports.mongo2sparql = (mongoQuery, queryOptions, options) ->
     if queryOptions.limit?
         sparqlLimit = "limit #{queryOptions.limit}"
 
-    return """{#{sparqlQuery.join('\n')}}
-        #{sparqlOrder.join(' ')}
-        #{sparqlLimit}
+    return """{
+    #{sparqlQuery.join('\n')}
+    }
+    #{sparqlOrder.join(' ')}
+    #{sparqlLimit}
     """
 
 
@@ -93,10 +99,10 @@ _convert = (sparqlQuery, query, validx) ->
         if prop is '$and'
             for val in value
                 _convert(sparqlQuery, val, validx)
-                validx+= 1
+                # validx+= 1
         else
             sparqlQuery.push _getStatement(prop, value, validx)
-            validx += 1
+            # validx += 1
 
 
 _buildProperty = (prop) ->
@@ -108,11 +114,16 @@ _buildProperty = (prop) ->
         prop = "<#{prop}>"
     return prop
 
+_buildVariable = (prop, lang, validx) ->
+    variable = "?#{_.str.classify prop}#{lang}#{validx.index}"
+    validx.index += 1
+    return variable
+
+
 _getStatement = (prop, value, validx) ->
     sparqlQuery = []
     lang = ''
     isNot = false
-    addVariableStatement = true
 
     if prop.indexOf('@') > -1
         [prop, lang] = prop.split('@')
@@ -124,91 +135,128 @@ _getStatement = (prop, value, validx) ->
     else
         prop = _buildProperty(prop)
 
-        variable = "?#{_.str.classify prop}#{lang}#{validx}"
-
         if _.isRegExp(value)
             throw 'regex not implemented'
 
         if _.isObject(value) and not _.isDate(value) and not value._ref?
+
+            addVariableStatement = []
             for $op, val of value
 
-                if $op in ['$gt', '$lt', '$gte', '$lte']
-                    if prop is 'a'
-                        val = {_id: val}
-                    _val = value2rdf(val, lang)
-                    op = operators[$op]
-                    sparqlQuery.push "filter (#{variable} #{op} #{_val})"
+                if filterFuncs[$op]?
+                    variable = _buildVariable(prop, lang, validx)
+                    sparqlQuery.push filterFuncs[$op](variable, val, lang)
+                    addVariableStatement.push variable
 
-                else if $op in ['$regex', '$iregex']
-                    iregex = ''
-                    if $op is '$iregex'
-                        iregex = ', "i"'
-                    if val.indexOf("'''") > -1
-                        sparqlQuery.push """filter regex(#{variable}, \"\"\"#{val}\"\"\"#{iregex})"""
-                    else
-                        sparqlQuery.push """filter regex(#{variable}, '''#{val}'''#{iregex})"""
-
-                else if $op in ['$in', '$nin']
-                    if $op is '$nin'
-                        isNot = true
-                    unless _.isArray val
-                        val = [val]
-                    val = (prop is 'a' and {_id: v} or v for v in val)
-                    vals = (value2rdf(v, lang) for v in val)
-                    filter = ("#{variable} = #{v}" for v in vals)
-                    sparqlQuery.push "filter (#{filter.join(' || ')})"
-
-                else if $op in ['$all', '$nall']
-                    if $op is '$nall'
-                        isNot = true
-                    unless _.isArray val
-                        val = [val]
-                    _variable = variable
-                    varidx = 0
-                    for _val in val
-                        unless _variable is variable
-                            sparqlQuery.push "?s #{prop} #{_variable} ."
-                        if prop is 'a'
-                            _val = {_id: _val}
-                        _val = value2rdf(_val, lang)
-                        sparqlQuery.push "filter (#{_variable} = #{_val})"
-                        varidx += 1
-                        _variable = "#{variable}#{varidx}"
-
-                else if $op is '$exists'
-                    notExists = ''
-                    addVariableStatement = false
-                    unless val
-                        notExists = 'not'
-                    sparqlQuery.push "?s ?p ?o ."
-                    sparqlQuery.push "filter (#{notExists} exists {?s #{prop} #{variable}})"
-
-                else if $op is '$ne'
-                    isNot = true
-                    if prop is 'a'
-                        val = {_id: val}
-                    _val = value2rdf(val, lang)
-                    sparqlQuery.push "filter (#{variable} = #{_val})"
+                else if innerFilterFuncs[$op]?
+                    sparqlQuery.push innerFilterFuncs[$op](prop, val, lang, validx)
 
                 else
                     throw "unknown operator #{$op}"
+
+            for _varstd in addVariableStatement
+                sparqlQuery.push "?s #{prop} #{_varstd} ."
         else
             if prop is 'a'
                 value = {_id: value}
-            value = value2rdf(value, lang)
-            sparqlQuery.push "filter (#{variable} = #{value})"
-
-        if addVariableStatement
+            variable = _buildVariable(prop, lang, validx)
             sparqlQuery.push "?s #{prop} #{variable} ."
+            sparqlQuery.push _commonFilter('$eq')(variable, value, lang)
+
+    return sparqlQuery.join('\n')
 
 
-    sparqlQuery = sparqlQuery.join('\n')
-    minus = ''
-    if isNot
-        minus = "MINUS "
-        sparqlQuery = "#{minus}{#{sparqlQuery}}"
-    return sparqlQuery
 
+_commonFilter = (operator) ->
+    return (variable, value, lang) ->
+        value = value2rdf(value, lang)
+        op = sparqlFilterOperators[operator]
+        "filter (#{variable} #{op} #{value})"
+
+_simpleFilterFunc = (operator) ->
+    return (variable, value, lang) ->
+        _commonFilter(operator)(variable, value, lang)
+
+
+_regexFilterFunc = (operator) -> # TODO $in with $regex
+    return (variable, value, lang) ->
+        iregex = ''
+        if operator is '$iregex'
+            iregex = ', "i"'
+        if value.indexOf("'''") > -1
+            _filter = """filter regex(#{variable}, \"\"\"#{value}\"\"\"#{iregex})"""
+        else
+            _filter = """filter regex(#{variable}, '''#{value}'''#{iregex})"""
+        _filter
+
+filterFuncs = {
+    '$eq': _simpleFilterFunc('$eq')
+    '$lt': _simpleFilterFunc('$lt')
+    '$lte': _simpleFilterFunc('$lte')
+    '$gt': _simpleFilterFunc('$gt')
+    '$gte': _simpleFilterFunc('$gte')
+    '$regex': _regexFilterFunc('$regex')
+    '$iregex': _regexFilterFunc('$iregex')
+}
+
+innerFilterFuncs = {
+    '$ne': (prop, value, lang, validx) ->
+        variable = _buildVariable(prop, lang, validx)
+        _filter = _commonFilter('$eq')(variable, value, lang)
+        return """MINUS {
+            #{_filter}
+            ?s #{prop} #{variable} .
+        }"""
+
+
+    '$in': (prop, value, lang, validx) ->
+        statement = []
+        filter = []
+        op = sparqlFilterOperators['$eq']
+        unless _.isArray(value)
+            value = [value]
+        for _val in value
+            variable = _buildVariable(prop, lang, validx)
+            statement.push "?s #{prop} #{variable} ."
+            val = value2rdf(_val, lang)
+            filter.push "#{variable} #{op} #{val}"
+        return """
+        filter (#{filter.join(' || ')})
+        #{statement.join('\n')}
+        """
+
+    '$nin': (prop, value, lang, validx) ->
+        unless _.isArray value
+            value = [value]
+        statement = this['$in'](prop, value, lang, validx)
+        return "MINUS {#{statement}}"
+
+    '$all': (prop, value, lang, validx) ->
+        unless _.isArray value
+            value = [value]
+        statements = []
+        for val in value
+            variable = _buildVariable(prop, lang, validx)
+            statements.push "?s #{prop} #{variable} ."
+            statements.push _commonFilter('$eq')(variable, val, lang)
+        return statements.join('\n')
+
+    '$nall': (prop, value, lang, validx) ->
+        statement = this['$all'](prop, value, lang, validx)
+        return "MINUS {#{statement}}"
+
+    '$exists': (prop, value, lang, validx) ->
+        notExists = ''
+        addVariableStatement = false
+        unless value
+            notExists = 'not'
+        variable = _buildVariable(prop, lang, validx)
+        statement = """
+            filter (#{notExists} exists {?s #{prop} #{variable}})
+        """
+        return statement
+
+}
 
 # ## value2rdf
 # Convert a value into its rdf representation. If lang is passed, add the
@@ -222,9 +270,12 @@ _getStatement = (prop, value, validx) ->
 #    'title@en'                      -> "title"@en
 #    {_id: 'http://example.org/foo'} -> <http://example.org/foo>
 exports.value2rdf = value2rdf = (value, lang) ->
-    if lang and not _.isString(value)
+    if _.isArray(value)
+        value = (value2rdf(v, lang) for v in value).join(', ')
+        value = "(#{value})"
+    else if lang and not _.isString(value)
         throw 'i18n fields accept only strings'
-    if value._id?
+    else if value._id?
         value = "<#{value._id}>"
     else if _.isBoolean(value)
         value = "\"#{value}\"^^xsd:boolean"

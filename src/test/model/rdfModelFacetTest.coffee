@@ -12,7 +12,7 @@ if db.type isnt 'rdf'
     console.log "Database is not an RDF database (got #{db.type}). Skipping..."
     return
 
-describe.only 'model.facets', ()->
+describe 'model.facets', ()->
 
     models = {}
 

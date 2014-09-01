@@ -460,6 +460,7 @@ describe 'Database.find()', ()->
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
+                console.log results
                 query = {_type: 'Test'}
                 query[f.index] = {$exists: true}
                 db.find query, (err, results) ->
@@ -482,6 +483,24 @@ describe 'Database.find()', ()->
                 db.find query, (err, results) ->
                     expect(err).to.be.null
                     expect(results.length).to.be.equal 3
+                    done()
+
+        it 'should return the docs which field exists with query', (done) ->
+            pojos = []
+            for i in [1..5]
+                pojo = {_type: 'Test'}
+                pojo[f.title] = i
+                if i%2 is 0
+                    pojo[f.index] = i*10
+                pojos.push pojo
+            db.batchSync pojos, (err, results) ->
+                expect(err).to.be.null
+                query = {_type: 'Test'}
+                query[f.index] = {$exists: true}
+                query[f.title] = {$in: [2, 3]}
+                db.find query, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 1
                     done()
 
     describe 'query[$regex]', () ->
@@ -774,6 +793,41 @@ describe 'Database.find()', ()->
                             expect(err).to.be.null
                             expect(count).to.be.equal 1
                             done()
+
+    describe 'query on the same field with multiple operators', () ->
+        it 'should be able to combine $nin and $ne', (done) ->
+            pojos = []
+            for i in [1..15]
+                pojo = {_type: 'Test'}
+                pojo[f.title] = i
+                pojo[f.index] = i%3
+                pojos.push pojo
+            db.batchSync pojos, (err, results) ->
+                expect(err).to.be.null
+                query = {_type: 'Test'}
+                query[f.index] = {'$nin': [2,1], '$ne': 1}
+                db.find query, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 5
+                    expect(i[f.index] for i in results).to.include.members [0]
+                    done()
+
+        it 'should be able to combine $lt, $gt and $ne', (done) ->
+            pojos = []
+            for i in [1..15]
+                pojo = {_type: 'Test'}
+                pojo[f.title] = i
+                pojo[f.index] = i%3
+                pojos.push pojo
+            db.batchSync pojos, (err, results) ->
+                expect(err).to.be.null
+                query = {_type: 'Test'}
+                query[f.index] = {'$gt': 0, '$lt': 3, '$ne': 2}
+                db.find query, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 5
+                    expect(i[f.index] for i in results).to.include.members [1]
+                    done()
 
 
     describe '.first(id)', () ->
