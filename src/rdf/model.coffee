@@ -111,6 +111,12 @@ class RdfModel extends ModelInterface
                     sortBy.push "#{order}#{propURI}#{lang}"
 
             options.sortBy = sortBy
+
+            if options.fields?
+                fields = options.fields
+                unless _.isArray(fields)
+                    fields = [fields]
+                options.fields = (field2uri(field, @) for field in fields)
             return callback null, query, options
 
 

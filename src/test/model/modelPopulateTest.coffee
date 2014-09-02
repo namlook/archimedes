@@ -746,3 +746,35 @@ describe 'model relations', ()->
                     ]
                     done()
 
+    describe '.find(fields)', () ->
+        it 'should returns only the specified fields', (done) ->
+            literal = new db.Literal
+            literal.set 'i18n', 'hello', 'en'
+            literal.set 'i18n', 'salut', 'fr'
+            literal.set 'string', 'hello'
+            literal.set 'integer', 2
+            literal.set 'date', new Date(2014, 1, 1)
+            # literal.set 'inner', new db.Inner {string: 'foo'}
+
+            literal2 = new db.Literal
+            literal2.set 'i18n', 'bye', 'en'
+            literal2.set 'i18n', 'au revoir', 'fr'
+            literal2.set 'string', 'hi'
+            literal2.set 'integer', 3
+            literal2.set 'date', new Date(2014, 1, 2)
+            # literal2.set 'inner', new db.Inner {string: 'bar'}
+
+            db.batchSync [literal, literal2], (err, data) ->
+                expect(err).to.be.null
+                db.Literal.find {}, {fields: ['string', 'integer'], sortBy: 'integer'}, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results[0].get('string')).to.be.equal 'hello'
+                    expect(results[0].get('integer')).to.be.equal 2
+                    expect(results[0].get('date')).to.not.exist
+                    expect(results[0].get('i18n', 'en')).to.not.exist
+
+                    expect(results[1].get('string')).to.be.equal 'hi'
+                    expect(results[1].get('integer')).to.be.equal 3
+                    expect(results[1].get('date')).to.not.exist
+                    expect(results[1].get('i18n', 'en')).to.not.exist
+                    done();

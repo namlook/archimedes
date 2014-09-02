@@ -40,6 +40,25 @@ describe 'Database.find(options)', ()->
                     expect(results.length).to.be.equal 2
                     done()
 
+    describe '.find(fields)', () ->
+        it 'should return only the value from specified fields', (done) ->
+            pojos = []
+            for i in [1..5]
+                pojo = {_type: 'Test'}
+                pojo[f.title] = i
+                pojo[f.index] = i * 10
+                pojos.push pojo
+            db.batchSync pojos, (err, results) ->
+                expect(err).to.be.null
+                expect(results.length).to.be.equal 5
+                expect(_.every(r.options.dbTouched for r in results)).to.be.true
+                db.find {_type: 'Test'}, {fields: f.title}, (err, results) ->
+                    expect(err).to.be.null
+                    for item in results
+                        expect(item[f.title]).to.exist
+                        expect(item[f.index]).to.not.exist
+                    done()
+
     describe '.find(sortBy)', () ->
         it 'should sort the results in asc order by default', (done) ->
             pojos = []

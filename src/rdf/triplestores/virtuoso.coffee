@@ -77,7 +77,7 @@ module.exports = class Virtuoso
             uris = [uris]
 
         async.map uris, (uri, cb) =>
-            @describeURI uri, (err, pojo) =>
+            @describeURI uri, options, (err, pojo) =>
                 if err
                     return cb err
                 return cb null, pojo
@@ -89,6 +89,8 @@ module.exports = class Virtuoso
 
     # ## describeURI
     # describe one URI
+    # options:
+    #   - fields: only fetch the value of the specified fields
     describeURI: (uri, options, callback) ->
         if typeof(options) is 'function'
             callback = options
@@ -96,12 +98,24 @@ module.exports = class Virtuoso
         unless callback?
             throw "callback required"
 
+        statements = []
+        if options.fields?
+            fields = options.fields
+            unless _.isArray(fields)
+                fields = [fields]
+            for fieldURI in fields
+                statements.push "<#{uri}> <#{fieldURI}> ?#{_.str.classify fieldURI} ."
+        else
+            statements.push "<#{uri}> ?p ?o ."
+
         sparqlQuery = """
         construct {
-          <#{uri}> ?p ?o .
+            #{statements.join('\n')}
         }  from <#{@graphURI}> where {
-          <#{uri}> ?p ?o .
+            #{statements.join('\n')}
         }"""
+
+        # console.log 'oooo.....', sparqlQuery, '....ooooo'
 
         @sparql sparqlQuery, options, (err, data) ->
             if err
