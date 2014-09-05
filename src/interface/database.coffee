@@ -17,6 +17,7 @@ class Database
         @_cache = {}
         # the types used by the schema to describe, validate and compute values
         @_types = defaultTypes
+        @inversedProperties = {}
 
     # ## count
     # return the number of documents that match the query
@@ -318,6 +319,7 @@ class Database
 
             # validate and attach the model to the database
             @validateModel(modelName, model)
+            @_registerInversedProperties(modelName, model)
             @[modelName] = model
             @modelsList.push modelName
 
@@ -400,6 +402,17 @@ class Database
     # Private methods
     #
     #
+
+    # ## _registerInversedProperties
+    _registerInversedProperties: (modelName, model) ->
+        for fieldName, infos of model::schema
+            if infos.inverse?
+                unless @inversedProperties[infos.type]?
+                    @inversedProperties[infos.type] = {}
+                @inversedProperties[infos.type][infos.inverse] = {
+                    type: modelName,
+                    fieldName: fieldName
+                }
 
     # ## _updateCache
     #

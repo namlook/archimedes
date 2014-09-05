@@ -1354,15 +1354,20 @@ class Model
             if field.indexOf('.') > -1
                 [relation, field] = field.split('.')
                 unless model::schema[relation]?
-                    throw "Unknown field #{model::meta.name}.#{relation}"
-                relationModel = @db[model::schema[relation].type]
-                unless relationModel
-                    throw "#{model::meta.name}.#{relation} is not a model"
-                if _.isArray(field)
-                    field = field.join('.')
-                newQuery = {}
-                newQuery[field] = value
-                @_validateQuery(relationModel, newQuery)
+                    inverseRelation = @db.inversedProperties[model::meta.name]?[relation]
+                    unless inverseRelation
+                        throw "Unknown field #{model::meta.name}.#{relation}"
+                    else if not @db[inverseRelation.type]?
+                        throw "#{model::meta.name}.#{relation} is not a model"
+                else
+                    relationModel = @db[model::schema[relation].type]
+                    unless relationModel
+                        throw "#{model::meta.name}.#{relation} is not a model"
+                    if _.isArray(field)
+                        field = field.join('.')
+                    newQuery = {}
+                    newQuery[field] = value
+                    @_validateQuery(relationModel, newQuery)
             else unless model::schema[field]?
                 throw "Unknown field #{model::meta.name}.#{field}"
 

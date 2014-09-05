@@ -107,7 +107,15 @@ _convert = (sparqlQuery, query, validx) ->
 
 _buildProperty = (prop) ->
     if prop.indexOf('->') > -1
-        prop = ("<#{_prop}>" for _prop in prop.split('->')).join('/')
+        _props = []
+        for _prop in prop.split('->')
+            if _prop.indexOf('^') > -1
+                for _inverseProp in _prop.split('^')
+                    if _inverseProp
+                        _props.push("^<#{_inverseProp}>")
+            else
+                _props.push("<#{_prop}>")
+        prop = _props.join('/')
     else if prop in ['_type', '_class']
         prop = 'a'
     else
@@ -124,16 +132,28 @@ _getStatement = (prop, value, validx) ->
     sparqlQuery = []
     lang = ''
     isNot = false
+    inverse = false
 
     if prop.indexOf('@') > -1
         [prop, lang] = prop.split('@')
 
+    if prop[0] is '^'
+        prop = prop[1..]
+        inverse = true
+
     if prop.indexOf('->_id::') > -1
         [path, instancesNamespace] = prop.split('->_id::')
         path = _buildProperty(path)
+        if inverse
+            path = "^#{path}"
         sparqlQuery.push("?s #{path} <#{instancesNamespace}/#{value}> .")
     else
+
         prop = _buildProperty(prop)
+
+        if inverse
+            prop = "^#{prop}"
+
 
         if _.isRegExp(value)
             throw 'regex not implemented'
@@ -310,11 +330,19 @@ exports.field2uri = field2uri = (fieldName, model) ->
         fields = fieldName.split('.')
         fieldName = fields[0]
         unless schema[fieldName]?
-            throw "Unknown field #{meta.name}.#{fieldName}"
-        newmodel = model.db[model::schema[fieldName].type]
-        newfieldName = fields[1..].join('.')
-        uri = schema[fieldName].uri or "#{meta.propertiesNamespace}/#{fieldName}"
-        return "#{uri}->#{field2uri(newfieldName, newmodel)}"
+            inverseRelation = model.db.inversedProperties[model::meta.name]?[fieldName]
+            unless inverseRelation
+                throw "Unknown field #{meta.name}.#{fieldName}"
+            else
+                newmodel = model.db[inverseRelation.type]
+                newfieldName = fields[1..].join('.')
+                uri = newmodel::schema[inverseRelation.fieldName].uri or "#{newmodel::meta.propertiesNamespace}/#{inverseRelation.fieldName}"
+                return "^#{uri}->#{field2uri(newfieldName, newmodel)}"
+        else
+            newmodel = model.db[model::schema[fieldName].type]
+            newfieldName = fields[1..].join('.')
+            uri = schema[fieldName].uri or "#{meta.propertiesNamespace}/#{fieldName}"
+            return "#{uri}->#{field2uri(newfieldName, newmodel)}"
     else
         if name is '_id'
             return "_id::#{meta.instancesNamespace}" # BIG UGLY HACK !!! it passes the instancesNamespace to _getStatement
@@ -363,17 +391,18 @@ exports.buildTimeSeriesQuery = (step) ->
     }
 
 if require.main is module
-    # uris = {
-    #     foo: 'http://example.org/foo'
-    #     bar: 'http://example.org/bar'
-    #     toto: 'http://example.org/toto'
-    # }
-    # query = {}
+    uris = {
+        foo: 'http://example.org/foo'
+        bar: 'http://example.org/bar'
+        toto: 'http://example.org/toto'
+    }
+    query = {}
     # query[uris.foo+"@en"] = "hello"
     # query["#{uris.bar}->#{uris.toto}->#{uris.foo}"] = new Date()
+    query["#{uris.bar}<-#{uris.toto}<-#{uris.foo}->#{uris.bar}"] = new Date()
     # console.log ' '
-    # console.log  exports.mongo2sparql query, {sortBy: ["-#{uris.bar}->#{uris.toto}->#{uris.foo}"]}
+    console.log  exports.mongo2sparql query
     # console.log ' '
 
-    console.log  exports.buildTimeSeriesQuery('$year-$month/$seconds')
+    # console.log  exports.buildTimeSeriesQuery('$year-$month/$seconds')
 
