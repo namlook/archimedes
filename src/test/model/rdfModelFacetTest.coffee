@@ -34,12 +34,25 @@ describe 'model.facets', ()->
                 type: 'date'
             inner:
                 type: 'Inner'
+                inverse: 'literals'
 
 
     class models.One extends config.Model
         schema:
+            title:
+                type: 'string'
             literal:
                 type: 'Literal'
+                inverse: 'ones'
+                required: true
+
+    class models.OtherOne extends config.Model
+        schema:
+            title:
+                type: 'string'
+            literal:
+                type: 'Literal'
+                inverse: 'otherOnes'
                 required: true
 
     class models.Multi extends config.Model
@@ -176,3 +189,107 @@ describe 'model.facets', ()->
                     expect(results[1].facet).to.be.equal '0'
                     expect(results[1].count).to.be.equal 3
                     done()
+
+        it "should facet on relations with query (2)", (done) ->
+            ones  = []
+            for i in [1..15]
+                ones.push new db.One {
+                    literal: new db.Literal {
+                        integer: i
+                        string: "#{i%2}"
+                        inner: new db.Inner {string: "#{i%2}"}
+                    }
+                }
+                ones.push new db.OtherOne {
+                    literal: new db.Literal {
+                        integer: i
+                        string: "#{i%2}"
+                        inner: new db.Inner {string: "#{i%2}"}
+                    }
+                }
+             async.map ones, (one, cb) ->
+                one.save cb
+            , (err, results) ->
+                expect(err).to.be.null
+                query = {}
+                query['literal.integer'] = {$lt: 8}
+                db.One.facets 'literal.inner.string', query, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 2
+                    expect(results[0].facet).to.be.equal '1'
+                    expect(results[0].count).to.be.equal 4
+                    expect(results[1].facet).to.be.equal '0'
+                    expect(results[1].count).to.be.equal 3
+                    done()
+
+        it "should facet on inversed relations", (done) ->
+            ones  = []
+            for i in [1..15]
+                ones.push new db.One {
+                    title: 'foo'+(i%2)
+                    literal: new db.Literal {
+                        integer: i
+                        string: "#{i%2}"
+                        inner: new db.Inner {string: "#{i%2}"}
+                    }
+                }
+             async.map ones, (one, cb) ->
+                one.save cb
+            , (err, results) ->
+                expect(err).to.be.null
+                db.Literal.facets 'ones.title', (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 2
+                    expect(results[0].facet).to.be.equal 'foo1'
+                    expect(results[0].count).to.be.equal 8
+                    expect(results[1].facet).to.be.equal 'foo0'
+                    expect(results[1].count).to.be.equal 7
+                    done()
+
+
+        it "should facet on inversed relations with query", (done) ->
+            ones  = []
+            for i in [1..15]
+                ones.push new db.One {
+                    title: 'foo'+(i%2)
+                    literal: new db.Literal {
+                        integer: i
+                        string: "#{i%2}"
+                        inner: new db.Inner {string: "#{i%2}"}
+                    }
+                }
+             async.map ones, (one, cb) ->
+                one.save cb
+            , (err, results) ->
+                expect(err).to.be.null
+                query = {integer: {$lt: 8}}
+                db.Literal.facets 'ones.title', query, (err, results) ->
+                    expect(err).to.be.null
+                    console.log results
+                    expect(results.length).to.be.equal 2
+                    expect(results[0].facet).to.be.equal 'foo1'
+                    expect(results[0].count).to.be.equal 4
+                    expect(results[1].facet).to.be.equal 'foo0'
+                    expect(results[1].count).to.be.equal 3
+                    done()
+
+        it "should raise an error if ._id is used on facet", (done) ->
+            ones  = []
+            for i in [1..15]
+                ones.push new db.One {
+                    title: 'foo'+(i%2)
+                    literal: new db.Literal {
+                        integer: i
+                        string: "#{i%2}"
+                        inner: new db.Inner {string: "#{i%2}"}
+                    }
+                }
+             async.map ones, (one, cb) ->
+                one.save cb
+            , (err, results) ->
+                expect(err).to.be.null
+                query = {integer: {$lt: 8}}
+                db.Literal.facets 'ones._id', query, (err, results) ->
+                    expect(err).to.be.equal 'Error: you cannot use _id on the facet'
+                    done()
+

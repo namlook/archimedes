@@ -267,6 +267,32 @@ class Database extends DatabaseInterface
         unless options.order?
             options.order = 'desc'
 
+        lang = null
+        if field.indexOf('@')
+            [field, lang] = field.split('@')
+
+        if field.indexOf('->') > -1 # XXX use mongo2sparql ?
+            propURI = []
+            for _prop in field.split('->')
+                if _.str.startsWith(_prop, '_id::')
+                    return callback("Error: you cannot use _id on the facet")
+                inverse = ""
+                if _prop[0] is '^'
+                    _prop = _prop[1..]
+                    inverse = "^"
+                _propURI = "#{inverse}<#{_prop}>"
+                propURI.push _propURI
+            propURI = propURI.join('/')
+        else
+            propURI = "<#{field}>"
+
+        langSection = ''
+        if lang
+            langSection = "FILTER(langMatches(lang(?facet), '#{lang}'))"
+
+        query = _.clone(query)
+        if query._type?
+            query._type = "#{@defaultClassesNamespace}/#{query._type}"
 
         sparqlQuery = ''
         unless _.isEmpty query
@@ -275,21 +301,8 @@ class Database extends DatabaseInterface
             catch e
                 return callback e
 
-        lang = null
-        if field.indexOf('@')
-            [field, lang] = field.split('@')
-
-        if field.indexOf('->') > -1
-            propURI = ("<#{_prop}>" for _prop in field.split('->')).join('/')
-        else
-            propURI = "<#{field}>"
-
-        langSection = ''
-        if lang
-            langSection = "FILTER(langMatches(lang(?facet), '#{lang}'))"
-
         sparqlQuery = """
-            select ?facet, (count(?facet) as ?count) from <#{@graphURI}> where {
+            select ?facet, (count(distinct ?s) as ?count) from <#{@graphURI}> where {
                 ?s #{propURI} ?facet .
                 #{sparqlQuery}
                 #{langSection}
@@ -358,7 +371,7 @@ class Database extends DatabaseInterface
                 return callback e
 
         sparqlQuery = """
-            select ?facet, (count(?facet) as ?count) from <#{@graphURI}> where {
+            select ?facet, (count(?s) as ?count) from <#{@graphURI}> where {
                 #{sparqlQuery}
                 ?s #{propURI} ?date .
                 #{modifiers}

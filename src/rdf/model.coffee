@@ -153,6 +153,13 @@ class RdfModel extends ModelInterface
                 field = field2uri(field, @)
             catch e
                 return callback e
+
+        # if the query is not a reference (or an array of references), then
+        # we add the type of the model in order to get only the document of
+        # the correct type.
+        if not _.isArray(query) and not @db.isReference(query)
+            query._type = @::meta.name
+
         try
             @_convertQueryUri(query)
         catch e

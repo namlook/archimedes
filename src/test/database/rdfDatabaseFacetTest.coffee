@@ -77,6 +77,25 @@ describe 'Database.facets()', ()->
                     expect(results[2].count).to.be.equal 2
                     done()
 
+        it "should return the facets on a specified field with a query on facet's field", (done) ->
+            pojos = []
+            for i in [1..15]
+                pojo = {_type: 'Test'}
+                pojo[f.title] = facetValues[i%3]
+                pojo[f.index] = i
+                pojo[f.foo] = i%2
+                pojos.push pojo
+            db.batchSync pojos, (err, obj, infos) ->
+                expect(err).to.be.null
+                query = {}
+                query[f.title] = facetValues[1] # foo
+                db.facets f.title, query, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 1
+                    expect(results[0].facet).to.be.equal 'foo'
+                    expect(results[0].count).to.be.equal 5
+                    done()
+
     describe '[i18n]', () ->
         it 'should return the facets for all languages on a specified i18n field', (done) ->
             pojos = []
@@ -196,3 +215,30 @@ describe 'Database.facets()', ()->
                     expect(results[1].facet).to.be.equal '0'
                     expect(results[1].count).to.be.equal 3
                     done()
+
+        it "should facet on relations with query with _type", (done) ->
+            data = []
+            for i in [1..15]
+                embeded = {_id: i%3, _type: 'Embed'}
+                embeded[f.index] = i%3
+                embeded[f.title] = facetValues[i%3]
+                data.push embeded
+                pojo = {_type: 'Pojo'}
+                pojo[f.foo] = {_ref: "http://data.example.org/embed/#{i%3}"}
+                pojo[f.index] = i*2
+                data.push pojo
+                otherPojo = {_type: 'Other'}
+                otherPojo[f.foo] = {_ref: "http://data.example.org/embed/#{i%3}"}
+                otherPojo[f.index] = i*2
+                data.push otherPojo
+            db.batchSync data, (err, savedOne, infos) ->
+                expect(err).to.be.null
+                query = {_type: 'Pojo'}
+                query["#{f.foo}->#{f.title}"] = facetValues[1]
+                db.facets "#{f.foo}->#{f.title}", query, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 1
+                    expect(results[0].facet).to.be.equal 'foo'
+                    expect(results[0].count).to.be.equal 5
+                    done()
+
