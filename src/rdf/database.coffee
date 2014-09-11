@@ -6,7 +6,7 @@ async = require 'async'
 {mongo2sparql, value2rdf, options2sparql, buildTimeSeriesQuery} = require './utils'
 
 triplestores = {
-    'stardog': require './triplestores/stardog'
+    # 'stardog': require './triplestores/stardog'
     'virtuoso': require './triplestores/virtuoso'
 }
 
