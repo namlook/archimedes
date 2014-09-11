@@ -18,7 +18,7 @@ module.exports = class Virtuoso
         host = options.host or 'localhost'
         port = options.port or '8890'
         @endpoint = options.endpoint or "http://#{host}:#{port}/sparql"
-        console.log "using SPARQL endpoint: #{@endpoint}"
+        # console.log "using SPARQL endpoint: #{@endpoint}"
         unless @endpoint
             throw "endpoint is required"
 
