@@ -41,7 +41,7 @@ describe 'Database.find(options)', ()->
                     done()
 
     describe '.find(fields)', () ->
-        it 'should return only the value from specified fields', (done) ->
+        it 'should return only the value from specified fields (single field)', (done) ->
             pojos = []
             for i in [1..5]
                 pojo = {_type: 'Test'}
@@ -57,6 +57,26 @@ describe 'Database.find(options)', ()->
                     for item in results
                         expect(item[f.title]).to.exist
                         expect(item[f.index]).to.not.exist
+                    done()
+
+        it 'should return only the value from specified fields (multiple fields)', (done) ->
+            pojos = []
+            for i in [1..5]
+                pojo = {_type: 'Test'}
+                pojo[f.title] = i
+                pojo[f.index] = i * 10
+                pojo[f.foo] = i + 10
+                pojos.push pojo
+            db.batchSync pojos, (err, results) ->
+                expect(err).to.be.null
+                expect(results.length).to.be.equal 5
+                expect(_.every(r.options.dbTouched for r in results)).to.be.true
+                db.find {_type: 'Test'}, {fields: [f.title, f.index]}, (err, results) ->
+                    expect(err).to.be.null
+                    for item in results
+                        expect(item[f.title]).to.exist
+                        expect(item[f.index]).to.exist
+                        expect(item[f.foo]).to.not.exist
                     done()
 
     describe '.find(sortBy)', () ->

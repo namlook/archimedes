@@ -398,6 +398,93 @@ describe 'Database.find()', ()->
                     expect(results.length).to.be.equal 3
                     done()
 
+    describe 'query[$year]', () ->
+
+        it 'should return the docs that match a simple query', (done) ->
+            pojos = []
+            for i in [1..5]
+                pojo = {_type: 'Test'}
+                pojo[f.title] = i
+                pojo[f.index] = new Date(Date.UTC(2000+(i*10), 0, 1))
+                pojos.push pojo
+            db.batchSync pojos, (err, results) ->
+                expect(err).to.be.null
+                query = {_type: 'Test'}
+                query[f.index] = {$year: 2030}
+                db.find query, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 1
+                    expect(new Date(results[0][f.index]).getFullYear()).to.be.equal 2030
+                    done()
+
+        it 'should return the docs that match a query with $gt', (done) ->
+            pojos = []
+            for i in [1..5]
+                pojo = {_type: 'Test'}
+                pojo[f.title] = i
+                pojo[f.index] = new Date(Date.UTC(2000+(i*10), 0, 1))
+                pojos.push pojo
+            db.batchSync pojos, (err, results) ->
+                expect(err).to.be.null
+                query = {_type: 'Test'}
+                query[f.index] = {$year: {$gt: 2030}}
+                db.find query, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 2
+                    done()
+
+        it 'should return the docs that match a query with $gt and $lt', (done) ->
+            pojos = []
+            for i in [1..5]
+                pojo = {_type: 'Test'}
+                pojo[f.title] = i
+                pojo[f.index] = new Date(Date.UTC(2000+(i*10), 0, 1))
+                pojos.push pojo
+            db.batchSync pojos, (err, results) ->
+                expect(err).to.be.null
+                query = {_type: 'Test'}
+                query[f.index] = {$year: {$gt: 2020, $lt: 2040}}
+                db.find query, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 1
+                    expect(new Date(results[0][f.index]).getFullYear()).to.be.equal 2030
+                    done()
+
+
+    describe 'query[$month]', () ->
+        it 'should return the docs that match a simple query', (done) ->
+            pojos = []
+            for i in [1..5]
+                pojo = {_type: 'Test'}
+                pojo[f.title] = i
+                pojo[f.index] = new Date(Date.UTC(2000, i, 1))
+                pojos.push pojo
+            db.batchSync pojos, (err, results) ->
+                expect(err).to.be.null
+                query = {_type: 'Test'}
+                query[f.index] = {$month: 4}
+                db.find query, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 1
+                    expect(new Date(results[0][f.index]).getMonth()).to.be.equal 3
+                    done()
+
+        it 'should return the docs that match a simple query with $gt', (done) ->
+            pojos = []
+            for i in [1..5]
+                pojo = {_type: 'Test'}
+                pojo[f.title] = i
+                pojo[f.index] = new Date(Date.UTC(2000, i, 1))
+                pojos.push pojo
+            db.batchSync pojos, (err, results) ->
+                expect(err).to.be.null
+                query = {_type: 'Test'}
+                query[f.index] = {$month: {$gt: 4}}
+                db.find query, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 2
+                    done()
+
 
     describe 'query[$ne]', () ->
         it 'should return the docs that match a simple query', (done) ->
@@ -460,7 +547,6 @@ describe 'Database.find()', ()->
                 pojos.push pojo
             db.batchSync pojos, (err, results) ->
                 expect(err).to.be.null
-                console.log results
                 query = {_type: 'Test'}
                 query[f.index] = {$exists: true}
                 db.find query, (err, results) ->

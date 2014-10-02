@@ -209,6 +209,17 @@ _regexFilterFunc = (operator) -> # TODO $in with $regex
             _filter = """filter regex(#{variable}, '''#{value}'''#{iregex})"""
         _filter
 
+
+_dateFilterFunc = (operator) ->
+    return (variable, value, lang) ->
+        filters = []
+        if _.isObject(value)
+            for $op, val of value
+                filters.push(filterFuncs[$op](operator+'('+variable+')', val, lang))
+        else
+            filters.push(filterFuncs['$eq'](operator+'('+variable+')', value, lang))
+        return filters.join('\n')
+
 filterFuncs = {
     '$eq': _simpleFilterFunc('$eq')
     '$lt': _simpleFilterFunc('$lt')
@@ -217,6 +228,9 @@ filterFuncs = {
     '$gte': _simpleFilterFunc('$gte')
     '$regex': _regexFilterFunc('$regex')
     '$iregex': _regexFilterFunc('$iregex')
+    '$year': _dateFilterFunc('year')
+    '$month': _dateFilterFunc('month')
+    '$day': _dateFilterFunc('day')
 }
 
 innerFilterFuncs = {
