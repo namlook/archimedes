@@ -101,16 +101,14 @@ describe 'model inverse relations', ()->
             two.set 'inner', inner
             two.set 'literal', literal
 
-            one.save (err) ->
+            db.batchSync [inner, innerbis, literal, one, two], (err) ->
                 expect(err).to.be.null
-                two.save (err) ->
-                    expect(err).to.be.null
 
-                    db.Literal.find {'ones.inner.string': 'foo bis'}, (err, results) ->
-                        expect(err).to.be.null
-                        expect(results.length).to.be.equal 1
-                        expect(results[0].get '_id').to.be.equal 'literal1'
-                        done()
+                db.Literal.find {'ones.inner.string': 'foo bis'}, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 1
+                    expect(results[0].get '_id').to.be.equal 'literal1'
+                    done()
 
         it 'should return the results with inverse relation in deep query', (done) ->
 
