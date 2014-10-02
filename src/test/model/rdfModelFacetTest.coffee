@@ -265,7 +265,6 @@ describe 'model.facets', ()->
                 query = {integer: {$lt: 8}}
                 db.Literal.facets 'ones.title', query, (err, results) ->
                     expect(err).to.be.null
-                    console.log results
                     expect(results.length).to.be.equal 2
                     expect(results[0].facet).to.be.equal 'foo1'
                     expect(results[0].count).to.be.equal 4
