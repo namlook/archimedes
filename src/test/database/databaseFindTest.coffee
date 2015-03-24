@@ -21,6 +21,7 @@ describe 'Database.find()', ()->
     }
 
     beforeEach (done) ->
+        db.clearRegisteredModels()
         db.clear done
 
     describe '.find(id)', () ->
@@ -98,6 +99,72 @@ describe 'Database.find()', ()->
                         foos = (Boolean(o[f.foo]) for o in results)
                         expect(foos).to.include.members [false, true]
                         done()
+
+    describe '.findModelsFromReferences(references)', (done) ->
+        it 'should throw an error if no references are passed', (done) ->
+            db.findModelsFromReferences null, (err, results) ->
+                expect(err).to.be.equal "references are required"
+
+                expect(-> db.findModelsFromReferences (err, results) ->).to.throw 'callback is required'
+                done()
+
+        it 'should throw an error if the models are not registered', (done) ->
+            pojos = []
+            for i in [1..4]
+                pojo = {_type: 'Pojo1'}
+                pojo[f.title] = i
+                pojo[f.index] = i*10
+                pojos.push pojo
+            for i in [1..6]
+                pojo = {_type: 'Pojo2'}
+                pojo[f.title] = i
+                pojo[f.index] = i*10
+                pojos.push pojo
+            db.batchSync pojos, (err, results) ->
+                expect(err).to.be.null
+                references = (result.result._ref for result in results)
+                expect(references.length).to.be.equal 10
+                db.findModelsFromReferences references, (err, models) ->
+                    expect(err).to.be.equal "the model Pojo1 is not registered. You should register models in order to use findModelsFromReferences()"
+                    done()
+
+        it 'should fetch the model from their reference', (done) ->
+            models = {}
+            class models.Pojo1 extends config.Model
+                schema:
+                    title:
+                        type: 'string'
+                    index:
+                        type: 'integer'
+
+            class models.Pojo2 extends config.Model
+                schema:
+                    title:
+                        type: 'string'
+                    foo:
+                        type: 'boolean'
+
+            db.registerModels models
+
+            pojos = []
+            for i in [1..4]
+                pojo = {_type: 'Pojo1'}
+                pojo[f.title] = "#{i}"
+                pojo[f.index] = i*10
+                pojos.push pojo
+            for i in [1..6]
+                pojo = {_type: 'Pojo2'}
+                pojo[f.title] = "#{i}"
+                pojo[f.foo] = i%2
+                pojos.push pojo
+            db.batchSync pojos, (err, results) ->
+                expect(err).to.be.null
+                references = (result.result._ref for result in results)
+                expect(references.length).to.be.equal 10
+                db.findModelsFromReferences references, (err, models) ->
+                    expect(err).to.be.null
+                    expect(models.length).to.be.equal 10
+                    done()
 
     describe '.find(query)', () ->
         it 'should return the docs that match a simple query', (done) ->

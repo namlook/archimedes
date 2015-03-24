@@ -80,6 +80,58 @@ class Database
         callback '_find() is not implemented'
 
 
+    # ## findModelsFromReferences
+    #
+    # return the instantiated models from their references
+    # (used for propagating deleltion)
+    findModelsFromReferences: (references, options, callback) ->
+        if typeof(options) is 'function' and not callback
+            callback = options
+            options = {}
+
+        unless callback
+            throw 'callback is required'
+
+        unless references
+            return callback("references are required")
+
+        unless _.isArray(references)
+            references = [references]
+
+        dereferences = (@dereference(ref) for ref in references)
+
+        modelsByType = {}
+        for deref in dereferences
+            modelsByType[deref._type] = [] unless modelsByType[deref._type]?
+            modelsByType[deref._type].push(deref._id)
+
+        dbContext = @
+
+        findByTypeFn = (type, ids) ->
+            return (cb) ->
+                dbContext[type].find {_id: ids}, (err, results) ->
+                    if err
+                        return cb(err)
+                    return cb(null, results)
+
+        parallelProcess = []
+        for type, ids of modelsByType
+            unless @[type]
+                return callback "the model #{type} is not registered. You should register models in order to use findModelsFromReferences()"
+            parallelProcess.push findByTypeFn(type, ids)
+
+        async.parallel parallelProcess, (err, _results) ->
+            if err
+                return callback(err)
+
+            results = []
+            for res in _results
+                results = results.concat(res)
+
+            return callback(null, results)
+
+
+
     # ## first
     # Returns the first document that match the query
     #
