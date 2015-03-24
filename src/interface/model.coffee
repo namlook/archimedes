@@ -1051,17 +1051,29 @@ class Model
             throw 'callback is required'
         unless @ref
             return callback "can't delete a non-saved model"
-        @db.delete @ref, (err) =>
+
+        # propagate deletion accross relations...
+        async.map @__propagateDeletion(), (model, cb) ->
+            model.delete (err) ->
+                if err
+                    return cb(err)
+                return cb(null, model)
+        , (err, results) =>
             if err
+                return callback(err)
+
+            # finally, delete the model
+            @db.delete @ref, (err) =>
+                if err
+                    if callback
+                        return callback err
+                    return
+
+                @_isNew = true
+                @_cachedProperties = {}
+
                 if callback
-                    return callback err
-                return
-
-            @_isNew = true
-            @_cachedProperties = {}
-
-            if callback
-                return callback null
+                    return callback null
 
 
     # ## clone
@@ -1319,6 +1331,27 @@ class Model
                 else if value.meta?.name
                     pendings.push value
         return pendings
+
+
+    # ## __propagateDeletion()
+    #
+    # delete all saved relations if their property has been
+    # marked as `propagateDeletion`
+    __propagateDeletion: () ->
+        relationsToDelete = []
+        for fieldName, value of @_properties
+            schema = @schema[fieldName]
+            if schema.propagateDeletion and @db[schema.type]?
+                if schema.multi
+                    for relation in @get(fieldName)
+                        if relation.get('_id')
+                            relationsToDelete.push(relation)
+                else
+                    relation = @get(fieldName)
+                    if relation.get('_id')
+                        relationsToDelete.push(relation)
+        return relationsToDelete
+
 
 
     # ## _updateCachedProperties()
