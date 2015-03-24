@@ -1043,6 +1043,8 @@ class Model
 
     # ## delete
     # delete the model instance and all its related property uris.
+    # if a property is a relation-property and propagateDeletion is true,
+    # then, remove the relations as well
     #
     # example:
     #       @delete (err) ->
@@ -1052,28 +1054,34 @@ class Model
         unless @ref
             return callback "can't delete a non-saved model"
 
+
         # propagate deletion accross relations...
-        async.map @__propagateDeletion(), (model, cb) ->
-            model.delete (err) ->
-                if err
-                    return cb(err)
-                return cb(null, model)
-        , (err, results) =>
+        @__getRelationsToPropagateDeletion (err, relations) =>
             if err
                 return callback(err)
 
-            # finally, delete the model
-            @db.delete @ref, (err) =>
+            async.map relations, (model, cb) ->
+
+                model.delete (err) ->
+                    if err
+                        return cb(err)
+                    return cb(null, model)
+            , (err, results) =>
                 if err
+                    return callback(err)
+
+                # finally, delete the model
+                @db.delete @ref, (err) =>
+                    if err
+                        if callback
+                            return callback err
+                        return
+
+                    @_isNew = true
+                    @_cachedProperties = {}
+
                     if callback
-                        return callback err
-                    return
-
-                @_isNew = true
-                @_cachedProperties = {}
-
-                if callback
-                    return callback null
+                        return callback null
 
 
     # ## clone
@@ -1333,24 +1341,33 @@ class Model
         return pendings
 
 
-    # ## __propagateDeletion()
+    # ## __getRelationsToPropagateDeletion()
     #
     # delete all saved relations if their property has been
     # marked as `propagateDeletion`
-    __propagateDeletion: () ->
+    __getRelationsToPropagateDeletion: (callback) ->
         relationsToDelete = []
+        referencesToDelete = []
         for fieldName, value of @_properties
             schema = @schema[fieldName]
             if schema.propagateDeletion and @db[schema.type]?
                 if schema.multi
                     for relation in @get(fieldName)
-                        if relation.get('_id')
+                        if typeof(relation) is 'string'
+                            referencesToDelete.push(relation)
+                        else if relation.get('_id')
                             relationsToDelete.push(relation)
                 else
                     relation = @get(fieldName)
-                    if relation.get('_id')
+                    if typeof(relation) is 'string'
+                        referencesToDelete.push(relation)
+                    else if relation.get('_id')
                         relationsToDelete.push(relation)
-        return relationsToDelete
+
+        @db.findModelsFromReferences referencesToDelete, (err, models) ->
+            if err
+                return callback err
+            return callback null, relationsToDelete.concat(models)
 
 
 

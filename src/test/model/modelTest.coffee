@@ -881,7 +881,7 @@ describe 'Model', ()->
                 expect(err).to.be.equal "can't delete a non-saved model"
                 done()
 
-        it 'should propagate deletion on relation', (done) ->
+        it 'should propagate deletion on relations', (done) ->
             logo = new db.File({title: 'the logo'})
             attachments = []
             for i in [1..5]
@@ -909,8 +909,40 @@ describe 'Model', ()->
                             db.BlogPost.first {_id: savedBlogPost.get('_id')}, (err, blogpost) ->
                                 expect(err).to.be.null
                                 expect(blogpost).to.be.null
-
                                 done()
+
+
+        it 'should propagate deletion on non-populated relations', (done) ->
+            logo = new db.File({title: 'the logo'})
+            attachments = []
+            for i in [1..5]
+                attachments.push new db.File {title: "attachment #{i}"}
+
+            blogPost = new db.BlogPost()
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'keyword', ['hello', 'world']
+            blogPost.set 'content', 'article'
+            blogPost.set 'logo', logo
+            blogPost.set 'attachments', attachments
+            blogPost.save (err, savedBlogPost) ->
+                attachmentIds = (attachment.get('_id') for attachment in savedBlogPost.get('attachments'))
+                db.BlogPost.first {_id: savedBlogPost.get('_id')}, (err, nonPopulatedBlogPost) ->
+                    nonPopulatedBlogPost.delete (err) ->
+                        expect(err).to.be.null
+
+                        db.File.find {_id: attachmentIds}, (err, files) ->
+                            expect(err).to.be.null
+                            expect(files.length).to.be.equal 0
+
+                            db.File.first {_id: logo.get('_id')}, (err, logo) ->
+                                expect(err).to.be.null
+                                expect(logo).to.be.null
+
+                                db.BlogPost.first {_id: savedBlogPost.get('_id')}, (err, blogpost) ->
+                                    expect(err).to.be.null
+                                    expect(blogpost).to.be.null
+                                    done()
+
 
     describe '.count()', () ->
         it "should return only the instance's number of the same type", (done) ->
