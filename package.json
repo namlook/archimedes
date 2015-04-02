@@ -1,6 +1,6 @@
 {
   "name": "archimedes",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A simple ORDFM",
   "main": "lib",
   "scripts": {
@@ -10,7 +10,9 @@
     "test": "npm run build && mocha lib/test/model lib/test/database",
     "coverage": "npm run build && mocha -r blanket -R html-cov lib/test/database lib/test/model > coverage.html && open coverage.html"
   },
-  "files": ["lib"],
+  "files": [
+    "lib"
+  ],
   "keywords": [],
   "author": "Namlook",
   "license": "MIT",
