@@ -4,9 +4,9 @@
   "description": "A simple ORDFM",
   "main": "lib",
   "scripts": {
-    "preinstall": "npm install coffee-script && npm run build",
-    "build": "coffee -co lib src/",
-    "live": "coffee -wco lib src/",
+    "prepublish": "npm run build",
+    "build": "./node_modules/coffee-script/bin/coffee -co lib src/",
+    "live": "./node_modules/coffee-script/bin/coffee -wco lib src/",
     "test": "npm run build && mocha lib/test/model lib/test/database",
     "coverage": "npm run build && mocha -r blanket -R html-cov lib/test/database lib/test/model > coverage.html && open coverage.html"
   },
@@ -22,11 +22,12 @@
     }
   },
   "devDependencies": {
+    "blanket": "^1.1.6",
     "chai": "~1.8.1",
-    "mocha": "~1.14.0",
-    "sinon": "~1.7.3",
+    "coffee-script": "^1.9.1",
     "coffeeify": "~0.6.0",
-    "blanket": "^1.1.6"
+    "mocha": "~1.14.0",
+    "sinon": "~1.7.3"
   },
   "dependencies": {
     "underscore": "^1.6.0",
