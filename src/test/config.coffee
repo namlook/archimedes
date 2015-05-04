@@ -32,6 +32,8 @@ Virtuoso = () ->
         Database: () ->
             new Database {
                 store: 'virtuoso'
+                host: process.env.DATABASE_VIRTUOSO_HOST, # docker uses this
+                port: process.env.DATABASE_VIRTUOSO_PORT,
                 namespace: 'http://onto.example.org'
                 defaultInstancesNamespace: 'http://data.example.org'
                 graphURI: 'http://example.org'
