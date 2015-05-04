@@ -40,6 +40,26 @@ describe 'Database.find(options)', ()->
                     expect(results.length).to.be.equal 2
                     done()
 
+
+    describe '.find(offset)', () ->
+        it 'should skip a certain number of docs', (done) ->
+            pojos = []
+            for i in [1..5]
+                pojo = {_type: 'Test'}
+                pojo[f.title] = i
+                pojo[f.index] = i * 10
+                pojos.push pojo
+            db.batchSync pojos, (err, results) ->
+                expect(err).to.be.null
+                expect(results.length).to.be.equal 5
+                expect(_.every(r.options.dbTouched for r in results)).to.be.true
+                db.find {_type: 'Test'}, {offset: 2, sortBy: f.title, orderBy: 'asc'}, (err, results) ->
+                    expect(err).to.be.null
+                    expect(results.length).to.be.equal 3
+                    expect(results[0][f.title]).to.be.equal 3
+                    done()
+
+
     describe '.find(fields)', () ->
         it 'should return only the value from specified fields (single field)', (done) ->
             pojos = []

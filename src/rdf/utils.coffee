@@ -36,6 +36,7 @@ exports.mongo2sparql = (mongoQuery, queryOptions, options) ->
     sparqlQuery = []
     sparqlOrder = []
     sparqlLimit = ''
+    sparqlOffset = ''
     searchAllProperties = false
 
     if _.isEmpty(mongoQuery) and not queryOptions.sortBy?
@@ -86,11 +87,16 @@ exports.mongo2sparql = (mongoQuery, queryOptions, options) ->
     if queryOptions.limit?
         sparqlLimit = "limit #{queryOptions.limit}"
 
+    #build offset
+    if queryOptions.offset?
+        sparqlOffset = "offset #{queryOptions.offset}"
+
     return """{
     #{sparqlQuery.join('\n')}
     }
     #{sparqlOrder.join(' ')}
     #{sparqlLimit}
+    #{sparqlOffset}
     """
 
 
