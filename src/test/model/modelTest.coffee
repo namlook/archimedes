@@ -62,7 +62,8 @@ describe 'Model', ()->
             keyword:
                 type: 'string'
                 multi: true
-
+            createdDate:
+                type: 'date'
             logo:
                 type: 'File'
                 propagateDeletion: true
@@ -874,10 +875,11 @@ describe 'Model', ()->
             blogPost.push 'attachments', file1
             blogPost.push 'attachments', file2
             blogPost.set 'blog', blog
+            blogPost.set 'createdDate', new Date('1984-08-03')
             blogPostCSV = blogPost.toCSV()
-            expect(blogPostCSV).to.be.equal '"ablogpost","http://data.example.org/blog_post/ablogpost","BlogPost","http://data.example.org/blog_post/ablogpost,http://data.example.org/blog_post/ablogpost","","http://data.example.org/blog_post/ablogpost","arf","foo,bar","","hello world@@en"'
+            expect(blogPostCSV).to.be.equal '"ablogpost","http://data.example.org/blog_post/ablogpost","BlogPost","http://data.example.org/file/file1,http://data.example.org/file/file2","","http://data.example.org/blog/theblog","arf","Fri Aug 03 1984 02:00:00 GMT+0200 (CEST)","foo,bar","","hello world@@en"'
             csvHeader = blogPost.toCSVHeader()
-            expect(csvHeader).to.be.equal '"_id","_ref","_type","attachments","author","blog","content","keyword","logo","title"'
+            expect(csvHeader).to.be.equal '"_id","_ref","_type","attachments","author","blog","content","createdDate","keyword","logo","title"'
 
         it 'should return only the specified field', () ->
             blog = new db.Blog
@@ -890,7 +892,7 @@ describe 'Model', ()->
             blogPost.set 'blog', blog
             fields = ['title', 'content', 'blog']
             blogPostCSV = blogPost.toCSV({fields: fields})
-            expect(blogPostCSV).to.be.equal "\"http://data.example.org/blog_post/ablogpost\",\"arf\",\"hello world@@en\""
+            expect(blogPostCSV).to.be.equal '"http://data.example.org/blog/theblog","arf","hello world@@en"'
             headerCSV = blogPost.toCSVHeader({fields: fields})
             expect(headerCSV).to.be.equal '"blog","content","title"'
 
@@ -909,9 +911,9 @@ describe 'Model', ()->
             blogPost.set 'content', 'arf'
             blogPost.set 'blog', blog
             blogPostCSV = blogPost.toCSV({delimiter: ';'})
-            expect(blogPostCSV).to.be.equal '"ablogpost";"http://data.example.org/blog_post/ablogpost";"BlogPost";"";"";"http://data.example.org/blog_post/ablogpost";"arf";"foo,bar";"";"hello world@@en"'
+            expect(blogPostCSV).to.be.equal '"ablogpost";"http://data.example.org/blog_post/ablogpost";"BlogPost";"";"";"http://data.example.org/blog/theblog";"arf";"";"foo,bar";"";"hello world@@en"'
             csvHeader = blogPost.toCSVHeader({delimiter: ';'})
-            expect(csvHeader).to.be.equal '"_id";"_ref";"_type";"attachments";"author";"blog";"content";"keyword";"logo";"title"'
+            expect(csvHeader).to.be.equal '"_id";"_ref";"_type";"attachments";"author";"blog";"content";"createdDate";"keyword";"logo";"title"'
 
     describe '.delete()', ()->
         it 'should remove a saved instance from the database', (done) ->

@@ -1213,7 +1213,7 @@ class Model
     #      - delimiter: the delimiter to use (default ';')
     #      - fields: serialize only the specified fields.
     #           This is opitional and if null, all fields are returned
-    toCSVHeader: (options) ->
+    toCSVHeader: (options) =>
         options = options or {}
         delimiter = options.delimiter or ','
         propertyNames = options.fields or Object.keys(@schema);
@@ -1245,15 +1245,15 @@ class Model
                         _values = _values.concat(vals.map (val) -> "#{val}@@#{lang}")
                     value = _values.join(',');
                 else if @db[@schema[name].type]?
-                    value = (value.map (val) => @reference val).join(',')
+                    value = (value.map (val) => @db.reference(val._type, val._id)).join(',')
                 else
                     value = value.join(',');
             else if _.isObject(value)
                 if @schema[name].i18n
                     for lang, val of value
                         value = "#{val}@@#{lang}"
-                else
-                    value = @reference value
+                else if value._type? and value._id?
+                    value = @db.reference value._type, value._id
             csv.push(value)
 
         delimiter = options.delimiter or ','
