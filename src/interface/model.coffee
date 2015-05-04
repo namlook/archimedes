@@ -1244,6 +1244,8 @@ class Model
                     for lang, vals of value
                         _values = _values.concat(vals.map (val) -> "#{val}@@#{lang}")
                     value = _values.join(',');
+                else if @db[@schema[name].type]?
+                    value = (value.map (val) => @reference val).join(',')
                 else
                     value = value.join(',');
             else if _.isObject(value)

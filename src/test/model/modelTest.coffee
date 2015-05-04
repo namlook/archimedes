@@ -864,14 +864,18 @@ describe 'Model', ()->
             blog.set 'i18ntags', ['the', 'tag'], 'en'
             blogCSV = blog.toCSV()
             expect(blogCSV).to.be.equal '"theblog","http://data.example.org/blog/theblog","Blog","un@@fr,tag@@fr,the@@en,tag@@en","The Blog"'
+            file1 = new db.File({_id: 'file1', title: 'File 1'})
+            file2 = new db.File({_id: 'file2', title: 'File 2'})
             blogPost = new db.BlogPost
             blogPost.set '_id', 'ablogpost'
             blogPost.set 'title', 'hello world', 'en'
             blogPost.set 'keyword', ['foo', 'bar']
             blogPost.set 'content', 'arf'
+            blogPost.push 'attachments', file1
+            blogPost.push 'attachments', file2
             blogPost.set 'blog', blog
             blogPostCSV = blogPost.toCSV()
-            expect(blogPostCSV).to.be.equal '"ablogpost","http://data.example.org/blog_post/ablogpost","BlogPost","","","http://data.example.org/blog_post/ablogpost","arf","foo,bar","","hello world@@en"'
+            expect(blogPostCSV).to.be.equal '"ablogpost","http://data.example.org/blog_post/ablogpost","BlogPost","http://data.example.org/blog_post/ablogpost,http://data.example.org/blog_post/ablogpost","","http://data.example.org/blog_post/ablogpost","arf","foo,bar","","hello world@@en"'
             csvHeader = blogPost.toCSVHeader()
             expect(csvHeader).to.be.equal '"_id","_ref","_type","attachments","author","blog","content","keyword","logo","title"'
 
