@@ -834,7 +834,7 @@ describe 'Model', ()->
                 done()
 
 
-    describe '.getJSON()', () ->
+    describe '.toJSON()', () ->
         it 'should return a json string of the model', () ->
             blogPost = new db.BlogPost
             blogPost.set 'title', 'hello world', 'en'
@@ -854,6 +854,60 @@ describe 'Model', ()->
                 expect(jsonBlogPost._id).to.not.be.undefined
                 expect(jsonBlogPost.id).to.be.undefined
                 done()
+
+    describe '.toCSV()', () ->
+        it 'should return the model into CSV format', () ->
+            blog = new db.Blog
+            blog.set '_id', 'theblog'
+            blog.set 'title', 'The Blog'
+            blog.set 'i18ntags', ['un', 'tag'], 'fr'
+            blog.set 'i18ntags', ['the', 'tag'], 'en'
+            blogCSV = blog.toCSV()
+            expect(blogCSV).to.be.equal '"theblog","http://data.example.org/blog/theblog","Blog","un@@fr,tag@@fr,the@@en,tag@@en","The Blog"'
+            blogPost = new db.BlogPost
+            blogPost.set '_id', 'ablogpost'
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'keyword', ['foo', 'bar']
+            blogPost.set 'content', 'arf'
+            blogPost.set 'blog', blog
+            blogPostCSV = blogPost.toCSV()
+            expect(blogPostCSV).to.be.equal '"ablogpost","http://data.example.org/blog_post/ablogpost","BlogPost","","","http://data.example.org/blog_post/ablogpost","arf","foo,bar","","hello world@@en"'
+            csvHeader = blogPost.toCSVHeader()
+            expect(csvHeader).to.be.equal '"_id","_ref","_type","attachments","author","blog","content","keyword","logo","title"'
+
+        it 'should return only the specified field', () ->
+            blog = new db.Blog
+            blog.set '_id', 'theblog'
+            blogPost = new db.BlogPost
+            blogPost.set '_id', 'ablogpost'
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'keyword', ['foo', 'bar']
+            blogPost.set 'content', 'arf'
+            blogPost.set 'blog', blog
+            fields = ['title', 'content', 'blog']
+            blogPostCSV = blogPost.toCSV({fields: fields})
+            expect(blogPostCSV).to.be.equal "\"http://data.example.org/blog_post/ablogpost\",\"arf\",\"hello world@@en\""
+            headerCSV = blogPost.toCSVHeader({fields: fields})
+            expect(headerCSV).to.be.equal '"blog","content","title"'
+
+        it 'should return the CSV with a custom delimiter', () ->
+            blog = new db.Blog
+            blog.set '_id', 'theblog'
+            blog.set 'title', 'The Blog'
+            blog.set 'i18ntags', ['un', 'tag'], 'fr'
+            blog.set 'i18ntags', ['the', 'tag'], 'en'
+            blogCSV = blog.toCSV({delimiter: ';'})
+            expect(blogCSV).to.be.equal '"theblog";"http://data.example.org/blog/theblog";"Blog";"un@@fr,tag@@fr,the@@en,tag@@en";"The Blog"'
+            blogPost = new db.BlogPost
+            blogPost.set '_id', 'ablogpost'
+            blogPost.set 'title', 'hello world', 'en'
+            blogPost.set 'keyword', ['foo', 'bar']
+            blogPost.set 'content', 'arf'
+            blogPost.set 'blog', blog
+            blogPostCSV = blogPost.toCSV({delimiter: ';'})
+            expect(blogPostCSV).to.be.equal '"ablogpost";"http://data.example.org/blog_post/ablogpost";"BlogPost";"";"";"http://data.example.org/blog_post/ablogpost";"arf";"foo,bar";"";"hello world@@en"'
+            csvHeader = blogPost.toCSVHeader({delimiter: ';'})
+            expect(csvHeader).to.be.equal '"_id";"_ref";"_type";"attachments";"author";"blog";"content";"keyword";"logo";"title"'
 
     describe '.delete()', ()->
         it 'should remove a saved instance from the database', (done) ->

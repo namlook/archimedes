@@ -1181,7 +1181,6 @@ class Model
         return jsonObject
 
 
-
     # ## toSerializableObject
     # convert the model into a simple pojo which will be passed to the database
     # The implementation of this method may be different that toJSONObject
@@ -1205,6 +1204,58 @@ class Model
     # Convert the model into a JSON string
     toJSON: (options) =>
         return JSON.stringify @toJSONObject(options)
+
+    # ## toCSVHeader
+    # return the model properties into CSV format.
+    # the properties are sorted
+    #
+    #  options:
+    #      - delimiter: the delimiter to use (default ';')
+    #      - fields: serialize only the specified fields.
+    #           This is opitional and if null, all fields are returned
+    toCSVHeader: (options) ->
+        options = options or {}
+        delimiter = options.delimiter or ','
+        propertyNames = options.fields or Object.keys(@schema);
+        return '"'+_.sortBy(propertyNames).join('"'+delimiter+'"')+'"'
+
+
+    # ## toCSV
+    # convert the model into comma separated values.
+    # the fields are sorted.
+    #
+    #  options:
+    #       - delimiter: the delimiter to use (default ';')
+    #       - fields: serialize only the specified fields. This is optional
+    #           and if null, all fields are returned
+    toCSV: (options) ->
+        options = options or {}
+
+        obj = @toJSONObject({dereference: true})
+
+        propertyNames = options.fields or Object.keys(@schema)
+
+        csv = []
+        for name in _.sortBy(propertyNames)
+            value = obj[name]
+            if @schema[name].multi and value?
+                if @schema[name].i18n
+                    _values = []
+                    for lang, vals of value
+                        _values = _values.concat(vals.map (val) -> "#{val}@@#{lang}")
+                    value = _values.join(',');
+                else
+                    value = value.join(',');
+            else if _.isObject(value)
+                if @schema[name].i18n
+                    for lang, val of value
+                        value = "#{val}@@#{lang}"
+                else
+                    value = @reference value
+            csv.push(value)
+
+        delimiter = options.delimiter or ','
+        return '"'+csv.join('"'+delimiter+'"')+'"'
 
 
     # ## reference
