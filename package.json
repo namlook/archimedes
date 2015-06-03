@@ -3,6 +3,7 @@
   "version": "0.0.6",
   "description": "A simple ORDFM",
   "main": "lib",
+  "repository": "https://github.com/namlook/archimedes",
   "scripts": {
     "prepublish": "npm run build",
     "build": "./node_modules/coffee-script/bin/coffee -co lib src/",
