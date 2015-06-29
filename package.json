@@ -6,10 +6,9 @@
   "repository": "https://github.com/namlook/archimedes",
   "scripts": {
     "prepublish": "npm run build",
-    "build": "./node_modules/coffee-script/bin/coffee -co lib src/",
-    "live": "./node_modules/coffee-script/bin/coffee -wco lib src/",
-    "test": "npm run build && mocha lib/test/model lib/test/database",
-    "coverage": "npm run build && mocha -r blanket -R html-cov lib/test/database lib/test/model > coverage.html && open coverage.html"
+    "build": "rm -rf lib libtests ; eslint src tests ;  babel src --optional runtime --out-dir lib --source-maps && babel tests --optional runtime --out-dir libtests --source-maps",
+    "test": "rm -rf lib libtests ; eslint src tests 1>&2 &&  babel src --optional runtime --out-dir lib --source-maps && babel tests --optional runtime --out-dir libtests --source-maps && ./node_modules/lab/bin/lab libtests/specs -vSl",
+    "coverage": "./node_modules/lab/bin/lab -r html -o coverage.html libtests/specs"
   },
   "files": [
     "lib"
@@ -17,30 +16,15 @@
   "keywords": [],
   "author": "Namlook",
   "license": "MIT",
-  "config": {
-    "blanket": {
-      "pattern": [
-        "lib/interface",
-        "lib/rdf"
-      ]
-    }
-  },
   "devDependencies": {
-    "blanket": "^1.1.6",
-    "chai": "~1.8.1",
-    "coffee-script": "^1.9.1",
-    "coffeeify": "~0.6.0",
-    "mocha": "~1.14.0",
-    "sinon": "~1.7.3"
+    "babel-runtime": "^5.6.15",
+    "code": "^1.4.1",
+    "eslint": "^0.24.0",
+    "lab": "^5.11.1",
+    "source-map-support": "^0.3.2"
   },
   "dependencies": {
-    "underscore": "^1.6.0",
-    "underscore.string": "~2.3.3",
-    "objectdiff": "~1.1.0",
-    "validator": "~3.1.0",
-    "async": "~0.2.9",
-    "extendonclass": "~1.0.0",
-    "request": "~2.33.0",
-    "superagent": "^0.17.0"
+    "joi": "^6.5.0",
+    "lodash": "^3.9.3"
   }
 }
