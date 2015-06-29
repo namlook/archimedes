@@ -7,9 +7,15 @@ import {ValidationError} from './errors';
 
 var modelSchemaValidator = joi.object().keys({
     mixins: joi.array(joi.string()),
-    properties: joi.object(),
-    methods: joi.object(),
-    statics: joi.object()
+    properties: joi.object().pattern(/.+/, joi.alternatives().try(
+        joi.object().keys({
+            type: joi.string().required(),
+            multi: joi.boolean()
+        }),
+        joi.string()
+    )),
+    methods: joi.object().pattern(/.+/, joi.func()),
+    statics: joi.object().pattern(/.+/, joi.func())
 });
 
 
@@ -18,7 +24,12 @@ var modelFactory = function(db, name, modelSchema) {
     var {error, value: schema} = joi.validate(modelSchema, modelSchemaValidator);
 
     if (error) {
-        throw new ValidationError(`${name} ${error}`);
+        let errorDetail = error.details[0];
+        let path = ` (${errorDetail.path})`;
+        if (!_.contains(path, '.')) {
+            path = '';
+        }
+        throw new ValidationError(`${name} ${errorDetail.message}${path}`);
     }
 
     schema.mixins = schema.mixins || [];

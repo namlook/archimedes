@@ -32,7 +32,7 @@ describe('Model Schema', function() {
             done();
         });
 
-        it('should throw an error if the schema are unknown properties', (done) => {
+        it('should throw an error if the schema have unknown properties', (done) => {
             let database = archimedes();
 
             var throws = function() {
@@ -43,10 +43,90 @@ describe('Model Schema', function() {
                 });
             };
 
-            expect(throws).to.throw(ValidationError, 'BadModel ValidationError: "mixin" is not allowed');
+            expect(throws).to.throw(ValidationError, 'BadModel "mixin" is not allowed');
             done();
         });
 
+        it('should throw an error if the properties have no type', (done) => {
+            let database = archimedes();
+
+            var throws = function() {
+                database.register({
+                    BadModel: {
+                        properties: {
+                            title: {
+                                multi: true
+                            }
+                        }
+                    }
+                });
+            };
+
+            expect(throws).to.throw(ValidationError, 'BadModel "type" is required (properties.title.type)');
+            done();
+        });
+
+
+        it("should throw an error if the properties' type are not string", (done) => {
+            let database = archimedes();
+
+            var throws = function() {
+                database.register({
+                    BadModel: {
+                        properties: {
+                            title: {
+                                type: true
+                            }
+                        }
+                    }
+                });
+            };
+
+            expect(throws).to.throw(ValidationError, 'BadModel "type" must be a string (properties.title.type)');
+            done();
+        });
+
+
+        it("should throw an error if the properties' multi are not boolean", (done) => {
+            let database = archimedes();
+
+            var throws = function() {
+                database.register({
+                    BadModel: {
+                        properties: {
+                            title: {
+                                type: 'string',
+                                multi: 'arf'
+                            }
+                        }
+                    }
+                });
+            };
+
+            expect(throws).to.throw(ValidationError, 'BadModel "multi" must be a boolean (properties.title.multi)');
+            done();
+        });
+
+
+        it('should throw an error if the properties have an unknown field', (done) => {
+            let database = archimedes();
+
+            var throws = function() {
+                database.register({
+                    BadModel: {
+                        properties: {
+                            title: {
+                                type: 'string',
+                                arf: 'foo'
+                            }
+                        }
+                    }
+                });
+            };
+
+            expect(throws).to.throw(ValidationError, 'BadModel "arf" is not allowed (properties.title)');
+            done();
+        });
     });
 
 
@@ -99,7 +179,28 @@ describe('Model Schema', function() {
             expect(db.BlogPost.generateSlug).to.not.exist();
             done();
         });
+
+
+        it('should throw an error is methods are not functions', (done) => {
+            let database = archimedes();
+
+            var throws = function() {
+                database.register({
+                    BadModel: {
+                        methods: {
+                            badMethod: 'foo'
+                        }
+                    }
+                });
+            };
+
+            expect(throws).to.throw(ValidationError, 'BadModel "badMethod" must be a Function (methods.badMethod)');
+            done();
+        });
+
+
     });
+
 
     describe('[statics]', function() {
 
@@ -114,6 +215,25 @@ describe('Model Schema', function() {
             expect(book.checkIsbn).to.not.exist();
             done();
         });
+
+
+        it('should throw an error is statics are not functions', (done) => {
+            let database = archimedes();
+
+            var throws = function() {
+                database.register({
+                    BadModel: {
+                        statics: {
+                            badStaticMethod: 'foo'
+                        }
+                    }
+                });
+            };
+
+            expect(throws).to.throw(ValidationError, 'BadModel "badStaticMethod" must be a Function (statics.badStaticMethod)');
+            done();
+        });
+
 
     });
 
