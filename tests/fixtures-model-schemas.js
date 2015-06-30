@@ -1,10 +1,16 @@
 
 export default {
+    User: {
+        properties: {
+            name: 'string'
+        }
+    },
     Content: {
         properties: {
             title: 'string',
             body: 'string',
-            author: 'string'
+            author: 'User',
+            createdDate: 'date'
         },
         methods: {
             writtenBy() {
@@ -12,16 +18,25 @@ export default {
             }
         }
     },
+    Comment: {
+        properties: {
+            body: 'string'
+        }
+    },
     AvailableOnline: {
         properties: {
             slug: 'string',
             comments: {
-                type: 'string',
-                multi: true
+                type: 'array',
+                items: 'Comment'
             },
             tags: {
-                type: 'string',
-                multi: true
+                type: 'array',
+                items: 'string'
+            },
+            ratting: {
+                type: 'number',
+                validate: [{min: 0}, {max: 5}]
             }
         },
         methods: {
@@ -48,9 +63,11 @@ export default {
         mixins: ['Content', 'AvailableOnline'],
         properties: {
             backlinks: {
-                type: 'string',
-                multi: true
-            }
+                type: 'array',
+                items: 'string'
+            },
+            updatedDate: 'date',
+            isPublished: 'boolean'
         }
     }
 };

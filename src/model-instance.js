@@ -86,6 +86,7 @@ export default function(db, modelClass, pojo) {
             return this;
         },
 
+
         /**
          * Remove a value to a property array.
          * If after removing the value, the array is empty, then unset the
@@ -107,6 +108,17 @@ export default function(db, modelClass, pojo) {
             }
 
             return this;
+        },
+
+
+        /**
+         * Validates the model's attributes against the model schmea
+         *
+         * @returns {error: object, value: object} - if no errors are found
+         *   error is null. value is the attribute values (casted if needed)
+         */
+        validate: function() {
+            return this.Model.schema.validate(this.attrs);
         }
     };
 }
