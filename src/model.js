@@ -112,9 +112,6 @@ var modelFactory = function(db, name, modelClassSchema) {
         name: name,
         db: db,
         _archimedesModel: true,
-        // mixins: (function() {
-        //     return mixins;
-        // })(),
         properties: new function() {
             return properties;
         },
@@ -124,20 +121,23 @@ var modelFactory = function(db, name, modelClassSchema) {
         statics: new function() {
             return staticMethods;
         },
-        create: function(pojo) {
+
+        create(pojo) {
             return _.assign({}, modelInstance(db, this, pojo), methods);
         },
-        find: function() {
-            console.log('find');
+
+        find(query) {
+            return db.find(name, query);
+        },
+
+        first(query) {
+            return db.first(name, query);
+        },
+
+        count(query) {
+            return db.count(name, query);
         }
     };
-
-
-    // let extendsFrom = mixins.map(parentName => {
-    //     console.log('iiii', parentName);
-    //     return db.schemas[parentName];
-    // });
-    // console.log('-----', name, extendsFrom);
 
     var modelSchema = new ModelSchema(inner);
 

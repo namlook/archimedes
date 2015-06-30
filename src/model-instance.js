@@ -1,25 +1,41 @@
 
 import _ from 'lodash';
 
-export default function(db, modelClass, pojo) {
+export default function(db, modelClass, attrs) {
 
-    pojo = pojo || {};
+    attrs = attrs || {};
+    attrs._type = modelClass.name;
+
+    var internals = {
+        pendingOperations: [],
+        attrs: attrs
+    };
 
     return {
         _archimedesModelInstance: true,
         Model: modelClass,
         _type: modelClass.name,
         db: db,
-        attrs: pojo,
 
-
-        save: function() {
-            this._id = 3;
-            db.sync(this._type, this);
+        save() {
+            return new Promise((resolve, reject) => {
+                let {error, value} = this.validate();
+                if (error) {
+                    return reject(error);
+                }
+                db.sync(this._type, value).then((pojo) => {
+                    let modelInstance = this.Model.create(pojo);
+                    modelInstance._id = pojo._id;
+                    this._id = pojo._id;
+                    this.set('_id', pojo._id);
+                    this.clearPending();
+                    return resolve(modelInstance);
+                });
+            });
         },
 
 
-        delete: function() {
+        delete() {
             db.delete(this._type, this);
         },
 
@@ -31,8 +47,8 @@ export default function(db, modelClass, pojo) {
          * @param {string} name - the property name
          * @returns the property value
          */
-        get: function(name) {
-            return _.get(this.attrs, name);
+        get(name) {
+            return _.get(internals.attrs, name);
         },
 
 
@@ -44,8 +60,9 @@ export default function(db, modelClass, pojo) {
          * @param {AnyLike} value - the property value
          * @returns this
          */
-        set: function(name, value) {
-            _.set(this.attrs, name, value);
+        set(name, value) {
+            internals.pendingOperations.push({operator: 'set', property: name, value: value});
+            _.set(internals.attrs, name, value);
             return this;
         },
 
@@ -56,8 +73,9 @@ export default function(db, modelClass, pojo) {
          * @param {string} name - the property name
          * @returns this
          */
-        unset: function(name) {
-            delete this.attrs[name];
+        unset(name) {
+            internals.pendingOperations.push({operator: 'unset', property: name});
+            delete internals.attrs[name];
             return this;
         },
 
@@ -71,18 +89,23 @@ export default function(db, modelClass, pojo) {
          * @param {AnyLike|array} values - a value or an array of values
          * @returns this
          */
-        push: function(name, values) {
+        push(name, values) {
             if (values == null || values === '') {
                 return this;
             }
 
-            let propValues = this.attrs[name] || [];
+            let propValues = internals.attrs[name] || [];
 
             if (!_.isArray(values)) {
                 values = [values];
             }
 
-            this.attrs[name] = _.uniq(_.flatten(propValues.concat(values)));
+            values = _.flatten(values);
+
+            internals.pendingOperations.push({operator: 'push', property: name, value: values});
+
+
+            internals.attrs[name] = _.uniq(propValues.concat(values));
             return this;
         },
 
@@ -96,14 +119,17 @@ export default function(db, modelClass, pojo) {
          * @param {AnyLike|array} values - a value or an array of values
          * @returns this
          */
-        pull: function(name, values) {
-            let propValues = this.attrs[name] || [];
+        pull(name, values) {
+            let propValues = internals.attrs[name] || [];
             if (!_.isArray(values)) {
                 values = [values];
             }
-            this.attrs[name] = _.without(propValues, ...values);
 
-            if (this.attrs[name].length === 0) {
+            internals.pendingOperations.push({operator: 'pull', property: name, value: values});
+
+            internals.attrs[name] = _.without(propValues, ...values);
+
+            if (internals.attrs[name].length === 0) {
                 this.unset(name);
             }
 
@@ -117,8 +143,21 @@ export default function(db, modelClass, pojo) {
          * @returns {error: object, value: object} - if no errors are found
          *   error is null. value is the attribute values (casted if needed)
          */
-        validate: function() {
-            return this.Model.schema.validate(this.attrs);
+        validate() {
+            return this.Model.schema.validate(internals.attrs);
+        },
+
+
+        attrs() {
+            return internals.attrs;
+        },
+
+        pending() {
+            return internals.pendingOperations;
+        },
+
+        clearPending() {
+            internals.pendingOperations = [];
         }
     };
 }

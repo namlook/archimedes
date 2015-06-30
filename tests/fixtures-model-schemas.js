@@ -14,7 +14,7 @@ export default {
         },
         methods: {
             writtenBy() {
-                console.log('its ' + this.attrs.author);
+                return this.get('author');
             }
         }
     },
@@ -41,7 +41,7 @@ export default {
         },
         methods: {
             generateSlug() {
-                return this.attrs.title.split(' ').join('-');
+                return this.get('title').split(' ').join('-');
             }
         }
     },
