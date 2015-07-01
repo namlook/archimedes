@@ -274,6 +274,18 @@ describe('Model', function() {
             expect(blogPost.get('title')).to.equal('the title');
             done();
         });
+
+
+        it('should create a model instance with no _id (even if passed)', (done) => {
+            let blogPost = db.BlogPost.create({
+                _id: 'thepost',
+                title: 'the title'
+            });
+            expect(blogPost.get('_id')).to.equal('thepost');
+            expect(blogPost._id).to.not.exist();
+            expect(blogPost.get('title')).to.equal('the title');
+            done();
+        });
     });
 
 

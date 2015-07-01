@@ -19,24 +19,31 @@ export default function(db, modelClass, attrs) {
 
         save() {
             return new Promise((resolve, reject) => {
-                let {error, value} = this.validate();
-                if (error) {
-                    return reject(error);
+                if (!this._id) {
+                    db.sync(this._type, this.attrs()).then((pojo) => {
+                        let modelInstance = this.Model.wrap(pojo);
+                        this._id = pojo._id;
+                        this.set('_id', pojo._id);
+                        this.clearPending();
+                        return resolve(modelInstance);
+                    }).catch(reject);
+                } else {
+                    db.update(
+                        this._type,
+                        this._id,
+                        internals.pendingOperations
+                    ).then((pojo) => {
+                        let modelInstance = this.Model.wrap(pojo);
+                        this.clearPending();
+                        return resolve(modelInstance);
+                    }).catch(reject);
                 }
-                db.sync(this._type, value).then((pojo) => {
-                    let modelInstance = this.Model.create(pojo);
-                    modelInstance._id = pojo._id;
-                    this._id = pojo._id;
-                    this.set('_id', pojo._id);
-                    this.clearPending();
-                    return resolve(modelInstance);
-                });
             });
         },
 
 
         delete() {
-            db.delete(this._type, this);
+            return new Error('not implemented');
         },
 
 

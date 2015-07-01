@@ -126,12 +126,50 @@ var modelFactory = function(db, name, modelClassSchema) {
             return _.assign({}, modelInstance(db, this, pojo), methods);
         },
 
-        find(query) {
-            return db.find(name, query);
+
+        /**
+         * Wrap a pojo into a model instance. The difference beetween wrap
+         * and create is wrap assign the _id to the model instance, simulating
+         * a saved document
+         *
+         * @params {object} - initial values
+         * @returns the model instance
+         */
+        wrap(pojo) {
+            let instance = this.create(pojo);
+            instance._id = pojo._id;
+            return instance;
         },
 
+        /**
+         * Returns a promise which resolve a list of model instance
+         * that match the query
+         *
+         * @params {?object} query - the query
+         * @returns a promise
+         */
+        find(query) {
+            return db.find(name, query).then((results) => {
+                let data = results.map(o => this.wrap(o));
+                return data;
+            });
+        },
+
+
+        /**
+         * Returns a promise which resolve a model instance that match the query
+         *
+         * @params {?object} query - the query
+         * @returns a promise
+         */
         first(query) {
-            return db.first(name, query);
+            return this.find(query).then((results) => {
+                var result;
+                if (results.length) {
+                    result = results[0];
+                }
+                return result;
+            });
         },
 
         count(query) {
