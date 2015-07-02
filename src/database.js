@@ -186,12 +186,43 @@ export default function(config) {
 
 
         delete(modelType, modelId) {
-            return new Error('not implemented');
+            return new Promise((resolve, reject) => {
+                if (typeof modelType !== 'string') {
+                    return reject(new Error('delete: modelType should be a string'));
+                }
+
+                if (typeof modelId !== 'string') {
+                    return reject(new Error('delete: id should be a string'));
+                }
+
+                internals.store = _.reject(internals.store, {_id: modelId, _type: modelType});
+
+                return resolve();
+            });
         },
 
         count(modelType, query) {
-            return new Error('not implemented');
-            // return this.find(modelType, query).length;
+            return new Promise((resolve, reject) => {
+                if (typeof modelType !== 'string') {
+                    return reject(new Error('count: modelType should be a string'));
+                }
+
+                if (query && !_.isObject(query)) {
+                    return reject(new Error('count: query should be an object'));
+                }
+
+                query = query || {};
+                query._type = modelType;
+
+                let {error, value: validatedQuery} = queryValidator(this[modelType].schema, query);
+
+                if (error) {
+                    return reject(new ValidationError('malformed query', error));
+                }
+
+
+                return resolve(_.where(internals.store, validatedQuery).length);
+            });
         }
     };
 }

@@ -305,10 +305,10 @@ describe('Model instance persistance', function() {
             db.batchSync('BlogPost', data).then((savedData) => {
                 expect(savedData.length).to.equal(10);
                 expect(savedData.map(o => o.ratting)).to.only.include([0, 1, 2, 3, 4]);
-                return db.BlogPost.find();
+                return db.find('BlogPost');
             }).then((results) => {
                 expect(results.length).to.equal(10);
-                expect(results.map(o => o.get('ratting'))).to.only.include([0, 1, 2, 3, 4]);
+                expect(results.map(o => o.ratting)).to.only.include([0, 1, 2, 3, 4]);
                 done();
             }).catch((error) => {
                 console.log(error.stack);
@@ -327,6 +327,145 @@ describe('Model instance persistance', function() {
                 done();
             });
         });
+    });
+
+
+    describe('#delete()', function() {
+        it('should return a promise', (done) => {
+            expect(db.delete('BlogPost', 'thepost').then).to.be.a.function();
+            done();
+        });
+
+        it('should remove a document from the db', (done) => {
+            var data = [];
+            for (let i = 0; i < 10; i++) {
+                data.push({_id: `bp${i}`, _type: 'BlogPost', title: `post ${i}`, ratting: `${i % 5}`});
+            }
+            db.batchSync('BlogPost', data).then((savedData) => {
+                expect(savedData.length).to.equal(10);
+                expect(savedData.map(o => o.ratting)).to.only.include([0, 1, 2, 3, 4]);
+                return db.delete('BlogPost', 'bp3');
+            }).then(() => {
+                return db.first('BlogPost', {_id: 'bp3'});
+            }).then((doc) => {
+                expect(doc).to.not.exist();
+                done();
+            }).catch((error) => {
+                console.log(error.stack);
+            });
+        });
+
+        // it('should reject if the id is not found', (done) => {
+        //     return db.delete('BlogPost', 'arf').catch((error) => {
+        //         expect(error).to.exist();
+        //         expect(error.message).to.equal('cannot found "arf" in database');
+        //         done();
+        //     });
+        // });
+
+        it('should reject if no id is passed', (done) => {
+            db.delete('BlogPost').catch((error) => {
+                expect(error).to.exist();
+                expect(error.message).to.equal('delete: id should be a string');
+                done();
+            });
+        });
+
+
+        it('should reject if no model type are specified', (done) => {
+            db.delete().catch((error) => {
+                expect(error).to.exist();
+                expect(error.message).to.equal('delete: modelType should be a string');
+                done();
+            });
+        });
+
+    });
+
+    describe('#count()', function() {
+        it('should return a promise', (done) => {
+            expect(db.count('BlogPost').then).to.be.a.function();
+            done();
+        });
+
+        it('should return the number of documents', (done) => {
+            var data = [];
+            for (let i = 0; i < 10; i++) {
+                data.push({_id: `bp${i}`, _type: 'BlogPost', title: `post ${i}`, ratting: `${i % 5}`});
+            }
+            db.batchSync('BlogPost', data).then((savedData) => {
+                expect(savedData.length).to.equal(10);
+                return db.count('BlogPost');
+            }).then((total) => {
+                expect(total).to.equal(10);
+                done();
+            }).catch((error) => {
+                console.log(error.stack);
+            });
+        });
+
+        it('should return the number of documents that match the query', (done) => {
+            var data = [];
+            for (let i = 0; i < 10; i++) {
+                data.push({_id: `bp${i}`, _type: 'BlogPost', title: `post ${i}`, ratting: `${i % 5}`});
+            }
+            db.batchSync('BlogPost', data).then((savedData) => {
+                expect(savedData.length).to.equal(10);
+                return db.count('BlogPost', {ratting: 3});
+            }).then((total) => {
+                expect(total).to.equal(2);
+                done();
+            }).catch((error) => {
+                console.log(error.stack);
+            });
+        });
+
+
+        it('should validate an cast the query', (done) => {
+            var data = [];
+            for (let i = 0; i < 10; i++) {
+                data.push({_id: `bp${i}`, _type: 'BlogPost', title: `post ${i}`, ratting: `${i % 5}`});
+            }
+            db.batchSync('BlogPost', data).then((savedData) => {
+                expect(savedData.length).to.equal(10);
+                return db.count('BlogPost', {ratting: '3'});
+            }).then((total) => {
+                expect(total).to.equal(2);
+                done();
+            }).catch((error) => {
+                console.log(error.stack);
+            });
+        });
+
+
+        it('should reject if the query is invalid', (done) => {
+            db.count('BlogPost', {arf: true}).catch((error) => {
+                expect(error).to.exist();
+                expect(error.message).to.equal('malformed query');
+                expect(error.extra[0].path).to.equal('arf');
+                expect(error.extra[0].message).to.equal('unknown property "arf" for model BlogPost');
+                done();
+            });
+        });
+
+
+        it('should reject if query is not an object', (done) => {
+            db.count('BlogPost', 'foo').catch((error) => {
+                expect(error).to.exist();
+                expect(error.message).to.equal('count: query should be an object');
+                done();
+            });
+        });
+
+
+        it('should reject if no model type are specified', (done) => {
+            db.count().catch((error) => {
+                expect(error).to.exist();
+                expect(error.message).to.equal('count: modelType should be a string');
+                done();
+            });
+        });
+
     });
 
     describe('#talk()', function() {
