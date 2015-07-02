@@ -9,13 +9,14 @@ var before = lab.before;
 var expect = Code.expect;
 
 import archimedes from '../lib';
+import MemoryAdapter from '../lib/adapters/memory';
 import modelSchemas from './fixtures-model-schemas';
 
 describe('ModelSchema', function() {
 
     var db;
     before(function(done) {
-        db = archimedes();
+        db = archimedes(MemoryAdapter);
         db.register(modelSchemas);
         done();
     });

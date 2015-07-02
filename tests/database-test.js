@@ -9,13 +9,14 @@ var beforeEach = lab.beforeEach;
 var expect = Code.expect;
 
 import archimedes from '../lib';
+import MemoryAdapter from '../lib/adapters/memory';
 import modelSchemas from './fixtures-model-schemas';
 
 describe('Model instance persistance', function() {
 
     var db;
     before(function(done) {
-        db = archimedes();
+        db = archimedes(MemoryAdapter);
         db.register(modelSchemas);
         done();
     });
@@ -24,6 +25,16 @@ describe('Model instance persistance', function() {
         db.clear().then(done).catch((error) => {
             console.log(error.stack);
         });
+    });
+
+
+    it('should throw an error if no adapter are found', (done) => {
+        var throws = function() {
+            archimedes();
+        };
+
+        expect(throws).to.throws('database: no adapter found');
+        done();
     });
 
 

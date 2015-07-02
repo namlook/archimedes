@@ -10,6 +10,7 @@ var before = lab.before;
 var expect = Code.expect;
 
 import archimedes from '../lib';
+import MemoryAdapter from '../lib/adapters/memory';
 import modelSchemas from './fixtures-model-schemas';
 import {ValidationError} from '../lib/errors';
 
@@ -17,7 +18,7 @@ describe('Model', function() {
 
     var db;
     before(function(done) {
-        db = archimedes();
+        db = archimedes(MemoryAdapter);
         db.register(modelSchemas);
         done();
     });
@@ -25,7 +26,7 @@ describe('Model', function() {
 
     describe('[schema]', function(){
         it('should accept empty schema', (done) => {
-            let database = archimedes();
+            let database = archimedes(MemoryAdapter);
 
             database.register({
                 EmptyModel: {}
@@ -35,7 +36,7 @@ describe('Model', function() {
         });
 
         it('should throw an error if the schema have unknown properties', (done) => {
-            let database = archimedes();
+            let database = archimedes(MemoryAdapter);
 
             var throws = function() {
                 database.register({
@@ -50,7 +51,7 @@ describe('Model', function() {
         });
 
         it('should throw an error if the properties have no type', (done) => {
-            let database = archimedes();
+            let database = archimedes(MemoryAdapter);
 
             var throws = function() {
                 database.register({
@@ -69,7 +70,7 @@ describe('Model', function() {
 
 
         it("should throw an error if the properties' type are not string", (done) => {
-            let database = archimedes();
+            let database = archimedes(MemoryAdapter);
 
             var throws = function() {
                 database.register({
@@ -89,7 +90,7 @@ describe('Model', function() {
 
 
         it("should throw an error if the properties' type is an array and items is not defined", (done) => {
-            let database = archimedes();
+            let database = archimedes(MemoryAdapter);
 
             var throws = function() {
                 database.register({
@@ -109,7 +110,7 @@ describe('Model', function() {
 
 
         it('should throw an error if the properties have an unknown field', (done) => {
-            let database = archimedes();
+            let database = archimedes(MemoryAdapter);
 
             var throws = function() {
                 database.register({
@@ -130,7 +131,7 @@ describe('Model', function() {
 
 
         it('should throw an error if property type is not valid', (done) => {
-            let database = archimedes();
+            let database = archimedes(MemoryAdapter);
 
             var throws = function() {
                 database.register({
@@ -171,7 +172,7 @@ describe('Model', function() {
         });
 
         it('should throw an error if the mixins are not registered', (done) => {
-            let database = archimedes();
+            let database = archimedes(MemoryAdapter);
 
             let throws = function() {
                 database.register({
@@ -202,7 +203,7 @@ describe('Model', function() {
 
 
         it('should  an error is methods are not functions', (done) => {
-            let database = archimedes();
+            let database = archimedes(MemoryAdapter);
 
             var throws = function() {
                 database.register({
@@ -238,7 +239,7 @@ describe('Model', function() {
 
 
         it('should  an error is statics are not functions', (done) => {
-            let database = archimedes();
+            let database = archimedes(MemoryAdapter);
 
             var throws = function() {
                 database.register({

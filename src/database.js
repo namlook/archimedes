@@ -4,16 +4,15 @@ import modelFactory from './model';
 import {ValidationError} from './errors';
 import queryValidator from './query-validator';
 
-export default function(config) {
+export default function(dbAdapter, config) {
 
-    var internals = {
-        store: []
-    };
+    if (!dbAdapter) {
+        throw new Error('database: no adapter found');
+    }
 
-    return {
+    var inner = {
         _archimedesDatabase: true,
         config: config,
-        store: 'memory',
 
         /**
          * Register the models to the database.
@@ -45,14 +44,11 @@ export default function(config) {
          * @returns a promise
          */
         clear() {
-            return new Promise((resolve) => {
-                internals.store = [];
-                return resolve();
-            });
+            return this.adapter.clear();
         },
 
         /**
-         * Returns a promise with results that match the query
+         * Returns a promise which resolve the records that match the query
          *
          * @params {string} modelType - the model type
          * @params {?object} query - the query
@@ -73,16 +69,13 @@ export default function(config) {
                     return reject(new ValidationError('malformed query', error));
                 }
 
-                var results = _.where(internals.store, validatedQuery) || [];
-                if (!_.isArray(results)) {
-                    results = [results];
-                }
-                return resolve(results);
+                return resolve(this.adapter.find(modelType, validatedQuery));
             });
         },
 
         /**
-         * Returns a promise with the first result that match the query
+         * Returns a promise which resolve the first
+         * record that match the query
          *
          * @params {string} modelType - the model type
          * @params {?object} query - the query
@@ -98,8 +91,42 @@ export default function(config) {
             });
         },
 
+
         /**
-         * Update model in the store.
+         * Returns a promise which resolve the number of record
+         * that match the query
+         *
+         * @params {string} modelType - the model type
+         * @params {?object} query
+         * @returns {promise}
+         */
+        count(modelType, query) {
+            return new Promise((resolve, reject) => {
+                if (typeof modelType !== 'string') {
+                    return reject(new Error('count: modelType should be a string'));
+                }
+
+                if (query && !_.isObject(query)) {
+                    return reject(new Error('count: query should be an object'));
+                }
+
+                query = query || {};
+                query._type = modelType;
+
+                let {error, value: validatedQuery} = queryValidator(this[modelType].schema, query);
+
+                if (error) {
+                    return reject(new ValidationError('malformed query', error));
+                }
+
+
+                return resolve(this.adapter.count(modelType, validatedQuery));
+            });
+        },
+
+
+        /**
+         * Update a record in the store.
          *
          * @params {string} modelType - the model type
          * @params {string} modelId - the model id
@@ -116,22 +143,19 @@ export default function(config) {
                 if (!_.isArray(operations)) {
                     return reject(new Error('update: operations should be an array'));
                 }
-
-                this[modelType].first({_id: modelId, _type: modelType}).then((modelInstance) => {
-                    if (modelInstance) {
-                        for (let i = 0; i < operations.length; i++) {
-                            let {operator, property, value} = operations[i];
-                            modelInstance[operator](property, value);
-                        }
-                        return resolve(this.sync(modelType, modelInstance.attrs()));
-                    } else {
-                        return reject(new Error(`Can't update the model ${modelType}: unknown model id "${modelId}"`));
-                    }
-                });
+                return resolve(this.adapter.update(modelType, modelId, operations));
             });
         },
 
 
+        /**
+         * Save the whole object in the database. If a record with the
+         * same id is already present in the database, it will be overwritten
+         *
+         * @params {string} modelType
+         * @params {object} pojo - the record to save
+         * @returns a promise which resolve the saved object
+         */
         sync(modelType, pojo) {
             return new Promise((resolve, reject) => {
                 if (typeof modelType !== 'string') {
@@ -156,14 +180,19 @@ export default function(config) {
                     return reject(new ValidationError(`${error[0].message}`, error));
                 }
 
-                internals.store.push(value);
-
-                return resolve(value);
+                return resolve(this.adapter.sync(modelType, value));
 
             });
         },
 
 
+        /**
+         * Sync an array of object. Act the same as #sync()
+         *
+         * @params {string} modelType
+         * @params {array} data - an array of pojo
+         * @returns a promise which resolve an array of the saved pojo
+         */
         batchSync(modelType, data) {
             return new Promise((resolve, reject) => {
                 if (typeof modelType !== 'string') {
@@ -174,17 +203,18 @@ export default function(config) {
                     return reject(new Error('batchSync: data should be an array'));
                 }
 
-                var promises = [];
-                for (let i = 0; i < data.length; i++) {
-                    let pojo = data[i];
-                    promises.push(this.sync(modelType, pojo));
-                }
-
-                return resolve(Promise.all(promises));
+                return resolve(this.adapter.batchSync(modelType, data));
             });
         },
 
 
+        /**
+         * Remove a record from the database
+         *
+         * @params {string} modelType - the model type
+         * @params {string} modelId - the model id
+         * @returns a promise
+         */
         delete(modelType, modelId) {
             return new Promise((resolve, reject) => {
                 if (typeof modelType !== 'string') {
@@ -195,34 +225,13 @@ export default function(config) {
                     return reject(new Error('delete: id should be a string'));
                 }
 
-                internals.store = _.reject(internals.store, {_id: modelId, _type: modelType});
-
-                return resolve();
-            });
-        },
-
-        count(modelType, query) {
-            return new Promise((resolve, reject) => {
-                if (typeof modelType !== 'string') {
-                    return reject(new Error('count: modelType should be a string'));
-                }
-
-                if (query && !_.isObject(query)) {
-                    return reject(new Error('count: query should be an object'));
-                }
-
-                query = query || {};
-                query._type = modelType;
-
-                let {error, value: validatedQuery} = queryValidator(this[modelType].schema, query);
-
-                if (error) {
-                    return reject(new ValidationError('malformed query', error));
-                }
-
-
-                return resolve(_.where(internals.store, validatedQuery).length);
+                return resolve(this.adapter.delete(modelType, modelId));
             });
         }
     };
+
+
+    inner.adapter = dbAdapter(inner);
+    return inner;
+
 }
