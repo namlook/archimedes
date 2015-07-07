@@ -8,17 +8,18 @@ var before = lab.before;
 // var beforeEach = lab.beforeEach;
 var expect = Code.expect;
 
-import archimedes from '../lib';
-import MemoryAdapter from '../lib/adapters/memory';
-import modelSchemas from './fixtures-model-schemas';
+import store from './db';
 
 describe('ModelSchemaProperty', function() {
 
     var db;
     before(function(done) {
-        db = archimedes(MemoryAdapter);
-        db.register(modelSchemas);
-        done();
+        store().then((registeredDB) => {
+            db = registeredDB;
+            done();
+        }).catch((error) => {
+            console.log(error.stack);
+        });
     });
 
 
@@ -37,6 +38,16 @@ describe('ModelSchemaProperty', function() {
         expect(ratting.type).to.equal('number');
         done();
     });
+
+
+    it('should return the property meta', (done) => {
+        let backlinks = db.BlogPost.schema.getProperty('backlinks');
+        expect(backlinks.meta).to.exist();
+        let ratting = db.BlogPost.schema.getProperty('ratting');
+        expect(ratting.meta.deprecated).to.be.true();
+        done();
+    });
+
 
     it('should return true if the property is an array', (done) => {
         let backlinks = db.BlogPost.schema.getProperty('backlinks');

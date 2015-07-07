@@ -1,5 +1,6 @@
 
 import _ from 'lodash';
+import {ValidationError} from './errors';
 
 export default function(db, modelClass, attrs) {
 
@@ -145,13 +146,19 @@ export default function(db, modelClass, attrs) {
 
 
         /**
-         * Validates the model's attributes against the model schmea
+         * Validates the model's attributes against the model schema
          *
-         * @returns {error: object, value: object} - if no errors are found
-         *   error is null. value is the attribute values (casted if needed)
+         * @returns a promise which resolve to a pojo with the correct
+         *     (casted if needed) values.
          */
         validate() {
-            return this.Model.schema.validate(internals.attrs);
+            return new Promise((resolve, reject) => {
+                let {error, value} = this.Model.schema.validate(internals.attrs);
+                if (error) {
+                    return reject(new ValidationError(error, error));
+                }
+                return resolve(value);
+            });
         },
 
 

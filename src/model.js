@@ -7,16 +7,16 @@ import ModelSchema from './model-schema';
 
 
 var propertyConfigValidator = {
-    type: joi.string().required().only([
-        'string', 'number', 'boolean', 'date', 'array'
-    ]),
+    type: joi.string().required(),
     validate: joi.array().items(joi.alternatives().try(
         joi.string(),
         joi.object()
-    ))
+    )),
+    meta: joi.object()
 };
 
 var modelClassSchemaValidator = joi.object().keys({
+    meta: joi.object(),
     mixins: joi.array().items(joi.string()),
     properties: joi.object().pattern(/.+/, joi.alternatives().try(
         joi.object().keys(propertyConfigValidator).keys({
@@ -42,7 +42,7 @@ var modelFactory = function(db, name, modelClassSchema) {
         if (!_.contains(path, '.')) {
             path = '';
         }
-        throw new ValidationError(`${name} ${errorDetail.message}${path}`);
+        throw new ValidationError(`${name} ${errorDetail.message}${path}`, error);
     }
 
 
@@ -69,22 +69,22 @@ var modelFactory = function(db, name, modelClassSchema) {
     });
     properties = _.assign({}, ..._.compact(properties));
 
-    /** if the property config is a string, convert it into a valid config **/
-    _.forOwn(properties, (propConfig, propName) => {
-        if (typeof propConfig === 'string') {
-            propConfig = {type: propConfig};
-        }
-        if (propConfig.type === 'array') {
-            if (!propConfig.items) {
-                throw new ValidationError(`${name} if property's type is "array" then "items" should be specified (properties.${propName})`);
-            }
+    // /** if the property config is a string, convert it into a valid config **/
+    // _.forOwn(properties, (propConfig, propName) => {
+    //     if (typeof propConfig === 'string') {
+    //         propConfig = {type: propConfig};
+    //     }
+    //     if (propConfig.type === 'array') {
+    //         if (!propConfig.items) {
+    //             throw new ValidationError(`${name} if property's type is "array" then "items" should be specified (properties.${propName})`);
+    //         }
 
-            if (typeof propConfig.items === 'string') {
-                propConfig.items = {type: propConfig.items};
-            }
-        }
-        properties[propName] = propConfig;
-    });
+    //         if (typeof propConfig.items === 'string') {
+    //             propConfig.items = {type: propConfig.items};
+    //         }
+    //     }
+    //     properties[propName] = propConfig;
+    // });
 
 
     /**
@@ -111,6 +111,9 @@ var modelFactory = function(db, name, modelClassSchema) {
     var inner = {
         name: name,
         db: db,
+        meta: new function() {
+            return modelClassSchema.meta;
+        },
         _archimedesModel: true,
         properties: new function() {
             return properties;
@@ -170,6 +173,11 @@ var modelFactory = function(db, name, modelClassSchema) {
                 }
                 return result;
             });
+        },
+
+
+        fetch(id) {
+            return db.fetch(name, id);
         },
 
         count(query) {

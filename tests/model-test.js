@@ -9,144 +9,130 @@ var before = lab.before;
 // var beforeEach = lab.beforeEach;
 var expect = Code.expect;
 
-import archimedes from '../lib';
-import MemoryAdapter from '../lib/adapters/memory';
-import modelSchemas from './fixtures-model-schemas';
-import {ValidationError} from '../lib/errors';
+import {database} from './db';
+import store from './db';
 
 describe('Model', function() {
 
     var db;
     before(function(done) {
-        db = archimedes(MemoryAdapter);
-        db.register(modelSchemas);
-        done();
+        store().then((registeredDb) => {
+            db = registeredDb;
+            done();
+        }).catch((error) => {
+            console.log(error.stack);
+        });
     });
 
 
     describe('[schema]', function(){
         it('should accept empty schema', (done) => {
-            let database = archimedes(MemoryAdapter);
-
-            database.register({
+            database().register({
                 EmptyModel: {}
+            }).then((registeredDb) => {
+                expect(registeredDb.EmptyModel.properties).to.be.empty();
+                done();
+            }).catch((error) => {
+                console.log(error.stack);
             });
-            expect(database.EmptyModel.properties).to.be.empty();
-            done();
         });
 
+
         it('should throw an error if the schema have unknown properties', (done) => {
-            let database = archimedes(MemoryAdapter);
 
-            var throws = function() {
-                database.register({
-                    BadModel: {
-                        mixin: ['UnknownModel']
-                    }
-                });
-            };
-
-            expect(throws).to.throw(ValidationError, 'BadModel "mixin" is not allowed');
-            done();
+            database().register({
+                BadModel: {
+                    mixin: ['UnknownModel']
+                }
+            }).catch((error) => {
+                expect(error.name).to.equal('ValidationError');
+                expect(error.message).to.equal('BadModel "mixin" is not allowed');
+                done();
+            });
         });
 
         it('should throw an error if the properties have no type', (done) => {
-            let database = archimedes(MemoryAdapter);
-
-            var throws = function() {
-                database.register({
-                    BadModel: {
-                        properties: {
-                            title: {
-                            }
+            database().register({
+                BadModel: {
+                    properties: {
+                        title: {
                         }
                     }
-                });
-            };
-
-            expect(throws).to.throw(ValidationError, 'BadModel "type" is required (properties.title.type)');
-            done();
+                }
+            }).catch((error) => {
+                expect(error.name).to.equal('ValidationError');
+                expect(error.message).to.equal('BadModel invalid type for property "title"');
+                done();
+            });
         });
 
 
         it("should throw an error if the properties' type are not string", (done) => {
-            let database = archimedes(MemoryAdapter);
-
-            var throws = function() {
-                database.register({
-                    BadModel: {
-                        properties: {
-                            title: {
-                                type: true
-                            }
+            database().register({
+                BadModel: {
+                    properties: {
+                        title: {
+                            type: true
                         }
                     }
-                });
-            };
-
-            expect(throws).to.throw(ValidationError, 'BadModel "type" must be a string (properties.title.type)');
-            done();
+                }
+            }).catch((error) => {
+                expect(error.name).to.equal('ValidationError');
+                expect(error.message).to.equal('BadModel invalid type for property "title"');
+                done();
+            });
         });
 
 
         it("should throw an error if the properties' type is an array and items is not defined", (done) => {
-            let database = archimedes(MemoryAdapter);
-
-            var throws = function() {
-                database.register({
-                    BadModel: {
-                        properties: {
-                            title: {
-                                type: 'array'
-                            }
+            database().register({
+                BadModel: {
+                    properties: {
+                        title: {
+                            type: 'array'
                         }
                     }
-                });
-            };
-
-            expect(throws).to.throw(ValidationError, "BadModel if property's type is \"array\" then \"items\" should be specified (properties.title)");
-            done();
+                }
+            }).catch((error) => {
+                expect(error.name).to.equal('ValidationError');
+                expect(error.message).to.equal("BadModel if property's type is \"array\" then \"items\" should be specified (properties.title)");
+                done();
+            });
         });
 
 
         it('should throw an error if the properties have an unknown field', (done) => {
-            let database = archimedes(MemoryAdapter);
-
-            var throws = function() {
-                database.register({
-                    BadModel: {
-                        properties: {
-                            title: {
-                                type: 'string',
-                                arf: 'foo'
-                            }
+            database().register({
+                BadModel: {
+                    properties: {
+                        title: {
+                            type: 'string',
+                            arf: 'foo'
                         }
                     }
-                });
-            };
-
-            expect(throws).to.throw(ValidationError, 'BadModel "arf" is not allowed (properties.title)');
-            done();
+                }
+            }).catch((error) => {
+                expect(error.name).to.equal('ValidationError');
+                expect(error.message).to.equal('BadModel "arf" is not allowed (properties.title)');
+                done();
+            });
         });
 
 
         it('should throw an error if property type is not valid', (done) => {
-            let database = archimedes(MemoryAdapter);
-
-            var throws = function() {
-                database.register({
-                    BadModel: {
-                        properties: {
-                            title: {
-                                type: 'foo'
-                            }
+            database().register({
+                BadModel: {
+                    properties: {
+                        title: {
+                            type: 'foo'
                         }
                     }
-                });
-            };
-
-            expect(throws).to.throw(ValidationError, 'BadModel "type" must be one of [string, number, boolean, date, array] (properties.title.type)');
-            done();
+                }
+            }).catch((error) => {
+                expect(error.name).to.equal('ValidationError');
+                expect(error.message).to.equal('BadModel invalid type for property "title"');
+                done();
+            });
         });
     });
 
@@ -172,18 +158,15 @@ describe('Model', function() {
         });
 
         it('should throw an error if the mixins are not registered', (done) => {
-            let database = archimedes(MemoryAdapter);
-
-            let throws = function() {
-                database.register({
-                    BadModel: {
-                        mixins: ['UnknownModel']
-                    }
-                });
-            };
-
-            expect(throws).to.throw(ValidationError, 'BadModel: unknown mixin "UnknownModel"');
-            done();
+            database().register({
+                BadModel: {
+                    mixins: ['UnknownModel']
+                }
+            }).catch((error) => {
+                expect(error.name).to.equal('ValidationError');
+                expect(error.message).to.equal('BadModel: unknown mixin "UnknownModel"');
+                done();
+            });
         });
     });
 
@@ -203,20 +186,17 @@ describe('Model', function() {
 
 
         it('should  an error is methods are not functions', (done) => {
-            let database = archimedes(MemoryAdapter);
-
-            var throws = function() {
-                database.register({
-                    BadModel: {
-                        methods: {
-                            badMethod: 'foo'
-                        }
+            database().register({
+                BadModel: {
+                    methods: {
+                        badMethod: 'foo'
                     }
-                });
-            };
-
-            expect(throws).to.throw(ValidationError, 'BadModel "badMethod" must be a Function (methods.badMethod)');
-            done();
+                }
+            }).catch((error) => {
+                expect(error.name).to.equal('ValidationError');
+                expect(error.message).to.equal('BadModel "badMethod" must be a Function (methods.badMethod)');
+                done();
+            });
         });
 
 
@@ -239,20 +219,17 @@ describe('Model', function() {
 
 
         it('should  an error is statics are not functions', (done) => {
-            let database = archimedes(MemoryAdapter);
-
-            var throws = function() {
-                database.register({
-                    BadModel: {
-                        statics: {
-                            badStaticMethod: 'foo'
-                        }
+            database().register({
+                BadModel: {
+                    statics: {
+                        badStaticMethod: 'foo'
                     }
-                });
-            };
-
-            expect(throws).to.throw(ValidationError, 'BadModel "badStaticMethod" must be a Function (statics.badStaticMethod)');
-            done();
+                }
+            }).catch((error) => {
+                expect(error.name).to.equal('ValidationError');
+                expect(error.message).to.equal('BadModel "badStaticMethod" must be a Function (statics.badStaticMethod)');
+                done();
+            });
         });
     });
 

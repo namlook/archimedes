@@ -36,7 +36,10 @@ export default {
             },
             ratting: {
                 type: 'number',
-                validate: [{min: 0}, {max: 5}]
+                validate: [{min: 0}, {max: 5}],
+                meta: {
+                    deprecated: true
+                }
             }
         },
         methods: {

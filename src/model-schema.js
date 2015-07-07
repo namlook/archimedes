@@ -69,7 +69,6 @@ export default class ModelSchema {
             // }
             if (error) {
                 error = error.details;
-
             }
 
             return {error, value};

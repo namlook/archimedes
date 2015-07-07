@@ -9,19 +9,19 @@ var before = lab.before;
 var beforeEach = lab.beforeEach;
 var expect = Code.expect;
 
-import archimedes from '../lib';
-import MemoryAdapter from '../lib/adapters/memory';
-import modelSchemas from './fixtures-model-schemas';
+import store from './db';
 
 describe('Model persistence', function() {
 
     var db;
     before(function(done) {
-        db = archimedes(MemoryAdapter);
-        db.register(modelSchemas);
-        done();
+        store().then((registeredDB) => {
+            db = registeredDB;
+            done();
+        }).catch((error) => {
+            console.log(error.stack);
+        });
     });
-
 
     beforeEach(function(done) {
         db.clear().then(done).catch((error) => {

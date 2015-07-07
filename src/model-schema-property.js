@@ -66,6 +66,10 @@ export default class ModelSchemaProperty {
         return this.config.type;
     }
 
+    get meta() {
+        return this.config.meta || {};
+    }
+
     isRelation() {
         return !!this.modelSchema.db[this.type];
     }

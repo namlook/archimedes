@@ -7,7 +7,7 @@
   "scripts": {
     "prepublish": "npm run build",
     "build": "rm -rf lib libtests ; eslint src tests ;  babel src --optional runtime --out-dir lib --source-maps && babel tests --optional runtime --out-dir libtests --source-maps",
-    "test": "rm -rf lib libtests ; eslint src tests 1>&2 &&  babel src --optional runtime --out-dir lib --source-maps && babel tests --optional runtime --out-dir libtests --source-maps && ./node_modules/lab/bin/lab libtests/specs -vSl",
+    "test": "rm -rf lib libtests ; eslint src tests 1>&2 &&  babel src --optional runtime --out-dir lib --source-maps && babel tests --optional runtime --out-dir libtests --source-maps && ./node_modules/lab/bin/lab libtests -vSl",
     "coverage": "./node_modules/lab/bin/lab -r html -o coverage.html libtests/specs"
   },
   "files": [
@@ -25,6 +25,10 @@
   },
   "dependencies": {
     "joi": "^6.5.0",
-    "lodash": "^3.9.3"
+    "lodash": "^3.9.3",
+    "n3": "^0.4.3",
+    "querystring": "^0.2.0",
+    "request": "^2.58.0",
+    "sparqljs": "^1.1.2"
   }
 }

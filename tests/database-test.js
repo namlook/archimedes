@@ -8,21 +8,28 @@ var before = lab.before;
 var beforeEach = lab.beforeEach;
 var expect = Code.expect;
 
-import archimedes from '../lib';
-import MemoryAdapter from '../lib/adapters/memory';
-import modelSchemas from './fixtures-model-schemas';
+import store from './db';
+import archimedes from '../lib/database';
 
-describe('Model instance persistance', function() {
+import _ from 'lodash';
+
+describe('Database', function() {
 
     var db;
     before(function(done) {
-        db = archimedes(MemoryAdapter);
-        db.register(modelSchemas);
-        done();
+        store().then((registeredDB) => {
+            db = registeredDB;
+            done();
+        }).catch((error) => {
+            console.log(error.stack);
+        });
     });
 
     beforeEach(function(done) {
-        db.clear().then(done).catch((error) => {
+        db.clear().then(() => {
+            done();
+        }).catch((error) => {
+            console.log(error);
             console.log(error.stack);
         });
     });
@@ -40,11 +47,17 @@ describe('Model instance persistance', function() {
 
     describe('#find()', function() {
         it('should return a promise', (done) => {
-            expect(db.find('BlogPost').then).to.be.a.function();
-            done();
+            let promise = db.find('BlogPost');
+            expect(promise.then).to.be.a.function();
+            promise.then(() => {
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
         });
 
-        it('should return the all results', (done) => {
+        it('should return all results', (done) => {
             var data = [];
             for (let i = 0; i < 10; i++) {
                 data.push({_id: `bp${i}`, _type: 'BlogPost', title: `post ${i}`, ratting: i % 5});
@@ -54,9 +67,10 @@ describe('Model instance persistance', function() {
                 expect(savedData).to.deep.equal(data);
                 return db.find('BlogPost');
             }).then((results) => {
-                expect(results).to.deep.equal(data);
+                expect(_.sortBy(results, '_id')).to.deep.equal(data);
                 done();
             }).catch((error) => {
+                console.log(error);
                 console.log(error.stack);
             });
         });
@@ -81,6 +95,7 @@ describe('Model instance persistance', function() {
                 expect(results.map(o => o.ratting)).to.only.include([4]);
                 done();
             }).catch((error) => {
+                console.log(error);
                 console.log(error.stack);
             });
         });
@@ -104,6 +119,7 @@ describe('Model instance persistance', function() {
                 expect(results.length).to.equal(0);
                 done();
             }).catch((error) => {
+                console.log(error);
                 console.log(error.stack);
             });
         });
@@ -212,8 +228,14 @@ describe('Model instance persistance', function() {
     describe('#sync()', function() {
 
         it('should return a promise', (done) => {
-            expect(db.sync('BlogPost', {title: 'the post'}).then).to.be.a.function();
-            done();
+            let promise = db.sync('BlogPost', {title: 'the post'});
+            expect(promise.then).to.be.a.function();
+            promise.then(() => {
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
         });
 
 
@@ -221,18 +243,22 @@ describe('Model instance persistance', function() {
             var savedPojoId;
             db.find('BlogPost').then((results) => {
                 expect(results.length).to.equal(0);
-                return db.sync('BlogPost', {title: 'the post'});
+                return db.sync('BlogPost', {title: 'the post', ratting: 4});
             }).then((savedPojo) => {
                 savedPojoId = savedPojo._id;
                 expect(savedPojo._id).to.exist();
                 expect(savedPojo._type).to.equal('BlogPost');
                 expect(savedPojo.title).to.equal('the post');
+                expect(savedPojo.ratting).to.equal(4);
                 return db.find('BlogPost');
             }).then((results) => {
                 expect(results.length).to.equal(1);
                 expect(results[0]._id).to.equal(savedPojoId);
+                expect(results[0].title).to.equal('the post');
+                expect(results[0].ratting).to.equal(4);
                 done();
             }).catch((error) => {
+                console.log(error);
                 console.log(error.stack);
             });
         });
@@ -267,10 +293,15 @@ describe('Model instance persistance', function() {
 
     describe('#batchSync()', function() {
         it('should return a promise', (done) => {
-            expect(db.batchSync('BlogPost', [{title: 'the post'}]).then).to.be.a.function();
-            done();
+            let promise = db.batchSync('BlogPost', [{title: 'the post'}]);
+            expect(promise.then).to.be.a.function();
+            promise.then(() => {
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
         });
-
 
         it('should sync a list of documents', (done) => {
             var data = [];
@@ -282,9 +313,10 @@ describe('Model instance persistance', function() {
                 expect(savedData).to.deep.equal(data);
                 return db.find('BlogPost');
             }).then((results) => {
-                expect(results).to.deep.equal(data);
+                expect(_.sortBy(results, '_id')).to.deep.equal(data);
                 done();
             }).catch((error) => {
+                console.log(error);
                 console.log(error.stack);
             });
         });
@@ -343,8 +375,14 @@ describe('Model instance persistance', function() {
 
     describe('#delete()', function() {
         it('should return a promise', (done) => {
-            expect(db.delete('BlogPost', 'thepost').then).to.be.a.function();
-            done();
+            let promise = db.delete('BlogPost', 'thepost');
+            expect(promise.then).to.be.a.function();
+            promise.then(() => {
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
         });
 
         it('should remove a document from the db', (done) => {
@@ -357,11 +395,12 @@ describe('Model instance persistance', function() {
                 expect(savedData.map(o => o.ratting)).to.only.include([0, 1, 2, 3, 4]);
                 return db.delete('BlogPost', 'bp3');
             }).then(() => {
-                return db.first('BlogPost', {_id: 'bp3'});
+                return db.fetch('BlogPost', 'bp3');
             }).then((doc) => {
                 expect(doc).to.not.exist();
                 done();
             }).catch((error) => {
+                console.log(error);
                 console.log(error.stack);
             });
         });
@@ -479,7 +518,7 @@ describe('Model instance persistance', function() {
 
     });
 
-    describe('#talk()', function() {
+    describe('#execute()', function() {
         it('should return a promise');
         it('should talk directly to the store');
     });
