@@ -12,10 +12,25 @@ export var instanceRdfUri = function(modelClass, id) {
 };
 
 export var propertyRdfUri = function(modelClass, propertyName) {
+    if (!modelClass) {
+        return new Error('propertyRdfUri require a modelClass');
+    }
+
+    if (!propertyName) {
+        return new Error('propertyRdfUri require a propertyName');
+    }
+
+
     if (propertyName === '_type') {
         return 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
     }
-    return modelClass.schema.getProperty(propertyName).meta.rdfUri;
+
+    let property = modelClass.schema.getProperty(propertyName);
+    if (!property) {
+        throw new Error(`unknown property "${propertyName}"" on model "${modelClass.name}"`);
+    }
+
+    return property.meta.rdfUri;
 };
 
 export var buildRdfValue = function(db, modelType, propertyName, value) {
@@ -47,6 +62,21 @@ export var uri2property = function(modelClass, uri) {
     return modelClass.meta.propertyUrisMapping[uri];
 };
 
+export var operation2triple = function(db, modelType, uri, operation) {
+    let modelClass = db[modelType];
+
+    let {property, value} = operation;
+
+    let propertyUri = propertyRdfUri(modelClass, property);
+    let rdfValue = buildRdfValue(db, modelType, property, value);
+
+    return {
+        subject: uri,
+        predicate: propertyUri,
+        object: rdfValue
+    };
+};
+
 
 export var rdfDoc2pojo = function(db, modelType, rdfDoc) {
     var modelClass = db[modelType];
@@ -68,8 +98,9 @@ export var rdfDoc2pojo = function(db, modelType, rdfDoc) {
         }
 
         var values = [];
+        var isRelation = modelClass.schema.getProperty(property).isRelation();
         rdfValues.forEach(function(rdfValue) {
-            if (modelClass.schema.getProperty(property).isRelation()) {
+            if (isRelation) {
                 let relationType = modelClass.schema.getProperty(property).type;
                 let relationId = uri2id(db[relationType], rdfValue);
                 values.push({_id: relationId, _type: relationType});
@@ -82,7 +113,11 @@ export var rdfDoc2pojo = function(db, modelType, rdfDoc) {
         if (!modelClass.schema.getProperty(property).isArray()) {
             value = values[0];
         } else {
-            value = values;
+            if (isRelation) {
+                value = _.sortBy(values, '_id');
+            } else {
+                value = _.sortBy(values);
+            }
         }
 
         pojo[property] = value;

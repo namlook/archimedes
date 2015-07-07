@@ -129,8 +129,11 @@ describe('Database', function() {
 
     describe('#first()', function() {
         it('should return a promise', (done) => {
-            expect(db.first('BlogPost').then).to.be.a.function();
-            done();
+            let promise = db.first('BlogPost');
+            expect(promise.then).to.be.a.function();
+            promise.then(() => {
+                done();
+            });
         });
 
 
@@ -153,6 +156,34 @@ describe('Database', function() {
                 expect(doc.title).to.equal('post 1');
                 done();
             }).catch((error) => {
+                console.log(error.stack);
+            });
+        });
+
+
+        it('should return a document that match {_id: ...}', (done) => {
+            var data = [];
+            for (let i = 0; i < 10; i++) {
+                data.push({
+                    _id: `bp${i}`,
+                    _type: 'BlogPost',
+                    title: `post ${i}`,
+                    ratting: i % 5
+                });
+            }
+            db.batchSync('BlogPost', data).then((savedData) => {
+                expect(savedData.length).to.equal(10);
+                expect(savedData).to.deep.equal(data);
+                return db.first('BlogPost', {_id: 'bp1'});
+            }).then((doc) => {
+                expect(doc).to.be.an.object();
+                expect(doc.title).to.equal('post 1');
+                return db.first('BlogPost', {_id: 'notfound'});
+            }).then((notFoundDoc) => {
+                expect(notFoundDoc).to.not.exist();
+                done();
+            }).catch((error) => {
+                console.log(error);
                 console.log(error.stack);
             });
         });
@@ -183,28 +214,31 @@ describe('Database', function() {
 
     describe('#update()', function() {
         it('should return a promise', (done) => {
-            expect(db.update('BlogPost', []).then).to.be.a.function();
-            done();
+            let promise = db.update('BlogPost', 'thepost', []);
+            expect(promise.then).to.be.a.function();
+            promise.then(() => {
+                done();
+            }).catch((error) => {
+                console.log(error);
+            });
         });
 
 
         it('should update a document', (done) => {
             db.sync('BlogPost', {_id: 'thepost', title: 'the post'}).then(() => {
-                db.update('BlogPost', 'thepost', [
+                return db.update('BlogPost', 'thepost', [
                     {operator: 'set', property: 'isPublished', value: true},
                     {operator: 'set', property: 'title', value: 'new title'}
-                ]).then((updatedDoc) => {
-                    expect(updatedDoc.title).to.equal('new title');
-                    expect(updatedDoc.isPublished).to.be.true();
-
-                    return db.first('BlogPost', {_id: 'thepost'});
-                }).then((doc) => {
-                    expect(doc.title).to.equal('new title');
-                    expect(doc.isPublished).to.be.true();
-                    done();
-                }).catch((error) => {
-                    console.log(error.stack);
-                });
+                ]);
+            }).then(() => {
+                return db.fetch('BlogPost', 'thepost');
+            }).then((doc) => {
+                expect(doc.title).to.equal('new title');
+                expect(doc.isPublished).to.be.true();
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
             });
         });
 

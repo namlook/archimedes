@@ -1,9 +1,13 @@
 
 import _ from 'lodash';
 import sparqlClient from './sparql-client';
-import {instanceRdfUri, query2whereClause, pojo2triples, rdfDoc2pojo} from './utils';
+import {
+    instanceRdfUri,
+    query2whereClause,
+    pojo2triples,
+    rdfDoc2pojo,
+    operation2triple} from './utils';
 import {Generator as SparqlGenerator} from 'sparqljs';
-
 
 export default function(config) {
     config = config || {};
@@ -87,6 +91,17 @@ export default function(config) {
              */
             find(modelType, query, options) {
                 return new Promise((resolve, reject) => {
+                    if (query._id) {
+                        return this.fetch(modelType, query._id).then((pojo) => {
+                            var results = [];
+                            if (pojo) {
+                                results.push(pojo);
+                            }
+                            resolve(results);
+                        }).catch((error) => {
+                            reject(error);
+                        });
+                    }
 
                     let whereClause = query2whereClause(db, modelType, query, options);
                     let sparson = {
@@ -223,21 +238,21 @@ export default function(config) {
                         type: 'update',
                         updates: [
                             {
-                                updateType: 'insertdelete',
+                                updateType: 'deletewhere',
                                 delete: [
                                     {
                                         type: 'graph',
                                         name: config.graphUri,
                                         triples: deleteTriples
                                     }
-                                ],
-                                insert: [],
-                                where: [
-                                    {
-                                        type: 'bgp',
-                                        triples: deleteTriples
-                                    }
                                 ]
+                                // insert: [],
+                                // where: [
+                                //     {
+                                //         type: 'bgp',
+                                //         triples: deleteTriples
+                                //     }
+                                // ]
                             },
                             {
                                 updateType: 'insert',
@@ -288,37 +303,55 @@ export default function(config) {
                         type: 'update',
                         updates: [
                             {
-                                updateType: 'insertdelete',
+                                // updateType: 'insertdelete',
+                                updateType: 'deletewhere',
                                 delete: [
                                     {
                                         type: 'graph',
                                         name: config.graphUri,
-                                        triples: [{
-                                            subject: '?s',
-                                            predicate: '?p',
-                                            object: '?o'
-                                        }]
-                                    }
-                                ],
-                                insert: [],
-                                where: [
-                                    {
-                                        type: 'bgp',
-                                        triples: [{
-                                            subject: '?s',
-                                            predicate: '?p',
-                                            object: '?o'
-                                        }]
-                                    },
-                                    {
-                                        type: 'filter',
-                                        expression: {
-                                            type: 'operation',
-                                            operator: 'in',
-                                            args: ['?s', uris]
-                                        }
+                                        // triples: [
+                                        //     {
+                                        //         subject: '?s',
+                                        //         predicate: '?p',
+                                        //         object: '?o'
+                                        //     }
+                                        // ]
+                                        triples: [
+                                            {
+                                                subject: '?s',
+                                                predicate: '?p',
+                                                object: '?o'
+                                            },
+                                            {
+                                                type: 'filter',
+                                                expression: {
+                                                    type: 'operation',
+                                                    operator: 'in',
+                                                    args: ['?s', uris]
+                                                }
+                                            }
+                                        ]
                                     }
                                 ]
+                                // insert: [],
+                                // where: [
+                                //     {
+                                //         type: 'bgp',
+                                //         triples: [{
+                                //             subject: '?s',
+                                //             predicate: '?p',
+                                //             object: '?o'
+                                //         }]
+                                //     },
+                                //     {
+                                //         type: 'filter',
+                                //         expression: {
+                                //             type: 'operation',
+                                //             operator: 'in',
+                                //             args: ['?s', uris]
+                                //         }
+                                //     }
+                                // ]
                             },
                             {
                                 updateType: 'insert',
@@ -345,25 +378,113 @@ export default function(config) {
                         return reject(error);
                     });
                 });
-
-
-
-                // return new Promise((resolve) => {
-                //     var promises = [];
-                //     for (let i = 0; i < data.length; i++) {
-                //         let pojo = data[i];
-                //         promises.push(db.sync(modelType, pojo));
-                //     }
-
-                //     return resolve(Promise.all(promises));
-                // });
             },
 
 
-            // update(modelType, modelId, operations) {
-                // let sparql = query2sparql('update', modelType, modelId, operations);
-                // return this.execute(sparql);
-            // },
+            update(modelType, modelIdOrUri, operations) {
+                return new Promise((resolve, reject) => {
+
+                    var uri = modelIdOrUri;
+
+                    if (!_.startsWith(modelIdOrUri, 'http://')) {
+                        uri = instanceRdfUri(db[modelType], modelIdOrUri);
+                    }
+
+                    var deleteTriples = operations.map((operation) => {
+                        if (_.contains(['unset', 'pull'], operation.operator)) {
+                            return operation2triple(db, modelType, uri, operation);
+                        }
+                    });
+
+                    deleteTriples = _.compact(deleteTriples);
+
+
+                    var sparson = {
+                        type: 'update',
+                        updates: []
+                    };
+
+                    if (deleteTriples.length) {
+                        sparson.updates.push({
+                            updateType: 'insertdelete',
+                            delete: [
+                                {
+                                    type: 'graph',
+                                    name: config.graphUri,
+                                    triples: deleteTriples
+                                }
+                            ],
+                            insert: [],
+                            where: [
+                                {
+                                    type: 'bgp',
+                                    triples: deleteTriples
+                                }
+                            ]
+                        });
+                    }
+
+
+                    var objectVariableIndex = 0;
+                    var deletewhereTriples = [];
+                    var insertTriples = operations.map((operation) => {
+                        if (_.contains(['set', 'push'], operation.operator)) {
+                            let triple = operation2triple(db, modelType, uri, operation);
+                            deletewhereTriples.push([{
+                                subject: uri,
+                                predicate: triple.predicate,
+                                object: `?o${objectVariableIndex++}`
+                            }]);
+                            return triple;
+                        }
+                    });
+                    insertTriples = _.compact(insertTriples);
+
+
+                    if (deletewhereTriples.length) {
+                        deletewhereTriples.forEach((dwTriples) => {
+                            sparson.updates.push({
+                                updateType: 'deletewhere',
+                                delete: [
+                                    {
+                                        type: 'graph',
+                                        name: config.graphUri,
+                                        triples: dwTriples
+                                    }
+                                ]
+                            });
+                        });
+                    }
+
+
+                    if (insertTriples.length) {
+                        sparson.updates.push({
+                            updateType: 'insert',
+                            insert: [
+                                {
+                                    type: 'graph',
+                                    name: config.graphUri,
+                                    triples: insertTriples
+                                }
+                            ]
+                        });
+                    }
+
+
+                    try {
+                        var sparql = new SparqlGenerator().stringify(sparson);
+                    } catch(sparqlGeneratorError) {
+                        return reject(sparqlGeneratorError);
+                    }
+
+                    this.execute(sparql).then(() => {
+                        return resolve();
+                    }).catch((error) => {
+                        return reject(error);
+                    });
+
+                });
+            },
 
 
             delete(modelType, modelIdOrUri) {

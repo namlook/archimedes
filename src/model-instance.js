@@ -33,10 +33,9 @@ export default function(db, modelClass, attrs) {
                         this._type,
                         this._id,
                         internals.pendingOperations
-                    ).then((pojo) => {
-                        let modelInstance = this.Model.wrap(pojo);
+                    ).then(() => {
                         this.clearPending();
-                        return resolve(modelInstance);
+                        return resolve(this);
                     }).catch(reject);
                 }
             });
@@ -69,6 +68,10 @@ export default function(db, modelClass, attrs) {
          * @returns this
          */
         set(name, value) {
+            let oldValue = this.get(name);
+            if (oldValue != null) {
+                internals.pendingOperations.push({operator: 'unset', property: name, value: oldValue});
+            }
             internals.pendingOperations.push({operator: 'set', property: name, value: value});
             _.set(internals.attrs, name, value);
             return this;
@@ -82,7 +85,8 @@ export default function(db, modelClass, attrs) {
          * @returns this
          */
         unset(name) {
-            internals.pendingOperations.push({operator: 'unset', property: name});
+            let value = this.get(name);
+            internals.pendingOperations.push({operator: 'unset', property: name, value: value});
             delete internals.attrs[name];
             return this;
         },
@@ -113,7 +117,10 @@ export default function(db, modelClass, attrs) {
             internals.pendingOperations.push({operator: 'push', property: name, value: values});
 
 
-            internals.attrs[name] = _.uniq(propValues.concat(values));
+            values = _.uniq(propValues.concat(values));
+
+            internals.attrs[name] = _.sortBy(values);
+
             return this;
         },
 
@@ -135,7 +142,7 @@ export default function(db, modelClass, attrs) {
 
             internals.pendingOperations.push({operator: 'pull', property: name, value: values});
 
-            internals.attrs[name] = _.without(propValues, ...values);
+            internals.attrs[name] = _.sortBy(_.without(propValues, ...values));
 
             if (internals.attrs[name].length === 0) {
                 this.unset(name);
@@ -155,7 +162,7 @@ export default function(db, modelClass, attrs) {
             return new Promise((resolve, reject) => {
                 let {error, value} = this.Model.schema.validate(internals.attrs);
                 if (error) {
-                    return reject(new ValidationError(error, error));
+                    return reject(new ValidationError(error[0].message, error));
                 }
                 return resolve(value);
             });

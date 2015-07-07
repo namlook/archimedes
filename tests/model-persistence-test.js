@@ -24,15 +24,23 @@ describe('Model persistence', function() {
     });
 
     beforeEach(function(done) {
-        db.clear().then(done).catch((error) => {
+        db.clear().then(() => {
+            done();
+        }).catch((error) => {
+            console.log(error);
             console.log(error.stack);
         });
     });
 
     describe('#find()', function(){
         it('should be a promise', (done) => {
-            expect(db.BlogPost.find().then).to.be.a.function();
-            done();
+            let promise = db.BlogPost.find();
+            expect(promise.then).to.be.a.function();
+            promise.then(() => {
+                done();
+            }).catch((error) => {
+                console.log(error);
+            });
         });
 
 
@@ -41,6 +49,7 @@ describe('Model persistence', function() {
                 expect(results).to.be.an.array();
                 done();
             }).catch((error) => {
+                console.log(error);
                 console.log(error.stack);
             });
         });

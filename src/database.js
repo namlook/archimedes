@@ -102,13 +102,36 @@ export default function(dbAdapter, config) {
 
 
         validate(modelType, pojo) {
-            var modelSchema = this[modelType].schema;
             return new Promise((resolve, reject) => {
+
+                var modelSchema = this[modelType].schema;
+
                 let {error, value} = modelSchema.validate(pojo);
+
                 if (error) {
-                    return reject(new ValidationError(error, error));
+
+                    /*** hack for virtuoso: boolean are returned as integers **/
+                    let propertyName = error[0].path;
+                    let badValue = pojo[propertyName];
+                    if (error[0].type === 'boolean.base' && _.contains([1, 0], badValue)) {
+                        pojo[propertyName] = Boolean(badValue);
+                        process.nextTick(() => {
+                            this.validate(modelType, pojo).then((validatedPojo) => {
+                                resolve(validatedPojo);
+                            }).catch((validationError) => {
+                                reject(validationError);
+                            });
+                        });
+                    } else {
+                        reject(new ValidationError(error[0].message, error));
+                    }
+
+                } else {
+
+                    resolve(value);
+
                 }
-                return resolve(value);
+
             });
         },
 
@@ -135,15 +158,8 @@ export default function(dbAdapter, config) {
                 }
 
                 this.adapter.find(modelType, validatedQuery).then((data) => {
-                    // var modelSchema = this[modelType].schema;
                     let promises = data.map((item) => {
                         return this.validate(modelType, item);
-                        // })
-                        // let {error: itemError, value: validatedItem} = modelSchema.validate(item);
-                        // if (itemError) {
-                        //     return reject(new ValidationError(itemError, itemError));
-                        // }
-                        // return validatedItem;
                     });
 
                     return resolve(Promise.all(promises));
@@ -160,12 +176,16 @@ export default function(dbAdapter, config) {
          * @returns {promise}
          */
         first(modelType, query) {
-            return this.find(modelType, query).then((results) => {
-                var result;
-                if (results.length) {
-                    result = results[0];
-                }
-                return result;
+            return new Promise((resolve, reject) => {
+                this.find(modelType, query).then((results) => {
+                    var result;
+                    if (results.length) {
+                        result = results[0];
+                    }
+                    return resolve(result);
+                }).catch((error) => {
+                    reject(error);
+                });
             });
         },
 
@@ -181,7 +201,19 @@ export default function(dbAdapter, config) {
                     return reject(new Error('fetch: id required and should be a string'));
                 }
 
-                return resolve(this.adapter.fetch(modelType, id));
+                this.adapter.fetch(modelType, id).then((pojo) => {
+                    if (pojo) {
+                        this.validate(modelType, pojo).then((validatedPojo) => {
+                            resolve(validatedPojo);
+                        }).catch((error) => {
+                            reject(error);
+                        });
+                    } else {
+                        process.nextTick(resolve);
+                    }
+                }).catch((error) => {
+                    reject(error);
+                });
             });
         },
 
@@ -237,6 +269,7 @@ export default function(dbAdapter, config) {
                 if (!_.isArray(operations)) {
                     return reject(new Error('update: operations should be an array'));
                 }
+
                 return resolve(this.adapter.update(modelType, modelId, operations));
             });
         },
@@ -268,14 +301,11 @@ export default function(dbAdapter, config) {
                     pojo._type = modelType;
                 }
 
-                let {error, value: validatedPojo} = this[modelType].schema.validate(pojo);
-
-                if (error) {
-                    return reject(new ValidationError(`${error[0].message}`, error));
-                }
-
-                return resolve(this.adapter.sync(modelType, validatedPojo));
-
+                this.validate(modelType, pojo).then((validatedPojo) => {
+                    resolve(this.adapter.sync(modelType, validatedPojo));
+                }).catch((error) => {
+                    reject(error);
+                });
             });
         },
 
@@ -297,7 +327,7 @@ export default function(dbAdapter, config) {
                     return reject(new Error('batchSync: data should be an array'));
                 }
 
-                let pojos = [];
+                var promises = [];
                 for(let i = 0; i < data.length; i++) {
                     let pojo = data[i];
 
@@ -313,17 +343,16 @@ export default function(dbAdapter, config) {
                         pojo._type = modelType;
                     }
 
-                    let {error, value: validatedPojo} = this[modelType].schema.validate(pojo);
-
-                    if (error) {
-                        return reject(new ValidationError(`${error[0].message}`, error));
-                    }
-
-                    pojos.push(validatedPojo);
-
+                    promises.push(this.validate(modelType, pojo));
                 }
 
-                return resolve(this.adapter.batchSync(modelType, pojos));
+                Promise.all(promises).then((pojos) => {
+                    resolve(this.adapter.batchSync(modelType, pojos));
+                }).catch((error) => {
+                    reject(error);
+                });
+
+                // return resolve(this.adapter.batchSync(modelType, pojos));
             });
         },
 

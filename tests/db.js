@@ -9,8 +9,8 @@ var databases = {
             graphUri: 'http://test.org',
             // host: '192.168.99.100',
             // port: 8890,
-            // endpoint: `http://192.168.99.100:8890/sparql` // virtuoso
-            endpoint: `http://192.168.99.100:32771/bigdata/sparql` // bigdata
+            endpoint: `http://192.168.99.100:8890/sparql` // virtuoso
+            // endpoint: `http://192.168.99.100:32772/bigdata/sparql` // bigdata
         });
     },
     memory: function() {

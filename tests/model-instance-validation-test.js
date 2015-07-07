@@ -23,6 +23,7 @@ describe('Model Instance validation', function() {
         });
     });
 
+
     it('should validate a model instance', (done) => {
         let now = new Date();
         let blogPost = db.BlogPost.create({
@@ -35,93 +36,113 @@ describe('Model Instance validation', function() {
             ratting: 5,
             isPublished: true
         });
-        var {error, value} = blogPost.validate();
-        expect(error).to.be.null();
-        expect(value).to.be.an.object();
-        done();
+        blogPost.validate().then((value) => {
+            expect(value).to.be.an.object();
+            done();
+        }).catch((error) => {
+            console.log(error);
+        });
     });
 
 
     it('should return an error if the type is not a string', (done) => {
         let blogPost = db.BlogPost.create({title: 23});
-        let {error} = blogPost.validate();
-        expect(error[0].path).to.equal('title');
-        expect(error[0].message).to.equal('"title" must be a string');
-        done();
+        blogPost.validate().catch((error) => {
+            expect(error.message).to.equal('"title" must be a string');
+            expect(error.extra[0].message).to.equal('"title" must be a string');
+            expect(error.extra[0].path).to.equal('title');
+            done();
+        });
     });
 
 
     it('should return an error if the type is not a number', (done) => {
         let blogPost = db.BlogPost.create({ratting: 'foo'});
-        let {error} = blogPost.validate();
-        expect(error[0].path).to.equal('ratting');
-        expect(error[0].message).to.equal('"ratting" must be a number');
-        done();
+        blogPost.validate().catch((error) => {
+            expect(error.extra[0].path).to.equal('ratting');
+            expect(error.extra[0].message).to.equal('"ratting" must be a number');
+            expect(error.message).to.equal('"ratting" must be a number');
+            done();
+        });
     });
 
 
     it('should return an error if the type is not a boolean', (done) => {
         let blogPost = db.BlogPost.create({isPublished: 'foo'});
-        let {error} = blogPost.validate();
-        expect(error[0].path).to.equal('isPublished');
-        expect(error[0].message).to.equal('"isPublished" must be a boolean');
-        done();
+        blogPost.validate().catch((error) => {
+            expect(error.extra[0].path).to.equal('isPublished');
+            expect(error.extra[0].message).to.equal('"isPublished" must be a boolean');
+            expect(error.message).to.equal('"isPublished" must be a boolean');
+            done();
+        });
     });
 
 
     it('should return an error if the type is not a date', (done) => {
         let blogPost = db.BlogPost.create({updatedDate: 'foo'});
-        let {error} = blogPost.validate();
-        expect(error[0].path).to.equal('updatedDate');
-        expect(error[0].message).to.equal('"updatedDate" must be a number of milliseconds or valid date string');
-        done();
+        blogPost.validate().catch((error) => {
+            expect(error.extra[0].path).to.equal('updatedDate');
+            expect(error.extra[0].message).to.equal('"updatedDate" must be a number of milliseconds or valid date string');
+            expect(error.message).to.equal('"updatedDate" must be a number of milliseconds or valid date string');
+            done();
+        });
     });
 
 
     it('should return an error if the type is not an array of string', (done) => {
         let blogPost = db.BlogPost.create({tags: 23});
-        let {error} = blogPost.validate();
-        expect(error[0].path).to.equal('tags');
-        expect(error[0].message).to.equal('"tags" must be an array');
-        done();
+        blogPost.validate().catch((error) => {
+            expect(error.extra[0].path).to.equal('tags');
+            expect(error.extra[0].message).to.equal('"tags" must be an array');
+            expect(error.message).to.equal('"tags" must be an array');
+            done();
+        });
     });
 
     describe('[relations]', function() {
 
         it('should return an error if the type is not another model instance', (done) => {
             let blogPost = db.BlogPost.create({author: 'me'});
-            let {error} = blogPost.validate();
-            expect(error[0].path).to.equal('author');
-            expect(error[0].message).to.equal('"author" must be an object');
-            done();
+            blogPost.validate().catch((error) => {
+                expect(error.extra[0].path).to.equal('author');
+                expect(error.extra[0].message).to.equal('"author" must be an object');
+                expect(error.message).to.equal('"author" must be an object');
+                done();
+            });
         });
 
 
         it('should return an error if the relation is not saved', (done) => {
             let me = db.User.create({name: 'me'});
             let blogPost = db.BlogPost.create({author: me});
-            let {error} = blogPost.validate();
-            expect(error[0].path).to.equal('author._id');
-            expect(error[0].message).to.equal('"author._id" is required');
-            done();
+            blogPost.validate().catch((error) => {
+                expect(error.extra[0].path).to.equal('author._id');
+                expect(error.extra[0].message).to.equal('"author._id" is required');
+                expect(error.message).to.equal('"author._id" is required');
+                done();
+            });
         });
 
         it('should return an error if the relation is not saved (even when _id is passed)', (done) => {
             let me = db.User.create({_id: 'me', name: 'me'});
             let blogPost = db.BlogPost.create({author: me});
-            let {error} = blogPost.validate();
-            expect(error[0].path).to.equal('author._id');
-            expect(error[0].message).to.equal('"author._id" is required');
-            done();
+            blogPost.validate().catch((error) => {
+                expect(error.extra[0].path).to.equal('author._id');
+                expect(error.extra[0].message).to.equal('"author._id" is required');
+                expect(error.message).to.equal('"author._id" is required');
+                done();
+            });
         });
 
 
         it('should return an error if the type is not a list of model instances', (done) => {
             let blogPost = db.BlogPost.create({comments: ['foo', 2]});
-            let {error} = blogPost.validate();
-            expect(error[0].path).to.equal('comments.0');
-            expect(error[0].message).to.equal('"comments" must be an object');
-            done();
+            blogPost.validate().catch((error) => {
+                expect(error.extra[0].path).to.equal('comments.0');
+                expect(error.extra[0].message).to.equal('"comments" must be an object');
+                expect(error.message).to.equal('"comments" must be an object');
+                done();
+            });
         });
 
 
@@ -129,20 +150,24 @@ describe('Model Instance validation', function() {
             let good = db.Comment.create({body: 'good'});
             let ok = db.Comment.create({body: "it's ok"});
             let blogPost = db.BlogPost.create({comments: [good, ok]});
-            let {error} = blogPost.validate();
-            expect(error[0].path).to.equal('comments.0._id');
-            expect(error[0].message).to.equal('"comments._id" is required');
-            done();
+            blogPost.validate().catch((error) => {
+                expect(error.extra[0].path).to.equal('comments.0._id');
+                expect(error.extra[0].message).to.equal('"comments._id" is required');
+                expect(error.message).to.equal('"comments._id" is required');
+                done();
+            });
         });
 
         it('should return an error if the relation is not saved (even when _id is passed)', (done) => {
             let good = db.Comment.create({_id: 'good', body: 'good'});
             let ok = db.Comment.create({_id: 'ok', body: "it's ok"});
             let blogPost = db.BlogPost.create({comments: [good, ok]});
-            let {error} = blogPost.validate();
-            expect(error[0].path).to.equal('comments.0._id');
-            expect(error[0].message).to.equal('"comments._id" is required');
-            done();
+            blogPost.validate().catch((error) => {
+                expect(error.extra[0].path).to.equal('comments.0._id');
+                expect(error.extra[0].message).to.equal('"comments._id" is required');
+                expect(error.message).to.equal('"comments._id" is required');
+                done();
+            });
         });
 
     });

@@ -23,7 +23,10 @@ describe('Model instance persistance', function() {
     });
 
     beforeEach(function(done) {
-        db.clear().then(done).catch((error) => {
+        db.clear().then(() => {
+            done();
+        }).catch((error) => {
+            console.log(error);
             console.log(error.stack);
         });
     });
@@ -51,8 +54,13 @@ describe('Model instance persistance', function() {
     describe('#save()', function() {
         it('should return a promise', (done) => {
             let blogPost = db.BlogPost.create();
-            expect(blogPost.save().then).to.be.a.function();
-            done();
+            let promise = blogPost.save();
+            expect(promise.then).to.be.a.function();
+            promise.then(() => {
+                done();
+            }).catch((error) => {
+                console.log(error);
+            });
         });
 
 
@@ -72,11 +80,12 @@ describe('Model instance persistance', function() {
                 expect(savedBlogPost._archimedesModelInstance).to.be.true();
                 expect(savedBlogPost.attrs()).to.deep.equal(blogPost.attrs());
                 expect(savedBlogPost._id).to.exist();
-                return db.first(blogPost._type, {_id: blogPost._id});
+                return db.fetch(blogPost._type, blogPost._id);
             }).then((fetchedBlogPost) => {
                 expect(fetchedBlogPost).to.deep.equal(blogPost.attrs());
                 done();
             }).catch((error) => {
+                console.log(error);
                 console.log(error.stack);
             });
         });
@@ -111,8 +120,6 @@ describe('Model instance persistance', function() {
                 expect(error.extra[0].path).to.equal('isPublished');
                 expect(error.extra[0].message).to.equal('"isPublished" must be a boolean');
                 done();
-            }).catch((error) => {
-                console.log(error.stack);
             });
         });
 
