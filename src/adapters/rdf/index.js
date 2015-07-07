@@ -303,55 +303,55 @@ export default function(config) {
                         type: 'update',
                         updates: [
                             {
-                                // updateType: 'insertdelete',
-                                updateType: 'deletewhere',
+                                updateType: 'insertdelete',
+                                // updateType: 'deletewhere',
                                 delete: [
                                     {
                                         type: 'graph',
                                         name: config.graphUri,
-                                        // triples: [
-                                        //     {
-                                        //         subject: '?s',
-                                        //         predicate: '?p',
-                                        //         object: '?o'
-                                        //     }
-                                        // ]
                                         triples: [
                                             {
                                                 subject: '?s',
                                                 predicate: '?p',
                                                 object: '?o'
-                                            },
-                                            {
-                                                type: 'filter',
-                                                expression: {
-                                                    type: 'operation',
-                                                    operator: 'in',
-                                                    args: ['?s', uris]
-                                                }
                                             }
                                         ]
+                                        // triples: [
+                                        //     {
+                                        //         subject: '?s',
+                                        //         predicate: '?p',
+                                        //         object: '?o'
+                                        //     },
+                                        //     {
+                                        //         type: 'filter',
+                                        //         expression: {
+                                        //             type: 'operation',
+                                        //             operator: 'in',
+                                        //             args: ['?s', uris]
+                                        //         }
+                                        //     }
+                                        // ]
+                                    }
+                                ],
+                                insert: [],
+                                where: [
+                                    {
+                                        type: 'bgp',
+                                        triples: [{
+                                            subject: '?s',
+                                            predicate: '?p',
+                                            object: '?o'
+                                        }]
+                                    },
+                                    {
+                                        type: 'filter',
+                                        expression: {
+                                            type: 'operation',
+                                            operator: 'in',
+                                            args: ['?s', uris]
+                                        }
                                     }
                                 ]
-                                // insert: [],
-                                // where: [
-                                //     {
-                                //         type: 'bgp',
-                                //         triples: [{
-                                //             subject: '?s',
-                                //             predicate: '?p',
-                                //             object: '?o'
-                                //         }]
-                                //     },
-                                //     {
-                                //         type: 'filter',
-                                //         expression: {
-                                //             type: 'operation',
-                                //             operator: 'in',
-                                //             args: ['?s', uris]
-                                //         }
-                                //     }
-                                // ]
                             },
                             {
                                 updateType: 'insert',

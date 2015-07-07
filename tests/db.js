@@ -9,8 +9,8 @@ var databases = {
             graphUri: 'http://test.org',
             // host: '192.168.99.100',
             // port: 8890,
-            endpoint: `http://192.168.99.100:8890/sparql` // virtuoso
-            // endpoint: `http://192.168.99.100:32772/bigdata/sparql` // bigdata
+            // endpoint: `http://192.168.99.100:8890/sparql` // virtuoso
+            endpoint: `http://192.168.99.100:32772/bigdata/sparql` // blazegraph's bigdata
         });
     },
     memory: function() {
@@ -20,18 +20,6 @@ var databases = {
 
 
 export var database = databases.triplestore;
-// function() {
-//     // let memoryStore = memory();
-//     let tripleStore = triplestore({
-//         graphUri: 'http://test.org',
-//         // host: '192.168.99.100',
-//         // port: 8890,
-//         // endpoint: `http://192.168.99.100:8890/sparql` // virtuoso
-//         endpoint: `http://192.168.99.100:32771/bigdata/sparql` // bigdata
-//     });
-
-//     return tripleStore;
-// };
 
 
 export var store = function() {
