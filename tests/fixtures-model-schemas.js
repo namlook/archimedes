@@ -20,7 +20,12 @@ export default {
     },
     Comment: {
         properties: {
-            body: 'string'
+            body: 'string',
+            author: 'User',
+            comments: {
+                type: 'array',
+                items: 'Comments'
+            }
         }
     },
     AvailableOnline: {

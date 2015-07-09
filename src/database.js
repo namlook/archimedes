@@ -105,11 +105,10 @@ export default function(dbAdapter, config) {
             return new Promise((resolve, reject) => {
 
                 var modelSchema = this[modelType].schema;
-
                 let {error, value} = modelSchema.validate(pojo);
 
                 if (error) {
-
+                    pojo = pojo || {};
                     /*** hack for virtuoso: boolean are returned as integers **/
                     let propertyName = error[0].path;
                     let badValue = pojo[propertyName];
@@ -148,8 +147,10 @@ export default function(dbAdapter, config) {
                     return reject(new Error('find: modelType is required'));
                 }
 
-                query = query || {};
-                query._type = modelType;
+                query = Object.assign({}, query);
+                if (!query._type) {
+                    query._type = modelType;
+                }
 
                 let {error, value: validatedQuery} = queryValidator(this[modelType].schema, query);
 
@@ -158,11 +159,14 @@ export default function(dbAdapter, config) {
                 }
 
                 this.adapter.find(modelType, validatedQuery).then((data) => {
-                    let promises = data.map((item) => {
+                    let promises = _.compact(data).map((item) => {
                         return this.validate(modelType, item);
                     });
 
+
                     return resolve(Promise.all(promises));
+                }).catch((findError) => {
+                    return reject(findError);
                 });
             });
         },

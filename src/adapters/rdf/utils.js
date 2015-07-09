@@ -253,50 +253,55 @@ export var query2whereClause = function(db, modelType, query) {
         /**
          * if object is... well, an object, then there is operators
          */
-        if (_.isObject(object)) {
+        if (!_.isObject(object)) {
+            object = {$eq: object};
+        }
 
-            _.forOwn(object, (value, operator) => {
+        _.forOwn(object, (value, operator) => {
 
+            let rdfValue;
+            if (_.isArray(value)) {
+                rdfValue = value.map((item) => {
+                   return buildRdfValue(db, modelType, propertyName, item);
+                });
+            } else {
+                rdfValue = buildRdfValue(db, modelType, propertyName, value);
+            }
 
-                var rdfValue = buildRdfValue(db, modelType, propertyName, value);
-
-                let filter = {
-                    type: 'operation',
-                    operator: operatorsMapping[operator],
-                    args: [
-                        variable, rdfValue
-                    ]
-                };
-
-                if (operator === '$iregex') {
-                    filter.args.push('"i"');
-                }
-
-                filters.push(filter);
-            });
-
-        } else {
-
-            var value = object;
-            var operator = '$eq';
-
-
-            var rdfValue = buildRdfValue(db, modelType, propertyName, value);
 
             let filter = {
                 type: 'operation',
-                operator: operatorsMapping[operator],
-                args: [
-                    variable, rdfValue
-                ]
+                operator: operatorsMapping[operator]
             };
+
+            if (operator === '$exists') {
+                if (value === false) {
+                    filter.operator = 'notexists';
+                }
+
+                filter.args = [{
+                    type: 'bgp',
+                    triples: [{
+                        subject: '?s',
+                        predicate: propertyUri,
+                        object: variable
+                    }]
+                }];
+
+            } else {
+
+                filter.args = [
+                    variable, rdfValue
+                ];
+
+            }
 
             if (operator === '$iregex') {
                 filter.args.push('"i"');
             }
 
             filters.push(filter);
-        }
+        });
 
     });
 

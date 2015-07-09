@@ -2,7 +2,6 @@
 import request from 'request';
 import querystring from 'querystring';
 import _ from 'lodash';
-// import nodeUtils from 'util';
 
 var sparqlClient = function(endpoint) {
     var requestDefaults = {
@@ -59,7 +58,6 @@ var sparqlClient = function(endpoint) {
                             } catch (e) {
                                 data = undefined;
                             }
-
                             resolve(data);
                         });
                     });

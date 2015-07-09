@@ -89,6 +89,8 @@ class QueryValidator {
                     castedValue.push(validation.value);
                 }
             });
+        } else if (operator === '$exists') {
+            castedValue = value;
         } else {
             validation = property.validate(value);
             if (validation.error) {

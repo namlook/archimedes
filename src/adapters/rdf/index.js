@@ -99,7 +99,7 @@ export default function(config) {
                             }
                             resolve(results);
                         }).catch((error) => {
-                            reject(error);
+                            return reject(error);
                         });
                     }
 
@@ -112,17 +112,26 @@ export default function(config) {
                             'default': [config.graphUri]
                         },
                         where: whereClause,
+                        order: [{
+                            expression: '?s'
+                            // descending: true
+                        }],
                         limit: 50
                     };
 
-                    let sparql = new SparqlGenerator().stringify(sparson);
+                    let sparql;
+                    try {
+                        sparql = new SparqlGenerator().stringify(sparson);
+                    } catch(generatorError) {
+                        return reject(generatorError);
+                    }
+
 
                     this.execute(sparql).then((data) => {
                         let uris = data.map(o => o.s.value);
                         let promises = uris.map((uri) => {
                             return this.fetch(modelType, uri);
                         });
-
                         resolve(Promise.all(promises));
                     }).catch((error) => {
                         reject(error);
@@ -155,7 +164,8 @@ export default function(config) {
                         where {<${uri}> ?p ?o .}`;
                     this.execute(sparql).then((data) => {
                         if (!data.length) {
-                            return resolve(null);
+                            return resolve();
+                            // return reject(new Error(`document ${uri} no found`));
                         }
 
                         let rdfDoc = {};
@@ -562,7 +572,6 @@ export default function(config) {
                                 };
                             });
                         }
-
                         return resolve(results);
                     }).catch((error) => {
                         return reject(error);
