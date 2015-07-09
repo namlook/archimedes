@@ -69,6 +69,21 @@ export default [
     },
     {
         model: 'BlogPost',
+        query: {title: {$ne: 'post 1'}},
+        ids: [
+            'blogpost0',
+            'blogpost2',
+            'blogpost3',
+            'blogpost4',
+            'blogpost5',
+            'blogpost6',
+            'blogpost7',
+            'blogpost8',
+            'blogpost9'
+        ]
+    },
+    {
+        model: 'BlogPost',
         query: {title: {$in: ['post 1', 'post 2']}},
         ids: ['blogpost1', 'blogpost2']
     },

@@ -168,41 +168,41 @@ export var pojo2triples = function(db, modelType, pojo) {
     return triples;
 };
 
-export var query2triples = function(db, modelType, query) {
-    var modelClass = db[modelType];
+// export var query2triples = function(db, modelType, query) {
+//     var modelClass = db[modelType];
 
-    var triples = [];
+//     var triples = [];
 
-    _.forOwn(query, (value, propertyName) => {
+//     _.forOwn(query, (value, propertyName) => {
 
-        let rdfValue;
-        let propertyUri;
-        if (propertyName === '_type') {
+//         let rdfValue;
+//         let propertyUri;
+//         if (propertyName === '_type') {
 
-            propertyUri = 'a';
-            rdfValue = classRdfUri(modelClass);
+//             propertyUri = 'a';
+//             rdfValue = classRdfUri(modelClass);
 
-        } else {
+//         } else {
 
-            propertyUri = propertyRdfUri(modelClass, propertyName);
+//             propertyUri = propertyRdfUri(modelClass, propertyName);
 
-            if (_.has(value, '_id') && _.has(value, '_type')) {
-                rdfValue = propertyRdfUri(db[value._type], value._id);
-            } else {
-                rdfValue = N3Util.createLiteral(value);
-            }
+//             if (_.has(value, '_id') && _.has(value, '_type')) {
+//                 rdfValue = propertyRdfUri(db[value._type], value._id);
+//             } else {
+//                 rdfValue = N3Util.createLiteral(value);
+//             }
 
-        }
+//         }
 
-        triples.push({
-            subject: '?s',
-            predicate: propertyUri,
-            object: rdfValue
-        });
-    });
+//         triples.push({
+//             subject: '?s',
+//             predicate: propertyUri,
+//             object: rdfValue
+//         });
+//     });
 
-    return triples;
-};
+//     return triples;
+// };
 
 
 var operatorsMapping = {
