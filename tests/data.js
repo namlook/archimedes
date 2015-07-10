@@ -1,7 +1,7 @@
 
 import store from './db';
 
-// import {inspect} from 'util';
+import {inspect} from 'util';
 
 var generateTags = function(i) {
     let _tags = [];
@@ -41,6 +41,7 @@ for (let i = 0; i < 10; i++) {
     });
 }
 
+var verbose = false;
 export default function loadDb() {
     return new Promise((resolve, reject) => {
 
@@ -50,17 +51,20 @@ export default function loadDb() {
             return db.clear();
 
         }).then(() => {
-
             return db.batchSync('BlogPost', blogposts);
 
-        }).then((/*results*/) => {
-            // console.log(inspect(results, {depth: 10}));
-            // console.log(results.length, 'blogposts saved');
+        }).then((results) => {
+            if (verbose) {
+                console.log(inspect(results, {depth: 10}));
+                console.log(results.length, 'blogposts saved');
+            }
             resolve(db);
 
         }).catch((error) => {
-            // console.log(error);
-            // console.log(error.stack);
+            if (verbose) {
+                console.log(error);
+                console.log(error.stack);
+            }
             reject(error);
         });
     });

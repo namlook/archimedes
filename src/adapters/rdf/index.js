@@ -91,6 +91,7 @@ export default function(config) {
              */
             find(modelType, query, options) {
                 return new Promise((resolve, reject) => {
+
                     if (query._id) {
                         return this.fetch(modelType, query._id).then((pojo) => {
                             var results = [];
@@ -103,7 +104,8 @@ export default function(config) {
                         });
                     }
 
-                    let whereClause = query2whereClause(db, modelType, query, options);
+                    let {orderBy, whereClause} = query2whereClause(db, modelType, query, options);
+
                     let sparson = {
                         type: 'query',
                         queryType: 'SELECT',
@@ -114,10 +116,13 @@ export default function(config) {
                         where: whereClause,
                         order: [{
                             expression: '?s'
-                            // descending: true
                         }],
-                        limit: 50
+                        limit: options.limit
                     };
+
+                    if (orderBy.length) {
+                        sparson.order = orderBy;
+                    }
 
                     let sparql;
                     try {
@@ -125,7 +130,6 @@ export default function(config) {
                     } catch(generatorError) {
                         return reject(generatorError);
                     }
-
 
                     this.execute(sparql).then((data) => {
                         let uris = data.map(o => o.s.value);
@@ -196,7 +200,7 @@ export default function(config) {
             count(modelType, query, options) {
                 return new Promise((resolve, reject) => {
 
-                    let whereClause = query2whereClause(db, modelType, query, options);
+                    let {whereClause} = query2whereClause(db, modelType, query, options);
                     let sparson = {
                         type: 'query',
                         queryType: 'SELECT',

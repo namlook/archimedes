@@ -212,6 +212,68 @@ export default [
         ]
     },
 
+    /**** options ****/
+    {
+        model: 'BlogPost',
+        query: {},
+        options: {limit: 3},
+        ids: [
+            'blogpost0',
+            'blogpost1',
+            'blogpost2'
+        ]
+    },
+    {
+        model: 'BlogPost',
+        query: {},
+        options: {sort: 'ratting'},
+        ids: [
+            'blogpost0',
+            'blogpost6',
+            'blogpost1',
+            'blogpost7',
+            'blogpost2',
+            'blogpost8',
+            'blogpost3',
+            'blogpost9',
+            'blogpost4',
+            'blogpost5'
+        ]
+    },
+    {
+        model: 'BlogPost',
+        query: {},
+        options: {sort: '-ratting'},
+        ids: [
+            'blogpost5',
+            'blogpost4',
+            'blogpost3',
+            'blogpost9',
+            'blogpost2',
+            'blogpost8',
+            'blogpost1',
+            'blogpost7',
+            'blogpost0',
+            'blogpost6'
+        ]
+    },
+    {
+        model: 'BlogPost',
+        query: {},
+        options: {sort: 'isPublished,-title'},
+        ids: [
+            'blogpost9',
+            'blogpost6',
+            'blogpost3',
+            'blogpost0',
+            'blogpost8',
+            'blogpost7',
+            'blogpost5',
+            'blogpost4',
+            'blogpost2',
+            'blogpost1'
+        ]
+    },
     /*** bad queries ***/
     {
         model: 'BlogPost',
@@ -224,5 +286,14 @@ export default [
         query: {ratting: {$badOperator: true}},
         error: 'malformed query',
         errorExtraMessage: 'unknown operator "$badOperator"'
+    },
+
+    /*** bad options ***/
+    {
+        model: 'BlogPost',
+        query: {},
+        options: {sort: 'unknownProperty'},
+        error: 'malformed options',
+        errorExtraMessage: 'unknown property "unknownProperty"" on model "BlogPost"'
     }
 ];

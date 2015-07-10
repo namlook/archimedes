@@ -1,8 +1,6 @@
 
 import 'source-map-support/register';
 
-
-
 import Lab from 'lab';
 var lab = exports.lab = Lab.script();
 
@@ -30,7 +28,7 @@ var processTest = function(db, testQuery) {
             return resolve();
         }
 
-        let promise = db.find(testQuery.model, testQuery.query);
+        let promise = db.find(testQuery.model, testQuery.query, testQuery.options);
 
         if (testQuery.error != null) {
 
@@ -70,6 +68,8 @@ var processTest = function(db, testQuery) {
                 // return resolve(processTest(db, _testQueries));
             }).catch((error) => {
                 console.log('xxxx', testQuery);
+                console.log(inspect(error, {depth: 10}));
+                console.log(error.stack);
                 return reject(error);
             });
 
@@ -122,7 +122,14 @@ describe('query', function(){
 
     for (let i = 0; i < testQueries.length; i++) {
         let testQuery = testQueries[i];
-        it(`${testQuery.model}: ${inspect(testQuery.query)}`, testFn(testQuery));
+        let testLauncher = it;
+        if (testQuery.only) {
+            testLauncher = it.only;
+        }
+        if (testQuery.skip) {
+            testLauncher = it.skip;
+        }
+        testLauncher(`${testQuery.model}: ${inspect(testQuery.query)}`, {parallel: false}, testFn(testQuery));
     }
 });
 

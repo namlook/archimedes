@@ -1,7 +1,7 @@
 
 import _ from 'lodash';
 import {Util as N3Util} from 'N3';
-
+import {ValidationError} from '../../errors';
 
 export var classRdfUri = function(modelClass) {
     return modelClass.meta.classRdfUri;
@@ -222,11 +222,30 @@ var operatorsMapping = {
 };
 
 
-export var query2whereClause = function(db, modelType, query) {
+export var query2whereClause = function(db, modelType, query, options) {
     var modelClass = db[modelType];
 
     var filters = [];
     var triples = [];
+    var orderBy = [];
+    var sorting = {};
+
+    _.get(options, 'sort', '').split(',').forEach((propertyName) => {
+        if (!propertyName) {
+            return;
+        }
+
+        let descending = false;
+        if (propertyName[0] === '-') {
+            propertyName = _.trim(propertyName, '-');
+            descending = true;
+        }
+        sorting[propertyName] = {
+            descending: descending
+        };
+    });
+
+
 
     _.forOwn(query, (object, propertyName) => {
 
@@ -237,6 +256,11 @@ export var query2whereClause = function(db, modelType, query) {
         }
         else {
             variable = `?${_.camelCase(propertyName)}${variableIdx++}`;
+        }
+
+
+        if (sorting[propertyName]) {
+            sorting[propertyName].expression = variable;
         }
 
         var propertyUri = propertyRdfUri(modelClass, propertyName);
@@ -305,20 +329,41 @@ export var query2whereClause = function(db, modelType, query) {
 
     });
 
-    return [
-        {
-            type: 'bgp',
-            triples: triples
-        },
-        {
-            type: 'filter',
-            expression: {
-                type: 'operation',
-                operator: '&&',
-                args: filters
+    _.forOwn(sorting, (order, propertyName) => {
+        if (!order.expression) {
+            order.expression = `?${propertyName}OrderBy`;
+            let propertyUri;
+            try {
+                propertyUri = propertyRdfUri(modelClass, propertyName);
+            } catch(err) {
+                throw new ValidationError('malformed options', err);
             }
+            triples.push({
+                subject: '?s',
+                predicate: propertyUri,
+                object: order.expression
+            });
         }
-    ];
+        orderBy.push(order);
+    });
+
+    return {
+        orderBy: orderBy,
+        whereClause: [
+            {
+                type: 'bgp',
+                triples: triples
+            },
+            {
+                type: 'filter',
+                expression: {
+                    type: 'operation',
+                    operator: '&&',
+                    args: filters
+                }
+            }
+        ]
+    };
 };
 
 

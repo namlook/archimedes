@@ -73,8 +73,19 @@ describe('Rdf utils', function() {
                 ratting: 5,
                 isPublished: true
             };
-            let triples = query2whereClause(db, 'BlogPost', query);
-            expect(triples).to.deep.equal([
+            let options = {sort: 'isPublished,-ratting'};
+            let triples = query2whereClause(db, 'BlogPost', query, options);
+            expect(triples).to.deep.equal({
+                orderBy: [{
+                    descending: false,
+                    expression: '?isPublished0'
+                  },
+                  {
+                    descending: true,
+                    expression: '?ratting0'
+                  }
+                ],
+                whereClause: [
                 {
                     type: 'bgp',
                     triples: [
@@ -115,8 +126,8 @@ describe('Rdf utils', function() {
                            }
                         ]
                     }
-                }
-            ]);
+                }]
+            });
             done();
         });
     });

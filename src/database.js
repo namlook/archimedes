@@ -3,6 +3,7 @@ import _ from 'lodash';
 import modelFactory from './model';
 import {ValidationError} from './errors';
 import queryValidator from './query-validator';
+import {findOptionsValidator} from './options-validator';
 
 var validPropertyTypes = [
     'string',
@@ -141,13 +142,22 @@ export default function(dbAdapter, config) {
          * @params {?object} query - the query
          * @returns {promise}
          */
-        find(modelType, query) {
+        find(modelType, query, options) {
+
+            query = Object.assign({}, query);
+            options = options || {};
+
             return new Promise((resolve, reject) => {
                 if (!modelType) {
                     return reject(new Error('find: modelType is required'));
                 }
 
-                query = Object.assign({}, query);
+
+                var {error: optionError, value: validatedOptions} = findOptionsValidator(options);
+                if (optionError) {
+                    return reject(new ValidationError('malformed options', optionError));
+                }
+
                 if (!query._type) {
                     query._type = modelType;
                 }
@@ -158,7 +168,7 @@ export default function(dbAdapter, config) {
                     return reject(new ValidationError('malformed query', error));
                 }
 
-                this.adapter.find(modelType, validatedQuery).then((data) => {
+                this.adapter.find(modelType, validatedQuery, validatedOptions).then((data) => {
                     let promises = _.compact(data).map((item) => {
                         return this.validate(modelType, item);
                     });
