@@ -226,6 +226,16 @@ export default [
     {
         model: 'BlogPost',
         query: {},
+        options: {limit: 3, offset: 3},
+        ids: [
+            'blogpost3',
+            'blogpost4',
+            'blogpost5'
+        ]
+    },
+    {
+        model: 'BlogPost',
+        query: {},
         options: {sort: 'ratting'},
         ids: [
             'blogpost0',

@@ -3,6 +3,7 @@ import joi from 'joi';
 
 var findOptionsSchemaValidator = {
     limit: joi.number().default(20),
+    offset: joi.number(),
     sort: joi.string()
 
 };

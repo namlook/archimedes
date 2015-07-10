@@ -92,6 +92,10 @@ export default function(config) {
             find(modelType, query, options) {
                 return new Promise((resolve, reject) => {
 
+                    /**
+                     * if _id is present in the query, perform a `fetch()`
+                     * which is faster
+                     */
                     if (query._id) {
                         return this.fetch(modelType, query._id).then((pojo) => {
                             var results = [];
@@ -120,10 +124,16 @@ export default function(config) {
                         limit: options.limit
                     };
 
+                    /** options **/
+                    if (options.offset) {
+                        sparson.offset = options.offset;
+                    }
+
                     if (orderBy.length) {
                         sparson.order = orderBy;
                     }
 
+                    /*** generate the sparql from the sparson ***/
                     let sparql;
                     try {
                         sparql = new SparqlGenerator().stringify(sparson);
