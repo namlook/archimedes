@@ -367,6 +367,53 @@ export var query2whereClause = function(db, modelType, query, options) {
 };
 
 
+export var constructTriples = function(modelClass, uri, options) {
+
+    options.fields = options.fields || [];
+    if (typeof options.fields === 'string') {
+        options.fields = options.fields.split(',');
+    }
+
+    let triples = [];
+    if (options.fields.length) {
+        var variableIdx = 0;
+
+        triples = options.fields.map((propertyName) => {
+
+            let variable = `?${_.camelCase(propertyName)}${variableIdx++}`;
+
+            let propertyUri;
+            try {
+                propertyUri = propertyRdfUri(modelClass, propertyName);
+            } catch(err) {
+                throw new ValidationError('malformed options', err);
+            }
+
+            return {
+                subject: uri,
+                predicate: propertyUri,
+                object: variable
+            };
+        });
+
+        triples.push({
+            subject: uri,
+            predicate: propertyRdfUri(modelClass, '_type'),
+            object: '?_type'
+        });
+
+
+    } else {
+        triples.push({
+            subject: uri,
+            predicate: '?p',
+            object: '?o'
+        });
+    }
+
+    return triples;
+};
+
 // export var query2sparql = function(db, modelType, query, options) {
 //     var sparson = query2sparson(db, modelType, query);
 //     var generator = new SparqlGenerator();

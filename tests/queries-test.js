@@ -55,7 +55,13 @@ var processTest = function(db, testQuery) {
                 let ids = results.map((item) => item._id);
 
                 try {
-                    expect(ids).to.deep.equal(testQuery.ids);
+                    if (testQuery.ids) {
+                        expect(ids).to.deep.equal(testQuery.ids);
+                    }
+
+                    if (testQuery.results) {
+                        expect(results).to.deep.equal(testQuery.results);
+                    }
                 } catch(e) {
                     console.log('------------------');
                     console.log('>>>', chalk.blue(inspect(testQuery, {depth: 10, colors: true})));

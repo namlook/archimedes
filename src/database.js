@@ -205,7 +205,10 @@ export default function(dbAdapter, config) {
 
 
 
-        fetch(modelType, id) {
+        fetch(modelType, id, options) {
+
+            options = options || {};
+
             return new Promise((resolve, reject) => {
                 if (typeof modelType !== 'string') {
                     return reject(new Error('fetch: modelType is required and should be a string'));
@@ -215,7 +218,8 @@ export default function(dbAdapter, config) {
                     return reject(new Error('fetch: id required and should be a string'));
                 }
 
-                this.adapter.fetch(modelType, id).then((pojo) => {
+
+                this.adapter.fetch(modelType, id, options).then((pojo) => {
                     if (pojo) {
                         this.validate(modelType, pojo).then((validatedPojo) => {
                             resolve(validatedPojo);

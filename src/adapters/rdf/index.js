@@ -6,7 +6,8 @@ import {
     query2whereClause,
     pojo2triples,
     rdfDoc2pojo,
-    operation2triple} from './utils';
+    operation2triple,
+    constructTriples} from './utils';
 import {Generator as SparqlGenerator} from 'sparqljs';
 
 export default function(config) {
@@ -97,7 +98,7 @@ export default function(config) {
                      * which is faster
                      */
                     if (query._id) {
-                        return this.fetch(modelType, query._id).then((pojo) => {
+                        return this.fetch(modelType, query._id, options).then((pojo) => {
                             var results = [];
                             if (pojo) {
                                 results.push(pojo);
@@ -118,9 +119,7 @@ export default function(config) {
                             'default': [config.graphUri]
                         },
                         where: whereClause,
-                        order: [{
-                            expression: '?s'
-                        }],
+                        order: orderBy,
                         limit: options.limit
                     };
 
@@ -129,9 +128,7 @@ export default function(config) {
                         sparson.offset = options.offset;
                     }
 
-                    if (orderBy.length) {
-                        sparson.order = orderBy;
-                    }
+                    sparson.order.push({expression: '?s'});
 
                     /*** generate the sparql from the sparson ***/
                     let sparql;
@@ -144,7 +141,7 @@ export default function(config) {
                     this.execute(sparql).then((data) => {
                         let uris = data.map(o => o.s.value);
                         let promises = uris.map((uri) => {
-                            return this.fetch(modelType, uri);
+                            return this.fetch(modelType, uri, options);
                         });
                         resolve(Promise.all(promises));
                     }).catch((error) => {
@@ -163,19 +160,42 @@ export default function(config) {
              * @returns a promise that resolve a pojo which contains
              *      all properties of the fetched document
              */
-            fetch(modelType, modelIdOrUri) {
+            fetch(modelType, modelIdOrUri, options) {
+
                 return new Promise((resolve, reject) => {
 
                     var uri = modelIdOrUri;
+                    var modelClass = db[modelType];
 
                     if (!_.startsWith(modelIdOrUri, 'http://')) {
-                        uri = instanceRdfUri(db[modelType], modelIdOrUri);
+                        uri = instanceRdfUri(modelClass, modelIdOrUri);
                     }
 
-                    var sparql = `
-                        construct {<${uri}> ?p ?o .}
-                        from <${config.graphUri}>
-                        where {<${uri}> ?p ?o .}`;
+                    let triples = constructTriples(modelClass, uri, options);
+
+                    let sparson = {
+                        type: 'query',
+                        queryType: 'CONSTRUCT',
+                        from: {
+                            'default': [config.graphUri]
+                        },
+                        template: triples,
+                        where: [
+                            {
+                              type: 'bgp',
+                              triples: triples
+                            }
+                        ]
+                    };
+
+                    /*** generate the sparql from the sparson ***/
+                    let sparql;
+                    try {
+                        sparql = new SparqlGenerator().stringify(sparson);
+                    } catch(generatorError) {
+                        return reject(generatorError);
+                    }
+
                     this.execute(sparql).then((data) => {
                         if (!data.length) {
                             return resolve();

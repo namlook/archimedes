@@ -284,6 +284,57 @@ export default [
             'blogpost1'
         ]
     },
+    {
+        model: 'BlogPost',
+        query: {},
+        options: {fields: 'title,ratting', limit: 3},
+        results: [
+            {
+                _id: 'blogpost0',
+                _type: 'BlogPost',
+                title: 'post 0',
+                ratting: 0
+            },
+            {
+                _id: 'blogpost1',
+                _type: 'BlogPost',
+                title: 'post 1',
+                ratting: 1
+            },
+            {
+                _id: 'blogpost2',
+                _type: 'BlogPost',
+                title: 'post 2',
+                ratting: 2
+            }
+        ]
+    },
+    {
+        model: 'BlogPost',
+        query: {},
+        options: {fields: ['title', 'ratting'], limit: 3},
+        results: [
+            {
+                _id: 'blogpost0',
+                _type: 'BlogPost',
+                title: 'post 0',
+                ratting: 0
+            },
+            {
+                _id: 'blogpost1',
+                _type: 'BlogPost',
+                title: 'post 1',
+                ratting: 1
+            },
+            {
+                _id: 'blogpost2',
+                _type: 'BlogPost',
+                title: 'post 2',
+                ratting: 2
+            }
+        ]
+    },
+
     /*** bad queries ***/
     {
         model: 'BlogPost',
