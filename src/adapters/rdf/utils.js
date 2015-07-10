@@ -2,6 +2,7 @@
 import _ from 'lodash';
 import {Util as N3Util} from 'N3';
 import {ValidationError} from '../../errors';
+import moment from 'moment';
 
 export var classRdfUri = function(modelClass) {
     return modelClass.meta.classRdfUri;
@@ -44,7 +45,12 @@ export var buildRdfValue = function(db, modelType, propertyName, value) {
     if (_.has(value, '_id') && _.has(value, '_type')) {
         rdfValue = instanceRdfUri(db[value._type], value._id);
     } else {
-        rdfValue = N3Util.createLiteral(value);
+        let propertyType = modelClass.schema.getProperty(propertyName).type;
+        if (_.contains(['date', 'datetime'], propertyType)) {
+            rdfValue = N3Util.createLiteral(moment(value).toISOString(), 'http://www.w3.org/2001/XMLSchema#dateTime');
+        } else {
+            rdfValue = N3Util.createLiteral(value);
+        }
     }
 
     return rdfValue;
@@ -245,8 +251,6 @@ export var query2whereClause = function(db, modelType, query, options) {
         };
     });
 
-
-
     _.forOwn(query, (object, propertyName) => {
 
         var variableIdx = 0;
@@ -277,7 +281,7 @@ export var query2whereClause = function(db, modelType, query, options) {
         /**
          * if object is... well, an object, then there is operators
          */
-        if (!_.isObject(object)) {
+        if (!_.isObject(object) || _.isDate(object)) {
             object = {$eq: object};
         }
 
@@ -298,6 +302,14 @@ export var query2whereClause = function(db, modelType, query, options) {
                 operator: operatorsMapping[operator]
             };
 
+
+            let property = db[modelType].schema.getProperty(propertyName);
+            let isDate = false;
+            if (property) {
+                isDate = _.contains(['date', 'datetime'], property.type);
+            }
+
+
             if (operator === '$exists') {
                 if (value === false) {
                     filter.operator = 'notexists';
@@ -311,6 +323,19 @@ export var query2whereClause = function(db, modelType, query, options) {
                         object: variable
                     }]
                 }];
+
+            } else if (isDate && operator === '$eq') {
+
+                value = moment(value).toISOString();
+                filter.args = [
+                    variable,
+                    {
+                        type: 'functionCall',
+                        function: 'http://www.w3.org/2001/XMLSchema#dateTime',
+                        args: [`"${value}"`],
+                        distinct: false
+                    }
+                ];
 
             } else {
 

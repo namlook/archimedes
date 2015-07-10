@@ -212,6 +212,50 @@ export default [
         ]
     },
 
+    /*** date ***/
+    {
+        model: 'BlogPost',
+        query: {createdDate: new Date(1984, 7, 3)},
+        ids: [
+            'blogpost2'
+        ]
+    },
+    {
+        model: 'BlogPost',
+        query: {createdDate: {$lt: new Date(1984, 7, 3)}},
+        ids: [
+            'blogpost0',
+            'blogpost1'
+        ]
+    },
+    {
+        model: 'BlogPost',
+        query: {createdDate: {$lte: new Date(1984, 7, 3)}},
+        ids: [
+            'blogpost0',
+            'blogpost1',
+            'blogpost2'
+        ]
+    },
+    {
+        model: 'BlogPost',
+        query: {createdDate: {$gt: new Date(1984, 7, 7)}},
+        ids: [
+            'blogpost7',
+            'blogpost8',
+            'blogpost9'
+        ]
+    },
+    {
+        model: 'BlogPost',
+        query: {createdDate: {$gte: new Date(1984, 7, 7)}},
+        ids: [
+            'blogpost6',
+            'blogpost7',
+            'blogpost8',
+            'blogpost9'
+        ]
+    },
     /**** options ****/
     {
         model: 'BlogPost',

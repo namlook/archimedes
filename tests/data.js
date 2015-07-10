@@ -30,6 +30,7 @@ for (let i = 0; i < 10; i++) {
         _id: `blogpost${i}`,
         title: `post ${i}`,
         body: `this is the body of the post ${i}`,
+        createdDate: new Date(1984, 7, i + 1),
         author: {
             _id: `user${i % 5}`,
             _type: 'User'

@@ -164,6 +164,7 @@ export default function(dbAdapter, config) {
 
                 let {error, value: validatedQuery} = queryValidator(this[modelType].schema, query);
 
+
                 if (error) {
                     return reject(new ValidationError('malformed query', error));
                 }

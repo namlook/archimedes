@@ -25,17 +25,17 @@ var allowedOperators = [
 
 var operatorValidator = joi.object().keys({
     $eq: joi.any(),
-    $gt: joi.number(),
-    $lt: joi.number(),
-    $gte: joi.number(),
-    $lte: joi.number(),
+    $gt: joi.alternatives().try(joi.number(), joi.date()),
+    $lt: joi.alternatives().try(joi.number(), joi.date()),
+    $gte: joi.alternatives().try(joi.number(), joi.date()),
+    $lte: joi.alternatives().try(joi.number(), joi.date()),
     $regex: joi.string(),
     $iregex: joi.string(),
     $ne: joi.any(),
-    $in: [joi.array(joi.any()).min(1)],
-    $nin: [joi.array(joi.any()).min(1)],
-    $all: [joi.array(joi.any()).min(1)],
-    $nall: [joi.array(joi.any()).min(1)],
+    $in: joi.array(joi.any()).min(1),
+    $nin: joi.array(joi.any()).min(1),
+    $all: joi.array(joi.any()).min(1),
+    $nall: joi.array(joi.any()).min(1),
     $exists: joi.boolean(),
 
     // to remove later ?
@@ -121,8 +121,7 @@ class QueryValidator {
                 });
                 this.errors = this.errors.concat(relationValidator.errors);
 
-            } else if (_.isObject(value)) {
-
+            } else if (_.isObject(value) && !_.isDate(value)) {
                 let validation = joi.validate(value, operatorValidator);
                 if (validation.error) {
                     this.errors.push(validation.error);

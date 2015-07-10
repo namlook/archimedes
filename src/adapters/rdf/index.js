@@ -123,6 +123,7 @@ export default function(config) {
                         limit: options.limit
                     };
 
+
                     /** options **/
                     if (options.offset) {
                         sparson.offset = options.offset;
