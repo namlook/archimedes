@@ -24,7 +24,7 @@ export default {
             author: 'User',
             comments: {
                 type: 'array',
-                items: 'Comments'
+                items: 'Comment'
             }
         }
     },

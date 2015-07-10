@@ -42,7 +42,24 @@ for (let i = 0; i < 10; i++) {
     });
 }
 
-var verbose = false;
+/** comments **/
+var comments = [];
+for (let i = 0; i < 10; i++) {
+    for (let k = 0; k < i % 8; k++) {
+        let sensation = (k + i) % 3 ? 'rocks' : 'sucks';
+        comments.push({
+            _id: `comment${k + i}`,
+            _type: 'Comment',
+            body: `this thing ${sensation} !`,
+            author: {
+                _id: `user${i % 5}`,
+                _type: 'User'
+            }
+        });
+    }
+}
+
+var verbose = true;
 export default function loadDb() {
     return new Promise((resolve, reject) => {
 
@@ -52,12 +69,15 @@ export default function loadDb() {
             return db.clear();
 
         }).then(() => {
-            return db.batchSync('BlogPost', blogposts);
-
+            return Promise.all([
+                db.batchSync('BlogPost', blogposts),
+                db.batchSync('Comment', comments)
+            ]);
         }).then((results) => {
             if (verbose) {
                 console.log(inspect(results, {depth: 10}));
-                console.log(results.length, 'blogposts saved');
+                console.log(results[0].length, 'blogposts saved');
+                console.log(results[1].length, 'comments saved');
             }
             resolve(db);
 

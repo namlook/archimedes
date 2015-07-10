@@ -1,8 +1,9 @@
 
 import _ from 'lodash';
 import joi from 'joi';
+import {ValidationError} from './errors';
 
-var constraints2joi = function(constraints, joiConstraint=null) {
+var constraints2joi = function(modelName, propertyName, constraints, joiConstraint=null) {
     if (!joiConstraint) {
         joiConstraint = joi;
     }
@@ -11,13 +12,13 @@ var constraints2joi = function(constraints, joiConstraint=null) {
             var constraintKeys = Object.keys(constraint);
 
             if (constraintKeys.length > 1) {
-                throw `the constraint ${constraint} must a have only one key`;
+                throw new ValidationError(`${modelName}.${propertyName}: the constraint ${constraint} must a have only one key`);
             }
 
             var constraintName = constraintKeys[0];
 
             if (!joiConstraint[constraintName]) {
-                throw `unknown constaint ${constraintName}`;
+                throw new ValidationError(`unknown constraint "${constraintName}" for property ${modelName}.${propertyName}`);
             }
 
             var constraintParams = constraint[constraintName];
@@ -29,7 +30,7 @@ var constraints2joi = function(constraints, joiConstraint=null) {
             joiConstraint = joiConstraint[constraintName](...constraintParams);
         } else {
             if (!joiConstraint[constraint]) {
-                throw `unknown constaint ${constraint}`;
+                throw new ValidationError(`unknown constraint "${constraint}" for property ${modelName}.${propertyName}`);
             }
             joiConstraint = joiConstraint[constraint]();
         }
@@ -103,6 +104,7 @@ export default class ModelSchemaProperty {
 
     get _validator() {
         var propertyName = this.name;
+        let modelName = this.modelSchema.name;
         var constraints;
 
         var relationConstraints;
@@ -113,7 +115,7 @@ export default class ModelSchemaProperty {
             });
         }
 
-        constraints = constraints2joi(this.validationConstraints);
+        constraints = constraints2joi(modelName, propertyName, this.validationConstraints);
 
         if (this.isArray()) {
 
@@ -121,7 +123,7 @@ export default class ModelSchemaProperty {
             if (this.isRelation()) {
                 itemsConstraints = relationConstraints;
             } else {
-                itemsConstraints = constraints2joi(this.itemValidationConstraints);
+                itemsConstraints = constraints2joi(modelName, propertyName, this.itemValidationConstraints);
             }
             constraints = constraints.items(itemsConstraints);
 

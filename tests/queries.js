@@ -256,6 +256,16 @@ export default [
             'blogpost9'
         ]
     },
+
+
+    /*** relations ***/
+    {
+        model: 'BlogPost',
+        query: {'comment.body': 'this thing rocks !'},
+        ids: []
+    },
+
+
     /**** options ****/
     {
         model: 'BlogPost',
