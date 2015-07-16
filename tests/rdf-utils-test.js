@@ -191,5 +191,4 @@ describe('Rdf utils', function() {
             done();
         });
     });
-
 });

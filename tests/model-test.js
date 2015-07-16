@@ -134,6 +134,34 @@ describe('Model', function() {
                 done();
             });
         });
+
+        it('should process reverse relations', (done) => {
+            let propConf = db.User.properties.reviewedBooks;
+            expect(propConf.type).to.equal('array');
+            expect(propConf.items.type).to.equal('Book');
+            expect(propConf.abstract).to.deep.equal({
+                fromReverse: {
+                    type: 'Book',
+                    property: 'reviewer'
+                }
+            });
+
+            let prop = db.User.schema.getProperty('reviewedBooks');
+            expect(prop.name).to.equal('reviewedBooks');
+            expect(prop.isArray()).to.be.true();
+            expect(prop.type).to.equal('Book');
+
+            let propConf2 = db.User.properties.contents;
+            expect(propConf2.type).to.equal('array');
+            expect(propConf2.items.type).to.equal('Content');
+            expect(propConf2.abstract).to.deep.equal({
+                fromReverse: {
+                    type: 'Content',
+                    property: 'author'
+                }
+            });
+            done();
+        });
     });
 
 
@@ -146,6 +174,13 @@ describe('Model', function() {
             expect(db.Book.properties).to.include([
                 'title', 'body', 'author', 'isbn'
             ]);
+            done();
+        });
+
+        it('should returns all aggregated mixins for a model', (done) => {
+            expect(db.Ebook.mixinsChain).to.include(
+                ['Content', 'Book', 'AvailableOnline', 'Ebook']
+            );
             done();
         });
 

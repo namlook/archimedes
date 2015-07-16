@@ -79,6 +79,20 @@ export default class ModelSchemaProperty {
         return this.config.type === 'array';
     }
 
+    isAbstract() {
+        return !!this.config.abstract;
+    }
+
+    isReverse() {
+        return !!_.get(this.config, 'abstract.fromReverse');
+    }
+
+    reverseProperties() {
+        let db = this.modelSchema.db;
+        let {property, type} = _.get(this.config, 'abstract.fromReverse', {});
+        return db.findProperties(property, type);
+    }
+
     get propagateDeletion() {
         return !!this.config.propagateDeletion;
     }

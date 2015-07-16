@@ -20,7 +20,21 @@ var modelClassSchemaValidator = joi.object().keys({
     mixins: joi.array().items(joi.string()),
     properties: joi.object().pattern(/.+/, joi.alternatives().try(
         joi.object().keys(propertyConfigValidator).keys({
-            items: joi.alternatives().try(joi.string(), propertyConfigValidator)
+            items: joi.alternatives().try(joi.string(), propertyConfigValidator),
+            reverse: joi.alternatives().try(joi.string(), joi.object().keys({
+                type: joi.string(),
+                name: joi.string()
+            })),
+            abstract: joi.alternatives().try(
+                joi.boolean().default(false),
+                joi.object().keys({
+                    fromReverse: joi.object().keys({
+                        type: joi.string(),
+                        property: joi.string(),
+                        targets: joi.array().items(joi.string())
+                    })
+                })
+            )
         }),
         joi.string()
     )),
@@ -61,6 +75,17 @@ var modelFactory = function(db, name, modelClassSchema) {
     mixins.push(_.omit(schema, 'mixins'));
 
 
+
+    /**
+     * process mixins chain
+     */
+    var mixinsChain = _.flatten(mixins.map(mixin => {
+        return mixin.mixinsChain;
+    }));
+    mixinsChain.push(name);
+
+
+
     /**
      * process the properties and aggregate them from mixins
      */
@@ -68,23 +93,6 @@ var modelFactory = function(db, name, modelClassSchema) {
         return mixin.properties;
     });
     properties = _.assign({}, ..._.compact(properties));
-
-    // /** if the property config is a string, convert it into a valid config **/
-    // _.forOwn(properties, (propConfig, propName) => {
-    //     if (typeof propConfig === 'string') {
-    //         propConfig = {type: propConfig};
-    //     }
-    //     if (propConfig.type === 'array') {
-    //         if (!propConfig.items) {
-    //             throw new ValidationError(`${name} if property's type is "array" then "items" should be specified (properties.${propName})`);
-    //         }
-
-    //         if (typeof propConfig.items === 'string') {
-    //             propConfig.items = {type: propConfig.items};
-    //         }
-    //     }
-    //     properties[propName] = propConfig;
-    // });
 
 
     /**
@@ -114,6 +122,10 @@ var modelFactory = function(db, name, modelClassSchema) {
         meta: new function() {
             return modelClassSchema.meta;
         },
+        mixins: mixins,
+        mixinsChain: new function() {
+            return _.uniq(_.compact(mixinsChain));
+        },
         _archimedesModel: true,
         properties: new function() {
             return properties;
@@ -142,6 +154,17 @@ var modelFactory = function(db, name, modelClassSchema) {
             let instance = this.create(pojo);
             instance._id = pojo._id;
             return instance;
+        },
+
+        // returns the list of model name which are mixed with this
+        mixedWith() {
+            let results = [];
+            _.forOwn(this.db.registeredModels, (model, modelName) => {
+                if (_.contains(model.mixinsChain, modelName)) {
+                    results.push(modelName);
+                }
+            });
+            return results;
         },
 
         /**

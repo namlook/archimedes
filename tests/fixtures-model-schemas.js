@@ -2,14 +2,19 @@
 export default {
     User: {
         properties: {
-            name: 'string'
+            name: 'string',
+            gender: 'string',
+            birthday: 'date'
         }
     },
     Content: {
         properties: {
             title: 'string',
             body: 'string',
-            author: 'User',
+            author: {
+                type: 'User',
+                reverse: 'contents'
+            },
             createdDate: 'date'
         },
         methods: {
@@ -21,7 +26,10 @@ export default {
     Comment: {
         properties: {
             body: 'string',
-            author: 'User',
+            author: {
+                type: 'User',
+                reverse: 'comments'
+            },
             comments: {
                 type: 'array',
                 items: 'Comment'
@@ -56,7 +64,11 @@ export default {
     Book: {
         mixins: ['Content'],
         properties: {
-            isbn: 'string'
+            isbn: 'string',
+            reviewer: {
+                type: 'User',
+                reverse: 'reviewedBooks'
+            }
         },
         statics: {
             checkIsbn(isbn) {
@@ -64,7 +76,7 @@ export default {
             }
         }
     },
-    EBook: {
+    Ebook: {
         mixins: ['Book', 'AvailableOnline']
     },
     BlogPost: {

@@ -27,12 +27,72 @@ export var propertyRdfUri = function(modelClass, propertyName) {
     }
 
     let property = modelClass.schema.getProperty(propertyName);
+
     if (!property) {
         throw new Error(`unknown property "${propertyName}"" on model "${modelClass.name}"`);
     }
 
-    return property.meta.rdfUri;
+    if (_.isArray(property)) {
+        return property.map((o) => o.meta.rdfUri);
+    } else {
+        return property.meta.rdfUri;
+    }
 };
+
+
+export var propertyName2Sparson = function(db, propertyNames) {
+    var items = [];
+    propertyNames.split('.').forEach((propertyName) => {
+        let properties = db.findProperties(propertyName);
+
+        properties = properties.map((property) => {
+            if (property.isReverse()) {
+
+                property = property.reverseProperties();
+                let propertyUris = _.uniq(property.map((o) => o.meta.rdfUri));
+                if (propertyUris.length > 1) {
+                    propertyUris = {
+                        type: 'path',
+                        pathType: '|',
+                        items: propertyUris
+                    };
+                }
+
+                return {
+                    type: 'path',
+                    pathType: '^',
+                    items: propertyUris
+                };
+
+            } else {
+                return property.meta.rdfUri;
+            }
+        });
+
+        properties = _.uniq(properties);
+
+        if (properties.length === 1) {
+
+            items.push(properties[0]);
+
+        } else if (properties.length > 1) {
+
+            items.push({
+                type: 'path',
+                pathType: '|',
+                items: properties
+            });
+
+        }
+    });
+
+    return {
+        type: 'path',
+        pathType: '/',
+        items: items
+    };
+};
+
 
 export var buildRdfValue = function(db, modelType, propertyName, value) {
     var modelClass = db[modelType];
@@ -174,41 +234,6 @@ export var pojo2triples = function(db, modelType, pojo) {
     return triples;
 };
 
-// export var query2triples = function(db, modelType, query) {
-//     var modelClass = db[modelType];
-
-//     var triples = [];
-
-//     _.forOwn(query, (value, propertyName) => {
-
-//         let rdfValue;
-//         let propertyUri;
-//         if (propertyName === '_type') {
-
-//             propertyUri = 'a';
-//             rdfValue = classRdfUri(modelClass);
-
-//         } else {
-
-//             propertyUri = propertyRdfUri(modelClass, propertyName);
-
-//             if (_.has(value, '_id') && _.has(value, '_type')) {
-//                 rdfValue = propertyRdfUri(db[value._type], value._id);
-//             } else {
-//                 rdfValue = N3Util.createLiteral(value);
-//             }
-
-//         }
-
-//         triples.push({
-//             subject: '?s',
-//             predicate: propertyUri,
-//             object: rdfValue
-//         });
-//     });
-
-//     return triples;
-// };
 
 
 var operatorsMapping = {
@@ -269,14 +294,21 @@ export var query2whereClause = function(db, modelType, query, options) {
 
         var propertyUri = propertyRdfUri(modelClass, propertyName);
 
+        let predicate;
+        if (_.contains(propertyName, '.')) {
+            predicate = propertyName2Sparson(db, propertyName);
+
+        } else {
+            predicate = propertyUri;
+        }
+
         let triple = {
             subject: '?s',
-            predicate: propertyUri,
+            predicate: predicate,
             object: variable
         };
 
         triples.push(triple);
-
 
         /**
          * if object is... well, an object, then there is operators

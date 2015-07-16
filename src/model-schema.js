@@ -10,30 +10,67 @@ import ModelSchemaProperty from './model-schema-property';
 
 export default class ModelSchema {
     constructor(modelClass) {
-        this._modelClass = modelClass;
+        this.modelClass = modelClass;
         this.name = modelClass.name;
         this.db = modelClass.db;
         this._properties = {};
-        _.forOwn(this._modelClass.properties, (_propConfig, _propName) => {
+        _.forOwn(this.modelClass.properties, (_propConfig, _propName) => {
             this._properties[_propName] = new ModelSchemaProperty(_propName, _propConfig, this);
         });
         // this.fixtures = new ModelFixture(this);
     }
 
     getProperty(propertyName) {
+        let property;
+
+        /** if the property name is a relation **/
         if (_.contains(propertyName, '.')) {
-            let relation = this._properties[propertyName.split('.')[0]];
-            let relationSchema = this.db[relation.type].schema;
+
+            let relation = this.getProperty(propertyName.split('.')[0]);
             let relationPropertyName = propertyName.split('.').slice(1).join('.');
-            return relationSchema.getProperty(relationPropertyName);
+
+            if (relation.isReverse()) {
+                let reversedProperties = relation.reverseProperties();
+                reversedProperties = _.flatten(reversedProperties.map((prop) => {
+                    return prop.modelSchema.getProperty(relationPropertyName);
+                }));
+
+                reversedProperties = _.compact(_.flatten(reversedProperties));
+
+                return _.uniq(reversedProperties, function(item) {
+                    return `${item.modelSchema.name}.${item.name}`;
+                });
+
+            } else {
+
+                let relationSchema = this.db[relation.type].schema;
+                property = relationSchema.getProperty(relationPropertyName);
+
+            }
+
+        } else {
+            property = this._properties[propertyName];
+
+            /**
+             * if there is no property, maybe the property asked
+             * is defined on another mixin. Let's create a list of potential
+             * list of model Name where the property might by defined.
+             */
+            if (!property) {
+                let properties = this.db.findProperties(propertyName, this.name);
+                if (properties.length) {
+                    return properties;
+                }
+            }
         }
 
-        return this._properties[propertyName];
+        return property;
     }
+
 
     get properties() {
         var properties = [];
-        Object.keys(this._modelClass.properties).forEach((propertyName) => {
+        Object.keys(this.modelClass.properties).forEach((propertyName) => {
             properties.push(this.getProperty(propertyName));
         });
         return properties;

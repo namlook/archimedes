@@ -261,9 +261,50 @@ export default [
     /*** relations ***/
     {
         model: 'BlogPost',
-        query: {'comment.body': 'this thing rocks !'},
-        ids: []
+        query: {'author.gender': 'female'},
+        ids: [ 'blogpost1', 'blogpost3', 'blogpost6', 'blogpost8' ]
     },
+    {
+        model: 'BlogPost',
+        query: {'author.birthday': {$lt: new Date(1982, 1, 1)}},
+        ids: [ 'blogpost0', 'blogpost1', 'blogpost5', 'blogpost6' ]
+    },
+    {
+        model: 'BlogPost',
+        query: {'comments.body': 'this thing sucks !'},
+        ids: [
+            'blogpost2',
+            'blogpost5',
+            'blogpost6',
+            'blogpost6',
+            'blogpost7',
+            'blogpost7'
+        ]
+    },
+    {
+        model: 'BlogPost',
+        query: {'comments.author.gender': 'female'},
+        ids: [
+            'blogpost1',
+            'blogpost3',
+            'blogpost3',
+            'blogpost3',
+            'blogpost6',
+            'blogpost6',
+            'blogpost6',
+            'blogpost6',
+            'blogpost6',
+            'blogpost6'
+        ]
+    },
+
+    /*** relations inverse ***/
+    {
+        model: 'User',
+        query: {'contents.ratting': 2},
+        ids: ['user2', 'user3']
+    },
+
 
 
     /**** options ****/
@@ -401,6 +442,12 @@ export default [
         query: {ratting: {$badOperator: true}},
         error: 'malformed query',
         errorExtraMessage: 'unknown operator "$badOperator"'
+    },
+    {
+        model: 'BlogPost',
+        query: {'comment.body': 'this thing rocks !'},
+        error: 'malformed query',
+        errorExtraMessage: 'unknown property "comment" for model BlogPost'
     },
 
     /*** bad options ***/

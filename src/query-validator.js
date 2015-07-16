@@ -51,6 +51,26 @@ class QueryValidator {
         this.errors = [];
     }
 
+    /**
+     * Returns true if the property is present in other models (via mixin)
+     *
+     * exemple for the reversed property 'contents.isPublish' of Author:
+     *   'contents' target the model Content but 'isPublished' is defined
+     *   in BlogPost model. But Content is a mixin of BlogPost then return true
+     *
+     * @params {string} propertyName
+     * returns a boolean
+     */
+    __isInheritedPropertyName(propertyName) {
+        let models = _.values(this._db.registeredModels);
+        let inheritedProperties = models.map((model) => {
+            if (_.contains(model.mixins, this._modelSchema.name)) {
+                return this._db[model.name].schema.getProperty(propertyName);
+            }
+        });
+        return !!_.compact(inheritedProperties).length;
+    }
+
     _validateValue(value, propertyName, operator) {
         if (operator) {
             if (!_.contains(allowedOperators, operator)) {
@@ -73,6 +93,8 @@ class QueryValidator {
                 path: propertyName
             });
             return null;
+        } else if (_.isArray(property)) {
+            return value;
         }
 
         var castedValue;
@@ -112,9 +134,20 @@ class QueryValidator {
             if (_.contains(propertyName, '.')) {
 
                 let relationName = propertyName.split('.')[0];
-                let relationPropertyName = propertyName.split('.').slice(1);
                 let propRelation = this._modelSchema.getProperty(relationName);
-                let relationValidator = new QueryValidator(this._db, this._db[propRelation.type].schema);
+                if (!propRelation) {
+                    this.errors.push({
+                        path: `${relationName}`,
+                        message: `unknown property "${relationName}" for model ${this._modelSchema.name}`
+                    });
+                    return;
+                } else if (_.isArray(propRelation)) {
+                    filter[propertyName] = value;
+                    return;
+                }
+
+                let relationValidator = new QueryValidator(this._db[propRelation.type].schema);
+                let relationPropertyName = propertyName.split('.').slice(1).join('.');
                 let relfilter = relationValidator.validate({[relationPropertyName]: value});
                 _.forOwn(relfilter, (relValue, relName) => {
                     filter[`${relationName}.${relName}`] = relValue;

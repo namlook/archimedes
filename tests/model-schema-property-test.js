@@ -36,6 +36,10 @@ describe('ModelSchemaProperty', function() {
         expect(backlinks.type).to.equal('string');
         let ratting = db.BlogPost.schema.getProperty('ratting');
         expect(ratting.type).to.equal('number');
+
+        let reviewedBooks = db.User.schema.getProperty('reviewedBooks');
+        expect(reviewedBooks.type).to.equal('Book');
+
         done();
     });
 
@@ -66,6 +70,28 @@ describe('ModelSchemaProperty', function() {
 
         let ratting = db.BlogPost.schema.getProperty('ratting');
         expect(ratting.isRelation()).to.be.false();
+        done();
+    });
+
+
+    it('should return all properties that match the reversed property', (done) => {
+        let reverseProperty = db.User.schema.getProperty('contents');
+        let properties = reverseProperty.reverseProperties();
+        expect(properties.length).to.equal(4);
+        let modelNames = properties.map(o => o.modelSchema.name);
+        expect(modelNames).to.include(['Content', 'Book', 'Ebook', 'BlogPost']);
+        done();
+    });
+
+    it('should return true if the property is abstract', (done) => {
+        let reviewedBooks = db.User.schema.getProperty('reviewedBooks');
+        expect(reviewedBooks.isAbstract()).to.be.true();
+
+        let author = db.BlogPost.schema.getProperty('author');
+        expect(author.isAbstract()).to.be.false();
+
+        let ratting = db.BlogPost.schema.getProperty('ratting');
+        expect(ratting.isAbstract()).to.be.false();
         done();
     });
 
