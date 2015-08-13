@@ -205,6 +205,10 @@ var modelFactory = function(db, name, modelClassSchema) {
 
         count(query) {
             return db.count(name, query);
+        },
+
+        groupBy(aggregation, query, options) {
+            return db.groupBy(name, aggregation, query, options);
         }
     };
 

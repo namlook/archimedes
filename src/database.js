@@ -354,6 +354,60 @@ export default function(dbAdapter, config) {
         },
 
 
+        groupBy(modelType, aggregator, query, options) {
+
+            options = options || {};
+
+            return new Promise((resolve, reject) => {
+
+                if (typeof modelType !== 'string') {
+                    return reject(new Error('update: modelType should be a string'));
+                }
+
+                if (!aggregator) {
+                    return reject(new Error('groupBy: aggregator is required'));
+                }
+
+                if (typeof aggregator === 'string') {
+                    aggregator = {
+                        property: aggregator,
+                        aggregation: {operator: 'count', target: aggregator}
+                    };
+                }
+
+                if (!aggregator.aggregation) {
+                    aggregator.aggregation = {operator: 'count', target: aggregator.property};
+                }
+
+                if (typeof aggregator.aggregation === 'string') {
+                    aggregator.aggregation = {
+                        operator: aggregator.aggregation,
+                        target: aggregator.property
+                    };
+                }
+
+                let operator = aggregator.aggregation.operator;
+                if (!_.contains(['count', 'sum', 'avg', 'min', 'max'], operator)) {
+                    return reject(new Error(`groupBy: unknown aggregation operator "${operator}"`));
+                }
+
+                if (query && !_.isObject(query)) {
+                    return reject(new Error('groupBy: query should be an object'));
+                }
+
+                query = query || {};
+                query._type = modelType;
+
+                let {error, value: validatedQuery} = queryValidator(this[modelType].schema, query);
+
+                if (error) {
+                    return reject(new ValidationError('malformed query', error));
+                }
+
+                return resolve(this.adapter.groupBy(modelType, aggregator, validatedQuery, options));
+            });
+        },
+
         /**
          * Update a record in the store.
          *

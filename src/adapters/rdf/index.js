@@ -7,7 +7,9 @@ import {
     pojo2triples,
     rdfDoc2pojo,
     operation2triple,
-    constructTriples} from './utils';
+    constructTriples,
+    propertyRdfUri,
+    propertyName2Sparson} from './utils';
 import {Generator as SparqlGenerator} from 'sparqljs';
 
 export default function(config) {
@@ -251,7 +253,13 @@ export default function(config) {
                         limit: 50
                     };
 
-                    let sparql = new SparqlGenerator().stringify(sparson);
+                    /*** generate the sparql from the sparson ***/
+                    let sparql;
+                    try {
+                        sparql = new SparqlGenerator().stringify(sparson);
+                    } catch(generatorError) {
+                        return reject(generatorError);
+                    }
 
                     this.execute(sparql).then((data) => {
                         return resolve(parseInt(data[0].count.value, 10));
@@ -262,6 +270,95 @@ export default function(config) {
                 });
             },
 
+
+            groupBy(modelType, aggregator, query, options) {
+                return new Promise((resolve, reject) => {
+                    let {whereClause} = query2whereClause(db, modelType, query, options);
+
+                    let {property, aggregation} = aggregator;
+
+                    /** construct the property value to perform the group by **/
+                    var propertyUri = propertyRdfUri(db[modelType], property);
+                    let predicate;
+                    if (_.contains(property, '.')) {
+                        predicate = propertyName2Sparson(db, property);
+                    } else {
+                        predicate = propertyUri;
+                    }
+                    whereClause.push({
+                        subject: '?s',
+                        predicate: predicate,
+                        object: '?aggregatedPropertyName'
+                    });
+
+
+                    /** construct the aggregation value **/
+                    let {target} = aggregation;
+                    let targetPropertyUri = propertyRdfUri(db[modelType], target);
+                    let aggregationPredicate;
+                    if (_.contains(target, '.')) {
+                        aggregationPredicate = propertyName2Sparson(db, target);
+                    } else {
+                        aggregationPredicate = targetPropertyUri;
+                    }
+                    whereClause.push({
+                        subject: '?s',
+                        predicate: aggregationPredicate,
+                        object: '?aggregatedTargetName'
+                    });
+
+
+                    /** build the sparson **/
+                    let sparson = {
+                        type: 'query',
+                        queryType: 'SELECT',
+                        variables: [
+                            `?aggregatedPropertyName`,
+                            {
+                            expression: {
+                                expression: `?aggregatedTargetName`,
+                                type: 'aggregate',
+                                aggregation: aggregation.operator,
+                                distinct: false
+                            },
+                            variable: '?value'
+                        }],
+                        from: {
+                            'default': [config.graphUri]
+                        },
+                        where: whereClause,
+                        group: [
+                            {expression: `?aggregatedPropertyName`}
+                        ],
+                        limit: 50
+                    };
+
+
+                    /*** generate the sparql from the sparson ***/
+                    let sparql;
+                    try {
+                        sparql = new SparqlGenerator().stringify(sparson);
+                    } catch(generatorError) {
+                        return reject(generatorError);
+                    }
+
+                    // console.log(sparql);
+
+                    this.execute(sparql).then((data) => {
+                        let results = [];
+                        data.forEach((item) => {
+                            results.push({
+                                property: item.aggregatedPropertyName.value,
+                                value: item.value.value
+                            });
+                        });
+                        return resolve(results);
+                    }).catch((error) => {
+                        reject(error);
+                    });
+
+                });
+            },
 
             sync(modelType, pojo) {
                 return new Promise((resolve, reject) => {

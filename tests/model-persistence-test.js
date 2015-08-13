@@ -121,4 +121,145 @@ describe('Model persistence', function() {
         });
 
     });
+
+    describe('#groupBy()', function() {
+        it('should group the result by a property', (done) => {
+            var data = [];
+            for (let i = 0; i < 10; i++) {
+                data.push({
+                    _id: `user${i}`,
+                    _type: 'User',
+                    name: `user ${i}`,
+                    gender: i % 3 && 'male' || 'female'
+                });
+            }
+            db.batchSync('User', data).then((savedData) => {
+                expect(savedData.length).to.equal(10);
+                return db.User.groupBy({property: 'gender', aggregation: 'count'});
+            }).then((results) => {
+                expect(results).to.deep.equal([
+                    { property: 'female', value: '4' },
+                    { property: 'male', value: '6' }
+                ]);
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+
+        it('should group with a query', (done) => {
+            let data = [];
+            for (let i = 0; i < 10; i++) {
+                data.push({
+                    _id: `user${i}`,
+                    _type: 'User',
+                    name: `user ${i}`,
+                    gender: i % 3 && 'male' || 'female'
+                });
+            }
+            db.batchSync('User', data).then((savedData) => {
+                expect(savedData.length).to.equal(10);
+                return db.User.groupBy(
+                    {property: 'gender', aggregation: 'count'},
+                    {gender: 'male'});
+            }).then((results) => {
+                expect(results).to.deep.equal([{ property: 'male', value: '6' }]);
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+
+        it('should group with a deep relation property', (done) => {
+            let users = [];
+            for (let i = 0; i < 10; i++) {
+                users.push({
+                    _id: `user${i}`,
+                    _type: 'User',
+                    name: `user ${i}`,
+                    gender: i % 3 && 'male' || 'female'
+                });
+            }
+
+            let blogPosts = [];
+            for (let i = 0; i < 10; i++) {
+                blogPosts.push({
+                    _id: `bp${i}`,
+                    _type: 'BlogPost',
+                    title: `blog post ${i}`,
+                    author: {_type: 'User', _id: `user${i % 3}`}
+                });
+            }
+
+            Promise.all([
+                db.batchSync('User', users),
+                db.batchSync('BlogPost', blogPosts)
+            ]).then(() => {
+                return db.BlogPost.groupBy(
+                    {property: 'author.gender', aggregation: 'count'}
+                );
+            }).then((results) => {
+                expect(results).to.deep.equal([
+                    { property: 'female', value: '4' },
+                    { property: 'male', value: '6' }
+                ]);
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+
+        it('should use the avg operator', (done) => {
+            let blogPosts = [];
+            for (let i = 0; i < 10; i++) {
+                blogPosts.push({
+                    _id: `bp${i}`,
+                    _type: 'BlogPost',
+                    title: `blog post ${i}`,
+                    isPublished: Boolean(i % 2),
+                    ratting: i % 3
+                });
+            }
+
+            db.batchSync('BlogPost', blogPosts).then(() => {
+                return db.BlogPost.groupBy({
+                    property: 'isPublished',
+                    aggregation: {operator: 'avg', target: 'ratting'}
+                });
+            }).then((results) => {
+                expect(results).to.deep.equal([
+                    { property: 'false', value: '1' },
+                    { property: 'true', value: '0.8' }
+                ]);
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+
+        it('should throw an error if the property is unknown', (done) => {
+            return db.User.groupBy({
+                property: 'ratting'
+            }).catch((error) => {
+                expect(error).to.exist();
+                expect(error.message).to.equal('unknown property "ratting" on model "User"');
+                done();
+            });
+        });
+
+        it('should throw an error if the operator is unknown', (done) => {
+            return db.BlogPost.groupBy({
+                property: 'isPublished',
+                aggregation: {operator: 'blah', target: 'ratting'}
+            }).catch((error) => {
+                expect(error).to.exist();
+                expect(error.message).to.equal('groupBy: unknown aggregation operator "blah"');
+                done();
+            });
+        });
+    });
 });

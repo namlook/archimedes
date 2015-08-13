@@ -10,7 +10,7 @@ var databases = {
             // host: '192.168.99.100',
             // port: 8890,
             // endpoint: `http://192.168.99.100:8890/sparql` // virtuoso
-            endpoint: `http://192.168.99.100:32769/bigdata/sparql` // blazegraph's bigdata
+            endpoint: `http://192.168.99.100:9999/bigdata/sparql` // blazegraph's bigdata
         });
     },
     memory: function() {

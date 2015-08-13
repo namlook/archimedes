@@ -29,7 +29,7 @@ export var propertyRdfUri = function(modelClass, propertyName) {
     let property = modelClass.schema.getProperty(propertyName);
 
     if (!property) {
-        throw new Error(`unknown property "${propertyName}"" on model "${modelClass.name}"`);
+        throw new Error(`unknown property "${propertyName}" on model "${modelClass.name}"`);
     }
 
     if (_.isArray(property)) {
