@@ -348,7 +348,7 @@ export default function(config) {
                         let results = [];
                         data.forEach((item) => {
                             results.push({
-                                property: item.aggregatedPropertyName.value,
+                                label: item.aggregatedPropertyName.value,
                                 value: item.value.value
                             });
                         });

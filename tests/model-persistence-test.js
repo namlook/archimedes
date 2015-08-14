@@ -138,8 +138,8 @@ describe('Model persistence', function() {
                 return db.User.groupBy({property: 'gender', aggregation: 'count'});
             }).then((results) => {
                 expect(results).to.deep.equal([
-                    { property: 'female', value: '4' },
-                    { property: 'male', value: '6' }
+                    { label: 'female', value: '4' },
+                    { label: 'male', value: '6' }
                 ]);
                 done();
             }).catch((error) => {
@@ -164,7 +164,7 @@ describe('Model persistence', function() {
                     {property: 'gender', aggregation: 'count'},
                     {gender: 'male'});
             }).then((results) => {
-                expect(results).to.deep.equal([{ property: 'male', value: '6' }]);
+                expect(results).to.deep.equal([{ label: 'male', value: '6' }]);
                 done();
             }).catch((error) => {
                 console.log(error);
@@ -202,8 +202,8 @@ describe('Model persistence', function() {
                 );
             }).then((results) => {
                 expect(results).to.deep.equal([
-                    { property: 'female', value: '4' },
-                    { property: 'male', value: '6' }
+                    { label: 'female', value: '4' },
+                    { label: 'male', value: '6' }
                 ]);
                 done();
             }).catch((error) => {
@@ -231,8 +231,8 @@ describe('Model persistence', function() {
                 });
             }).then((results) => {
                 expect(results).to.deep.equal([
-                    { property: 'false', value: '1' },
-                    { property: 'true', value: '0.8' }
+                    { label: 'false', value: '1' },
+                    { label: 'true', value: '0.8' }
                 ]);
                 done();
             }).catch((error) => {
