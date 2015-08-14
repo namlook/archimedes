@@ -257,7 +257,7 @@ describe('Model persistence', function() {
                 aggregation: {operator: 'blah', target: 'ratting'}
             }).catch((error) => {
                 expect(error).to.exist();
-                expect(error.message).to.equal('groupBy: unknown aggregation operator "blah"');
+                expect(error.message).to.equal('malformed aggregator');
                 done();
             });
         });

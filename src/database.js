@@ -4,6 +4,7 @@ import modelFactory from './model';
 import {ValidationError} from './errors';
 import queryValidator from './query-validator';
 import {findOptionsValidator} from './options-validator';
+import groupByValidator from './group-by-validator';
 
 var validPropertyTypes = [
     'string',
@@ -386,9 +387,10 @@ export default function(dbAdapter, config) {
                     };
                 }
 
-                let operator = aggregator.aggregation.operator;
-                if (!_.contains(['count', 'sum', 'avg', 'min', 'max'], operator)) {
-                    return reject(new Error(`groupBy: unknown aggregation operator "${operator}"`));
+                let {error: aggregatorError, value: validatedAggregator} = groupByValidator(aggregator);
+
+                if (aggregatorError) {
+                    return reject(new ValidationError('malformed aggregator', aggregatorError));
                 }
 
                 if (query && !_.isObject(query)) {
@@ -398,13 +400,15 @@ export default function(dbAdapter, config) {
                 query = query || {};
                 query._type = modelType;
 
-                let {error, value: validatedQuery} = queryValidator(this[modelType].schema, query);
+                let {error: queryError, value: validatedQuery} = queryValidator(this[modelType].schema, query);
 
-                if (error) {
-                    return reject(new ValidationError('malformed query', error));
+                if (queryError) {
+                    return reject(new ValidationError('malformed query', queryError));
                 }
 
-                return resolve(this.adapter.groupBy(modelType, aggregator, validatedQuery, options));
+                // TODO validate options
+
+                return resolve(this.adapter.groupBy(modelType, validatedAggregator, validatedQuery, options));
             });
         },
 
