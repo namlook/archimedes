@@ -89,7 +89,7 @@ class QueryValidator {
 
         if (!property) {
             this.errors.push({
-                message: `unknown property "${propertyName}" for model ${this._modelSchema.name}`,
+                message: `unknown property "${propertyName}" on model "${this._modelSchema.name}"`,
                 path: propertyName
             });
             return null;
@@ -138,7 +138,7 @@ class QueryValidator {
                 if (!propRelation) {
                     this.errors.push({
                         path: `${relationName}`,
-                        message: `unknown property "${relationName}" for model ${this._modelSchema.name}`
+                        message: `unknown property "${relationName}" on model "${this._modelSchema.name}"`
                     });
                     return;
                 } else if (_.isArray(propRelation)) {

@@ -95,8 +95,7 @@ describe('Model persistence', function() {
             return db.BlogPost.find({arf: true}).catch((error) => {
                 expect(error).to.exist();
                 expect(error.message).to.equal('malformed query');
-                expect(error.extra[0].message).to.equal('unknown property "arf" for model BlogPost');
-                expect(error.extra[0].path).to.equal('arf');
+                expect(error.extra).to.equal('unknown property "arf" on model "BlogPost"');
                 done();
             });
         });
@@ -119,7 +118,6 @@ describe('Model persistence', function() {
                 console.log(error.stack);
             });
         });
-
     });
 
     describe('#groupBy()', function() {

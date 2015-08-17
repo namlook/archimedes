@@ -8,20 +8,16 @@ import Code from 'code';
 var describe = lab.describe;
 var it = lab.it;
 var before = lab.before;
-// var beforeEach = lab.beforeEach;
 var expect = Code.expect;
 
 import testQueries from './queries';
 import loadDb from './data';
 import chalk from 'chalk';
-import _ from 'lodash';
 import {inspect} from 'util';
 
 
-// var nbTests = 0;
-var processTest = function(db, testQuery) {
+var processDbTest = function(db, testQuery) {
 
-    // var testQuery = _testQueries.shift();
     return new Promise((resolve, reject) => {
 
         if (!testQuery) {
@@ -35,8 +31,8 @@ var processTest = function(db, testQuery) {
             promise.catch((error) => {
                 try {
                     expect(error.message).to.equal(testQuery.error);
-                    if (_.has(error, 'extra.0.message')) {
-                        expect(error.extra[0].message).to.equal(testQuery.errorExtraMessage);
+                    if (error.extra) {
+                        expect(error.extra).to.equal(testQuery.errorExtraMessage);
                     }
                 } catch (e) {
                     console.log('------------------');
@@ -44,9 +40,7 @@ var processTest = function(db, testQuery) {
                     console.log('------------------');
                     return reject(e);
                 }
-                // nbTests++;
                 return resolve();
-                // return resolve(processTest(db, _testQueries));
             });
 
         } else {
@@ -69,9 +63,7 @@ var processTest = function(db, testQuery) {
                     return reject(e);
                 }
 
-                // nbTests++;
                 return resolve();
-                // return resolve(processTest(db, _testQueries));
             }).catch((error) => {
                 console.log('xxxx', testQuery);
                 console.log(inspect(error, {depth: 10}));
@@ -85,21 +77,66 @@ var processTest = function(db, testQuery) {
 };
 
 
-// loadDb().then((db) => {
+var processModelTest = function(db, testQuery) {
 
-//     processTest(db, testQueries).then(() => {
-//         console.log('ok', nbTests, 'tests passed');
-//     }).catch((errors) => {
-//         console.log(inspect(errors, {depth: 10, colors: true}));
-//         console.log(chalk.red(errors.stack));
-//     });
+    return new Promise((resolve, reject) => {
 
-// }).catch((error) => {
-//     console.log('--xxxx--');
-//     console.log(error);
-// });
+        if (!testQuery) {
+            return resolve();
+        }
 
+        let promise = db[testQuery.model].find(testQuery.query, testQuery.options);
 
+        if (testQuery.error != null) {
+
+            promise.catch((error) => {
+                try {
+                    expect(error.message).to.equal(testQuery.error);
+                    if (error.extra) {
+                        expect(error.extra).to.equal(testQuery.errorExtraMessage);
+                    }
+                } catch (e) {
+                    console.log('------------------');
+                    console.log('>>>', chalk.blue(inspect(testQuery, {depth: 10, colors: true})));
+                    console.log('------------------');
+                    return reject(e);
+                }
+                return resolve();
+            });
+
+        } else {
+
+            promise.then((results) => {
+                let ids = results.map((item) => item._id);
+
+                try {
+                    if (testQuery.ids) {
+                        expect(ids).to.deep.equal(testQuery.ids);
+                    }
+
+                    if (testQuery.results) {
+                        let pojos = results.map((o) => o.attrs());
+                        expect(pojos).to.deep.equal(testQuery.results);
+                    }
+                } catch(e) {
+                    console.log('------------------');
+                    console.log('>>>', chalk.blue(inspect(testQuery, {depth: 10, colors: true})));
+                    console.log('------------------');
+                    return reject(e);
+                }
+
+                return resolve();
+            }).catch((error) => {
+                console.log('xxxx', testQuery);
+                console.log(inspect(error, {depth: 10}));
+                console.log(error.stack);
+                return reject(error);
+            });
+
+        }
+
+    });
+};
 
 describe('query', function(){
 
@@ -115,9 +152,19 @@ describe('query', function(){
     });
 
 
-    var testFn = function(testQuery) {
+    var testDbFn = function(testQuery) {
         return function(done) {
-            processTest(db, testQuery).then(() => {
+            processDbTest(db, testQuery).then(() => {
+                done();
+            }).catch((error) => {
+                console.log(error);
+            });
+        };
+    };
+
+    var testModelFn = function(testQuery) {
+        return function(done) {
+            processModelTest(db, testQuery).then(() => {
                 done();
             }).catch((error) => {
                 console.log(error);
@@ -135,7 +182,8 @@ describe('query', function(){
         if (testQuery.skip) {
             testLauncher = it.skip;
         }
-        testLauncher(`${testQuery.model}: ${inspect(testQuery.query)}`, {parallel: false}, testFn(testQuery));
+        testLauncher(`db> ${testQuery.model}: ${inspect(testQuery.query)} (${inspect(testQuery.options)})`, {parallel: false}, testDbFn(testQuery));
+        testLauncher(`model> ${testQuery.model}: ${inspect(testQuery.query)} (${inspect(testQuery.options)})`, {parallel: false}, testModelFn(testQuery));
     }
 });
 

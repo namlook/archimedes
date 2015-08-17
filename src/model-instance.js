@@ -1,6 +1,5 @@
 
 import _ from 'lodash';
-import {ValidationError} from './errors';
 
 export default function(db, modelClass, attrs) {
 
@@ -159,18 +158,23 @@ export default function(db, modelClass, attrs) {
          *     (casted if needed) values.
          */
         validate() {
-            return new Promise((resolve, reject) => {
-                let {error, value} = this.Model.schema.validate(internals.attrs);
-                if (error) {
-                    return reject(new ValidationError(error[0].message, error));
-                }
-                return resolve(value);
-            });
+            return db.validate(this._type, internals.attrs);
+            // return new Promise((resolve, reject) => {
+            //     let {error, value} = this.Model.schema.validate(internals.attrs);
+            //     if (error) {
+            //         return reject(new ValidationError('Bad value', error));
+            //     }
+            //     return resolve(value);
+            // });
         },
 
 
         attrs() {
             return internals.attrs;
+        },
+
+        toJSON() {
+            return JSON.stringify(this.attrs());
         },
 
         pending() {

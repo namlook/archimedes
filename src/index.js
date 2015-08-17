@@ -4,7 +4,6 @@ import rdfAdapter from './adapters/rdf';
 import memoryAdapter from './adapters/memory';
 
 export var triplestore = function(config) {
-
     let rdf = rdfAdapter({
         graphUri: config.graphUri,
         // host: config.host,

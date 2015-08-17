@@ -447,7 +447,7 @@ export default [
         model: 'BlogPost',
         query: {'comment.body': 'this thing rocks !'},
         error: 'malformed query',
-        errorExtraMessage: 'unknown property "comment" for model BlogPost'
+        errorExtraMessage: 'unknown property "comment" on model "BlogPost"'
     },
 
     /*** bad options ***/
@@ -456,6 +456,20 @@ export default [
         query: {},
         options: {sort: 'unknownProperty'},
         error: 'malformed options',
-        errorExtraMessage: 'unknown property "unknownProperty"" on model "BlogPost"'
+        errorExtraMessage: 'unknown property "unknownProperty" on model "BlogPost"'
+    },
+    {
+        model: 'BlogPost',
+        query: {},
+        options: {fields: 'unknownProperty'},
+        error: 'malformed options',
+        errorExtraMessage: 'unknown property "unknownProperty" on model "BlogPost"'
+    },
+    {
+        model: 'BlogPost',
+        query: {},
+        options: {fields: ['unknownProperty']},
+        error: 'malformed options',
+        errorExtraMessage: 'unknown property "unknownProperty" on model "BlogPost"'
     }
 ];

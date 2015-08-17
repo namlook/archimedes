@@ -79,7 +79,7 @@ describe('Utils', function() {
         it('should throw an error if property is unknown', (done) => {
             let query = {'unknownProperty': true};
             let {error, value} = queryValidator(db.BlogPost.schema, query);
-            expect(error[0].message).to.equal('unknown property "unknownProperty" for model BlogPost');
+            expect(error[0].message).to.equal('unknown property "unknownProperty" on model "BlogPost"');
             expect(error[0].path).to.equal('unknownProperty');
             expect(value).to.not.exist();
             done();

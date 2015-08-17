@@ -48,9 +48,9 @@ describe('Model Instance validation', function() {
     it('should return an error if the type is not a string', (done) => {
         let blogPost = db.BlogPost.create({title: 23});
         blogPost.validate().catch((error) => {
-            expect(error.message).to.equal('"title" must be a string');
-            expect(error.extra[0].message).to.equal('"title" must be a string');
-            expect(error.extra[0].path).to.equal('title');
+            expect(error.name).to.equal('ValidationError');
+            expect(error.message).to.equal('Bad value');
+            expect(error.extra).to.equal('"title" must be a string');
             done();
         });
     });
@@ -59,9 +59,9 @@ describe('Model Instance validation', function() {
     it('should return an error if the type is not a number', (done) => {
         let blogPost = db.BlogPost.create({ratting: 'foo'});
         blogPost.validate().catch((error) => {
-            expect(error.extra[0].path).to.equal('ratting');
-            expect(error.extra[0].message).to.equal('"ratting" must be a number');
-            expect(error.message).to.equal('"ratting" must be a number');
+            expect(error.name).to.equal('ValidationError');
+            expect(error.message).to.equal('Bad value');
+            expect(error.extra).to.equal('"ratting" must be a number');
             done();
         });
     });
@@ -70,9 +70,9 @@ describe('Model Instance validation', function() {
     it('should return an error if the type is not a boolean', (done) => {
         let blogPost = db.BlogPost.create({isPublished: 'foo'});
         blogPost.validate().catch((error) => {
-            expect(error.extra[0].path).to.equal('isPublished');
-            expect(error.extra[0].message).to.equal('"isPublished" must be a boolean');
-            expect(error.message).to.equal('"isPublished" must be a boolean');
+            expect(error.name).to.equal('ValidationError');
+            expect(error.message).to.equal('Bad value');
+            expect(error.extra).to.equal('"isPublished" must be a boolean');
             done();
         });
     });
@@ -81,9 +81,9 @@ describe('Model Instance validation', function() {
     it('should return an error if the type is not a date', (done) => {
         let blogPost = db.BlogPost.create({updatedDate: 'foo'});
         blogPost.validate().catch((error) => {
-            expect(error.extra[0].path).to.equal('updatedDate');
-            expect(error.extra[0].message).to.equal('"updatedDate" must be a number of milliseconds or valid date string');
-            expect(error.message).to.equal('"updatedDate" must be a number of milliseconds or valid date string');
+            expect(error.name).to.equal('ValidationError');
+            expect(error.message).to.equal('Bad value');
+            expect(error.extra).to.equal('"updatedDate" must be a number of milliseconds or valid date string');
             done();
         });
     });
@@ -92,9 +92,9 @@ describe('Model Instance validation', function() {
     it('should return an error if the type is not an array of string', (done) => {
         let blogPost = db.BlogPost.create({tags: 23});
         blogPost.validate().catch((error) => {
-            expect(error.extra[0].path).to.equal('tags');
-            expect(error.extra[0].message).to.equal('"tags" must be an array');
-            expect(error.message).to.equal('"tags" must be an array');
+            expect(error.name).to.equal('ValidationError');
+            expect(error.message).to.equal('Bad value');
+            expect(error.extra).to.equal('"tags" must be an array');
             done();
         });
     });
@@ -104,9 +104,9 @@ describe('Model Instance validation', function() {
         it('should return an error if the type is not another model instance', (done) => {
             let blogPost = db.BlogPost.create({author: 'me'});
             blogPost.validate().catch((error) => {
-                expect(error.extra[0].path).to.equal('author');
-                expect(error.extra[0].message).to.equal('"author" must be an object');
-                expect(error.message).to.equal('"author" must be an object');
+                expect(error.name).to.equal('ValidationError');
+                expect(error.message).to.equal('Bad value');
+                expect(error.extra).to.equal('"author" must be an object');
                 done();
             });
         });
@@ -116,9 +116,9 @@ describe('Model Instance validation', function() {
             let me = db.User.create({name: 'me'});
             let blogPost = db.BlogPost.create({author: me});
             blogPost.validate().catch((error) => {
-                expect(error.extra[0].path).to.equal('author._id');
-                expect(error.extra[0].message).to.equal('"author._id" is required');
-                expect(error.message).to.equal('"author._id" is required');
+                expect(error.name).to.equal('ValidationError');
+                expect(error.message).to.equal('Bad value');
+                expect(error.extra).to.equal('"author._id" is required');
                 done();
             });
         });
@@ -127,9 +127,9 @@ describe('Model Instance validation', function() {
             let me = db.User.create({_id: 'me', name: 'me'});
             let blogPost = db.BlogPost.create({author: me});
             blogPost.validate().catch((error) => {
-                expect(error.extra[0].path).to.equal('author._id');
-                expect(error.extra[0].message).to.equal('"author._id" is required');
-                expect(error.message).to.equal('"author._id" is required');
+                expect(error.name).to.equal('ValidationError');
+                expect(error.message).to.equal('Bad value');
+                expect(error.extra).to.equal('"author._id" is required');
                 done();
             });
         });
@@ -138,9 +138,9 @@ describe('Model Instance validation', function() {
         it('should return an error if the type is not a list of model instances', (done) => {
             let blogPost = db.BlogPost.create({comments: ['foo', 2]});
             blogPost.validate().catch((error) => {
-                expect(error.extra[0].path).to.equal('comments.0');
-                expect(error.extra[0].message).to.equal('"comments" must be an object');
-                expect(error.message).to.equal('"comments" must be an object');
+                expect(error.name).to.equal('ValidationError');
+                expect(error.message).to.equal('Bad value');
+                expect(error.extra).to.equal('"comments" must be an object');
                 done();
             });
         });
@@ -151,9 +151,9 @@ describe('Model Instance validation', function() {
             let ok = db.Comment.create({body: "it's ok"});
             let blogPost = db.BlogPost.create({comments: [good, ok]});
             blogPost.validate().catch((error) => {
-                expect(error.extra[0].path).to.equal('comments.0._id');
-                expect(error.extra[0].message).to.equal('"comments._id" is required');
-                expect(error.message).to.equal('"comments._id" is required');
+                expect(error.name).to.equal('ValidationError');
+                expect(error.message).to.equal('Bad value');
+                expect(error.extra).to.equal('"comments._id" is required');
                 done();
             });
         });
@@ -163,9 +163,9 @@ describe('Model Instance validation', function() {
             let ok = db.Comment.create({_id: 'ok', body: "it's ok"});
             let blogPost = db.BlogPost.create({comments: [good, ok]});
             blogPost.validate().catch((error) => {
-                expect(error.extra[0].path).to.equal('comments.0._id');
-                expect(error.extra[0].message).to.equal('"comments._id" is required');
-                expect(error.message).to.equal('"comments._id" is required');
+                expect(error.name).to.equal('ValidationError');
+                expect(error.message).to.equal('Bad value');
+                expect(error.extra).to.equal('"comments._id" is required');
                 done();
             });
         });

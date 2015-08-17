@@ -169,6 +169,43 @@ describe('Database', function() {
                 console.log(error.stack);
             });
         });
+
+        it('should fetch a float with a certain precision', (done) => {
+            let data = [
+                {
+                    _id: 'post1',
+                    ratting: 2.434
+                },
+                {
+                    _id: 'post2',
+                    ratting: 2.436
+                },
+                {
+                    _id: 'post3',
+                    ratting: 2.2
+                }
+            ];
+
+
+            db.batchSync('BlogPost', data).then((savedData) => {
+                expect(savedData).to.deep.equal([
+                    { _id: 'post1', ratting: 2.43, _type: 'BlogPost' },
+                    { _id: 'post2', ratting: 2.44, _type: 'BlogPost' },
+                    { _id: 'post3', ratting: 2.2, _type: 'BlogPost' }
+                ]);
+                return db.find('BlogPost');
+            }).then((fetchedData) => {
+                expect(fetchedData).to.deep.equal([
+                    { _id: 'post1', ratting: 2.43, _type: 'BlogPost' },
+                    { _id: 'post2', ratting: 2.44, _type: 'BlogPost' },
+                    { _id: 'post3', ratting: 2.2, _type: 'BlogPost' }
+                ]);
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
     });
 
 
@@ -446,7 +483,9 @@ describe('Database', function() {
             }
             db.batchSync('BlogPost', data).catch((error) => {
                 expect(error).to.exist();
-                expect(error.extra[0].message).to.equal('"isPublished" must be a boolean');
+                expect(error.name).to.equal('ValidationError');
+                expect(error.message).to.equal('Bad value');
+                expect(error.extra).to.equal('"isPublished" must be a boolean');
                 done();
             });
         });
@@ -572,8 +611,7 @@ describe('Database', function() {
             db.count('BlogPost', {arf: true}).catch((error) => {
                 expect(error).to.exist();
                 expect(error.message).to.equal('malformed query');
-                expect(error.extra[0].path).to.equal('arf');
-                expect(error.extra[0].message).to.equal('unknown property "arf" for model BlogPost');
+                expect(error.extra).to.equal('unknown property "arf" on model "BlogPost"');
                 done();
             });
         });

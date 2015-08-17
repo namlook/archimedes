@@ -116,9 +116,8 @@ describe('Model instance persistance', function() {
             });
             blogPost.save().catch((error) => {
                 expect(error).to.exist();
-                expect(error.message).to.equal('"isPublished" must be a boolean');
-                expect(error.extra[0].path).to.equal('isPublished');
-                expect(error.extra[0].message).to.equal('"isPublished" must be a boolean');
+                expect(error.message).to.equal('Bad value');
+                expect(error.extra).to.equal('"isPublished" must be a boolean');
                 done();
             });
         });

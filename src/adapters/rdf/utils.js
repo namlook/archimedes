@@ -261,7 +261,7 @@ export var query2whereClause = function(db, modelType, query, options) {
     var orderBy = [];
     var sorting = {};
 
-    _.get(options, 'sort', '').split(',').forEach((propertyName) => {
+    _.get(options, 'sort', []).forEach((propertyName) => {
         if (!propertyName) {
             return;
         }

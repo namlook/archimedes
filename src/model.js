@@ -2,7 +2,7 @@
 import _ from 'lodash';
 import joi from 'joi';
 import modelInstance from './model-instance';
-import {ValidationError} from './errors';
+import {StructureError} from './errors';
 import ModelSchema from './model-schema';
 
 
@@ -56,7 +56,7 @@ var modelFactory = function(db, name, modelClassSchema) {
         if (!_.contains(path, '.')) {
             path = '';
         }
-        throw new ValidationError(`${name} ${errorDetail.message}${path}`, error);
+        throw new StructureError(`${name} ${errorDetail.message}${path}`, error);
     }
 
 
@@ -67,7 +67,7 @@ var modelFactory = function(db, name, modelClassSchema) {
 
     let mixins = schema.mixins.map(mixinName => {
         if (!db.modelSchemas[mixinName]) {
-            throw new ValidationError(`${name}: unknown mixin "${mixinName}"`);
+            throw new StructureError(`${name}: unknown mixin "${mixinName}"`);
         }
         return modelFactory(db, mixinName, db.modelSchemas[mixinName]);
     });
@@ -174,8 +174,8 @@ var modelFactory = function(db, name, modelClassSchema) {
          * @params {?object} query - the query
          * @returns a promise
          */
-        find(query) {
-            return db.find(name, query).then((results) => {
+        find(query, options) {
+            return db.find(name, query, options).then((results) => {
                 let data = results.map(o => this.wrap(o));
                 return data;
             });
@@ -209,6 +209,10 @@ var modelFactory = function(db, name, modelClassSchema) {
 
         groupBy(aggregation, query, options) {
             return db.groupBy(name, aggregation, query, options);
+        },
+
+        batchSync(data) {
+            return db.batchSync(name, data);
         }
     };
 

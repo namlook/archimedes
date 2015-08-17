@@ -73,7 +73,7 @@ describe('Rdf utils', function() {
                 ratting: 5,
                 isPublished: true
             };
-            let options = {sort: 'isPublished,-ratting'};
+            let options = {sort: ['isPublished', '-ratting']};
             let triples = query2whereClause(db, 'BlogPost', query, options);
             expect(triples).to.deep.equal({
                 orderBy: [{

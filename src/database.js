@@ -1,7 +1,7 @@
 
 import _ from 'lodash';
 import modelFactory from './model';
-import {ValidationError} from './errors';
+import {ValidationError, StructureError} from './errors';
 import queryValidator from './query-validator';
 import {findOptionsValidator} from './options-validator';
 import groupByValidator from './group-by-validator';
@@ -38,7 +38,7 @@ export default function(dbAdapter, config) {
                         }
                         if (propConfig.type === 'array') {
                             if (!propConfig.items) {
-                                return reject(new ValidationError(`${modelName} if property's type is "array" then "items" should be specified (properties.${propName})`));
+                                return reject(new StructureError(`${modelName} if property's type is "array" then "items" should be specified (properties.${propName})`));
                             }
 
                             if (typeof propConfig.items === 'string') {
@@ -46,7 +46,7 @@ export default function(dbAdapter, config) {
                             }
                         } else if (!_.contains(validPropertyTypes, propConfig.type)) {
                             if (!models[propConfig.type]) {
-                                return reject(new ValidationError(`${modelName} invalid type for property "${propName}"`));
+                                return reject(new StructureError(`${modelName} invalid type for property "${propName}"`));
                             }
                         }
 
@@ -195,6 +195,7 @@ export default function(dbAdapter, config) {
 
                 if (error) {
                     pojo = pojo || {};
+
                     /*** hack for virtuoso: boolean are returned as integers **/
                     let propertyName = error[0].path;
                     let badValue = pojo[propertyName];
@@ -208,7 +209,7 @@ export default function(dbAdapter, config) {
                             });
                         });
                     } else {
-                        reject(new ValidationError(error[0].message, error));
+                        reject(new ValidationError('Bad value', error));
                     }
 
                 } else {
@@ -232,6 +233,15 @@ export default function(dbAdapter, config) {
             query = Object.assign({}, query);
             options = options || {};
 
+
+            if (typeof options.fields === 'string') {
+                options.fields = options.fields.split(',');
+            }
+
+            if (typeof options.sort === 'string') {
+                options.sort = options.sort.split(',');
+            }
+
             return new Promise((resolve, reject) => {
                 if (!modelType) {
                     return reject(new Error('find: modelType is required'));
@@ -247,11 +257,11 @@ export default function(dbAdapter, config) {
                     query._type = modelType;
                 }
 
-                let {error, value: validatedQuery} = queryValidator(this[modelType].schema, query);
+                let {error: queryError, value: validatedQuery} = queryValidator(this[modelType].schema, query);
 
 
-                if (error) {
-                    return reject(new ValidationError('malformed query', error));
+                if (queryError) {
+                    return reject(new ValidationError('malformed query', queryError));
                 }
 
                 this.adapter.find(modelType, validatedQuery, validatedOptions).then((data) => {
@@ -259,8 +269,8 @@ export default function(dbAdapter, config) {
                         return this.validate(modelType, item);
                     });
 
-
                     return resolve(Promise.all(promises));
+
                 }).catch((findError) => {
                     return reject(findError);
                 });
@@ -294,6 +304,10 @@ export default function(dbAdapter, config) {
         fetch(modelType, id, options) {
 
             options = options || {};
+
+            if (typeof options.fields === 'string') {
+                options.fields = options.fields.split(',');
+            }
 
             return new Promise((resolve, reject) => {
                 if (typeof modelType !== 'string') {

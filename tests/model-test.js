@@ -45,7 +45,7 @@ describe('Model', function() {
                     mixin: ['UnknownModel']
                 }
             }).catch((error) => {
-                expect(error.name).to.equal('ValidationError');
+                expect(error.name).to.equal('StructureError');
                 expect(error.message).to.equal('BadModel "mixin" is not allowed');
                 done();
             });
@@ -60,7 +60,7 @@ describe('Model', function() {
                     }
                 }
             }).catch((error) => {
-                expect(error.name).to.equal('ValidationError');
+                expect(error.name).to.equal('StructureError');
                 expect(error.message).to.equal('BadModel invalid type for property "title"');
                 done();
             });
@@ -77,7 +77,7 @@ describe('Model', function() {
                     }
                 }
             }).catch((error) => {
-                expect(error.name).to.equal('ValidationError');
+                expect(error.name).to.equal('StructureError');
                 expect(error.message).to.equal('BadModel invalid type for property "title"');
                 done();
             });
@@ -94,7 +94,7 @@ describe('Model', function() {
                     }
                 }
             }).catch((error) => {
-                expect(error.name).to.equal('ValidationError');
+                expect(error.name).to.equal('StructureError');
                 expect(error.message).to.equal("BadModel if property's type is \"array\" then \"items\" should be specified (properties.title)");
                 done();
             });
@@ -112,7 +112,7 @@ describe('Model', function() {
                     }
                 }
             }).catch((error) => {
-                expect(error.name).to.equal('ValidationError');
+                expect(error.name).to.equal('StructureError');
                 expect(error.message).to.equal('BadModel "arf" is not allowed (properties.title)');
                 done();
             });
@@ -129,7 +129,7 @@ describe('Model', function() {
                     }
                 }
             }).catch((error) => {
-                expect(error.name).to.equal('ValidationError');
+                expect(error.name).to.equal('StructureError');
                 expect(error.message).to.equal('BadModel invalid type for property "title"');
                 done();
             });
@@ -198,8 +198,7 @@ describe('Model', function() {
                     mixins: ['UnknownModel']
                 }
             }).catch((error) => {
-                expect(error.name).to.equal('ValidationError');
-                expect(error.message).to.equal('BadModel: unknown mixin "UnknownModel"');
+                expect(error.name).to.equal('StructureError');
                 done();
             });
         });
@@ -228,7 +227,7 @@ describe('Model', function() {
                     }
                 }
             }).catch((error) => {
-                expect(error.name).to.equal('ValidationError');
+                expect(error.name).to.equal('StructureError');
                 expect(error.message).to.equal('BadModel "badMethod" must be a Function (methods.badMethod)');
                 done();
             });
@@ -261,7 +260,7 @@ describe('Model', function() {
                     }
                 }
             }).catch((error) => {
-                expect(error.name).to.equal('ValidationError');
+                expect(error.name).to.equal('StructureError');
                 expect(error.message).to.equal('BadModel "badStaticMethod" must be a Function (statics.badStaticMethod)');
                 done();
             });
