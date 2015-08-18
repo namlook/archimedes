@@ -42,7 +42,12 @@ export default function(db, modelClass, attrs) {
 
 
         delete() {
-            return new Error('not implemented');
+            return new Promise((resolve, reject) => {
+                if (!this._id) {
+                    return reject(new Error("Can't delete a not saved model instance"));
+                }
+                return resolve(db.delete(this._type, this._id));
+            });
         },
 
 

@@ -226,6 +226,7 @@ export default function(dbAdapter, config) {
          *
          * @params {string} modelType - the model type
          * @params {?object} query - the query
+         * @params {?object} options
          * @returns {promise}
          */
         find(modelType, query, options) {
@@ -283,11 +284,12 @@ export default function(dbAdapter, config) {
          *
          * @params {string} modelType - the model type
          * @params {?object} query - the query
+         * @params {?object} options
          * @returns {promise}
          */
-        first(modelType, query) {
+        first(modelType, query, options) {
             return new Promise((resolve, reject) => {
-                this.find(modelType, query).then((results) => {
+                this.find(modelType, query, options).then((results) => {
                     var result;
                     if (results.length) {
                         result = results[0];
@@ -300,7 +302,15 @@ export default function(dbAdapter, config) {
         },
 
 
-
+        /**
+         * Returns a promise which resolve into a record
+         * which match the id
+         *
+         * @params {string} modelType - the model type
+         * @params {string} id - the model id
+         * @params {?object} options
+         * @returns a promise
+         */
         fetch(modelType, id, options) {
 
             options = options || {};
@@ -315,7 +325,7 @@ export default function(dbAdapter, config) {
                 }
 
                 if (typeof id !== 'string') {
-                    return reject(new Error('fetch: id required and should be a string'));
+                    return reject(new Error('fetch: id is required and should be a string'));
                 }
 
 

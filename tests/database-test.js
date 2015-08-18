@@ -293,7 +293,113 @@ describe('Database', function() {
                 console.log(error.stack);
             });
         });
+
+        it('should return a pojo with only the specified fields', (done) => {
+            db.sync('BlogPost', {
+                _id: 'thepost',
+                _type: 'BlogPost',
+                title: 'the post',
+                ratting: '4'
+            }).then(() => {
+                return db.first('BlogPost', {_id: 'thepost'}, {fields: ['ratting']});
+            }).then((result) => {
+                expect(result).to.be.an.object();
+                expect(result._id).to.equal('thepost');
+                expect(result.title).to.not.exists();
+                expect(result.ratting).to.equal(4);
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
     });
+
+
+    describe('#fetch()', function(){
+        it('should return a promise', (done) => {
+            let promise = db.fetch('BlogPost', 'foo');
+            expect(promise.then).to.be.a.function();
+            promise.then(() => {
+                done();
+            }).catch((error) => {
+                console.log(error);
+            });
+        });
+
+
+        it('should return a pojo that match the id', (done) => {
+            db.sync('BlogPost', {
+                _id: 'thepost',
+                _type: 'BlogPost',
+                title: 'the post'
+            }).then(() => {
+                return db.fetch('BlogPost', 'thepost');
+            }).then((result) => {
+                expect(result).to.be.an.object();
+                expect(result._id).to.equal('thepost');
+                expect(result.title).to.equal('the post');
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+
+        it('should return null if the id doesnt match', (done) => {
+            db.sync('BlogPost', {
+                _id: 'thepost',
+                _type: 'BlogPost',
+                title: 'the post'
+            }).then(() => {
+                return db.fetch('BlogPost', 'otherpost');
+            }).then((result) => {
+                expect(result).to.not.exists();
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+
+        it('should return a pojo with only the specified fields', (done) => {
+            db.sync('BlogPost', {
+                _id: 'thepost',
+                _type: 'BlogPost',
+                title: 'the post',
+                ratting: '4'
+            }).then(() => {
+                return db.fetch('BlogPost', 'thepost', {fields: ['ratting']});
+            }).then((result) => {
+                expect(result).to.be.an.object();
+                expect(result._id).to.equal('thepost');
+                expect(result.title).to.not.exists();
+                expect(result.ratting).to.equal(4);
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+
+        it('should reject if no model type is specified', (done) => {
+            db.fetch().catch((error) => {
+                expect(error).to.exist();
+                expect(error.message).to.equal('fetch: modelType is required and should be a string');
+                done();
+            });
+        });
+
+        it('should reject if no id is specified', (done) => {
+            db.fetch('BlogPost').catch((error) => {
+                expect(error).to.exist();
+                expect(error.message).to.equal('fetch: id is required and should be a string');
+                done();
+            });
+        });
+
+    });
+
 
     describe('#update()', function() {
         it('should return a promise', (done) => {

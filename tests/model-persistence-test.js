@@ -120,6 +120,225 @@ describe('Model persistence', function() {
         });
     });
 
+
+    describe('#first()', function(){
+        it('should return a promise', (done) => {
+            let promise = db.BlogPost.first({_id: 'foo'});
+            expect(promise.then).to.be.a.function();
+            promise.then(() => {
+                done();
+            }).catch((error) => {
+                console.log(error);
+            });
+        });
+
+
+        it('should return a model instance', (done) => {
+            let bp = db.BlogPost.create({_id: 'thepost', title: 'the post'});
+
+            bp.save().then(() => {
+                return db.BlogPost.first({_id: 'thepost'});
+            }).then((result) => {
+                expect(result).to.be.an.object();
+                expect(result.get('_id')).to.equal('thepost');
+                expect(result._archimedesModelInstance).to.be.true();
+                expect(result.get('title')).to.equal('the post');
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+
+        it('should return null if the id doesnt match', (done) => {
+            let bp = db.BlogPost.create({_id: 'thepost', title: 'the post'});
+
+            bp.save().then(() => {
+                return db.BlogPost.first({_id: 'otherpost'});
+            }).then((result) => {
+                expect(result).to.not.exists();
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+
+        it('should return a model instance with only the specified fields', (done) => {
+            let bp = db.BlogPost.create({
+                _id: 'thepost',
+                title: 'the post',
+                ratting: 4
+            });
+
+            bp.save().then(() => {
+                return db.BlogPost.first({_id: 'thepost'}, {fields: ['ratting']});
+            }).then((result) => {
+                expect(result).to.be.an.object();
+                expect(result.get('_id')).to.equal('thepost');
+                expect(result._archimedesModelInstance).to.be.true();
+                expect(result.get('title')).to.not.exists();
+                expect(result.get('ratting')).to.equal(4);
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+    });
+
+
+    describe('#fetch()', function(){
+        it('should return a promise', (done) => {
+            let promise = db.BlogPost.fetch('foo');
+            expect(promise.then).to.be.a.function();
+            promise.then(() => {
+                done();
+            }).catch((error) => {
+                console.log(error);
+            });
+        });
+
+
+        it('should return a model instance', (done) => {
+            let bp = db.BlogPost.create({_id: 'thepost', title: 'the post'});
+
+            bp.save().then(() => {
+                return db.BlogPost.fetch('thepost');
+            }).then((result) => {
+                expect(result).to.be.an.object();
+                expect(result.get('_id')).to.equal('thepost');
+                expect(result._archimedesModelInstance).to.be.true();
+                expect(result.get('title')).to.equal('the post');
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+
+        it('should return null if the id doesnt match', (done) => {
+            let bp = db.BlogPost.create({_id: 'thepost', title: 'the post'});
+
+            bp.save().then(() => {
+                return db.BlogPost.fetch('otherpost');
+            }).then((result) => {
+                expect(result).to.not.exists();
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+
+        it('should return a model instance with only the specified fields', (done) => {
+            let bp = db.BlogPost.create({
+                _id: 'thepost',
+                title: 'the post',
+                ratting: 4
+            });
+
+            bp.save().then(() => {
+                return db.BlogPost.fetch('thepost', {fields: ['ratting']});
+            }).then((result) => {
+                expect(result).to.be.an.object();
+                expect(result.get('_id')).to.equal('thepost');
+                expect(result._archimedesModelInstance).to.be.true();
+                expect(result.get('title')).to.not.exists();
+                expect(result.get('ratting')).to.equal(4);
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+
+        it('should reject if no id is specified', (done) => {
+            db.BlogPost.fetch().catch((error) => {
+                expect(error).to.exist();
+                expect(error.message).to.equal('fetch: id is required and should be a string');
+                done();
+            });
+        });
+    });
+
+
+   describe('#count()', function() {
+        it('should return a promise', (done) => {
+            expect(db.BlogPost.count().then).to.be.a.function();
+            done();
+        });
+
+        it('should return the number of documents', (done) => {
+            var data = [];
+            for (let i = 0; i < 10; i++) {
+                data.push({_id: `bp${i}`, _type: 'BlogPost', title: `post ${i}`, ratting: `${i % 5}`});
+            }
+            db.BlogPost.batchSync(data).then((savedData) => {
+                expect(savedData.length).to.equal(10);
+                return db.BlogPost.count();
+            }).then((total) => {
+                expect(total).to.equal(10);
+                done();
+            }).catch((error) => {
+                console.log(error.stack);
+            });
+        });
+
+        it('should return the number of documents that match the query', (done) => {
+            var data = [];
+            for (let i = 0; i < 10; i++) {
+                data.push({_id: `bp${i}`, _type: 'BlogPost', title: `post ${i}`, ratting: `${i % 5}`});
+            }
+            db.BlogPost.batchSync(data).then((savedData) => {
+                expect(savedData.length).to.equal(10);
+                return db.BlogPost.count({ratting: 3});
+            }).then((total) => {
+                expect(total).to.equal(2);
+                done();
+            }).catch((error) => {
+                console.log(error.stack);
+            });
+        });
+
+
+        it('should validate an cast the query', (done) => {
+            var data = [];
+            for (let i = 0; i < 10; i++) {
+                data.push({_id: `bp${i}`, _type: 'BlogPost', title: `post ${i}`, ratting: `${i % 5}`});
+            }
+            db.BlogPost.batchSync(data).then((savedData) => {
+                expect(savedData.length).to.equal(10);
+                return db.BlogPost.count({ratting: '3'});
+            }).then((total) => {
+                expect(total).to.equal(2);
+                done();
+            }).catch((error) => {
+                console.log(error.stack);
+            });
+        });
+
+
+        it('should reject if the query is invalid', (done) => {
+            db.BlogPost.count({arf: true}).catch((error) => {
+                expect(error).to.exist();
+                expect(error.message).to.equal('malformed query');
+                expect(error.extra).to.equal('unknown property "arf" on model "BlogPost"');
+                done();
+            });
+        });
+
+
+        it('should reject if query is not an object', (done) => {
+            db.BlogPost.count('foo').catch((error) => {
+                expect(error).to.exist();
+                expect(error.message).to.equal('count: query should be an object');
+                done();
+            });
+        });
+    });
+
+
     describe('#groupBy()', function() {
         it('should group the result by a property', (done) => {
             var data = [];

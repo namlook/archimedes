@@ -138,7 +138,37 @@ describe('Model instance persistance', function() {
                 console.log(error.stack);
             });
         });
+    });
 
+    describe('#delete()', () => {
+        it('should delete a model instance', (done) => {
+            let blogPost = db.BlogPost.create({_id: 'thepost', title: 'the post'});
+
+            blogPost.save().then(() => {
+                return db.BlogPost.fetch('thepost');
+            }).then((bp) => {
+                expect(bp.get('title')).to.equal('the post');
+                return bp.delete();
+            }).then(() => {
+                return db.BlogPost.fetch('thepost');
+            }).then((data) => {
+                expect(data).to.not.exists();
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+
+        it('should throw an error when trying to delete a not saved model instance', (done) => {
+            let blogPost = db.BlogPost.create({_id: 'thepost', title: 'the post'});
+
+            blogPost.delete().catch((error) => {
+                expect(error).to.exists();
+                expect(error.message).to.equal("Can't delete a not saved model instance");
+                done();
+            });
+        });
     });
 
 });

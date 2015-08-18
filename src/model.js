@@ -172,6 +172,7 @@ var modelFactory = function(db, name, modelClassSchema) {
          * that match the query
          *
          * @params {?object} query - the query
+         * @params {?object} options
          * @returns a promise
          */
         find(query, options) {
@@ -186,10 +187,11 @@ var modelFactory = function(db, name, modelClassSchema) {
          * Returns a promise which resolve a model instance that match the query
          *
          * @params {?object} query - the query
+         * @params {?object} options
          * @returns a promise
          */
-        first(query) {
-            return this.find(query).then((results) => {
+        first(query, options) {
+            return this.find(query, options).then((results) => {
                 var result;
                 if (results.length) {
                     result = results[0];
@@ -198,11 +200,31 @@ var modelFactory = function(db, name, modelClassSchema) {
             });
         },
 
-
-        fetch(id) {
-            return db.fetch(name, id);
+        /**
+         * Returns a promise which resolve into a model instance that match
+         * the id
+         *
+         * @params {string} id - the model id to fetch
+         * @params {?object} options
+         * @returns a promise
+         */
+        fetch(id, options) {
+            return db.fetch(name, id, options).then((pojo) => {
+                if (pojo) {
+                    return this.wrap(pojo);
+                }
+                return pojo;
+            });
         },
 
+        /**
+         * Returns a promise which resolve the number of record
+         * that match the query
+         *
+         * @params {string} modelType - the model type
+         * @params {?object} query
+         * @returns {promise}
+         */
         count(query) {
             return db.count(name, query);
         },
