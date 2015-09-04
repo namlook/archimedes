@@ -297,6 +297,19 @@ export default [
             'blogpost6'
         ]
     },
+    {
+        model: 'Comment',
+        query: {'author._id': 'user1'},
+        ids: [
+            'comment01',
+            'comment06',
+            'comment16',
+            'comment26',
+            'comment36',
+            'comment46',
+            'comment56'
+        ]
+    },
 
     /*** relations inverse ***/
     {
@@ -448,6 +461,12 @@ export default [
         query: {'comment.body': 'this thing rocks !'},
         error: 'malformed query',
         errorExtraMessage: 'unknown property "comment" on model "BlogPost"'
+    },
+    {
+        model: 'BlogPost',
+        query: {'ratting._id': 'foo'},
+        error: 'malformed query',
+        errorExtraMessage: 'cannot reach ratting._id on BlogPost: ratting is not a relation'
     },
 
     /*** bad options ***/

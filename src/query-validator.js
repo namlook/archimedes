@@ -1,6 +1,7 @@
 
 import _ from 'lodash';
 import joi from 'joi';
+import {ValidationError} from './errors';
 
 var allowedOperators = [
     '$eq',
@@ -43,6 +44,8 @@ var operatorValidator = joi.object().keys({
     $month: joi.number(),
     $day: joi.number()
 }).unknown(true);
+
+
 
 class QueryValidator {
     constructor(modelSchema) {
@@ -144,6 +147,10 @@ class QueryValidator {
                 } else if (_.isArray(propRelation)) {
                     filter[propertyName] = value;
                     return;
+                }
+
+                if (!propRelation.isRelation()) {
+                    throw new ValidationError('malformed query', `cannot reach ${propertyName} on ${this._modelSchema.name}: ${propRelation.name} is not a relation`);
                 }
 
                 let relationValidator = new QueryValidator(this._db[propRelation.type].schema);

@@ -280,10 +280,10 @@ export var query2whereClause = function(db, modelType, query, options) {
 
         var variableIdx = 0;
         var variable;
+
         if (propertyName === '_type') {
             variable = `?_type${variableIdx++}`;
-        }
-        else {
+        } else {
             variable = `?${_.camelCase(propertyName)}${variableIdx++}`;
         }
 
@@ -292,12 +292,21 @@ export var query2whereClause = function(db, modelType, query, options) {
             sorting[propertyName].expression = variable;
         }
 
+        let idAsValue = false;
+        if (_.endsWith(propertyName, '._id')) {
+            propertyName = propertyName.split('.').slice(0, -1).join('.');
+            let property = modelClass.schema.getProperty(propertyName);
+            if (!property.isRelation()) {
+                throw new ValidationError(`${propertyName}._id not found on model ${modelClass.name}: ${propertyName} is not a relation`, err);
+            }
+            idAsValue = true;
+        }
+
         var propertyUri = propertyRdfUri(modelClass, propertyName);
 
         let predicate;
         if (_.contains(propertyName, '.')) {
             predicate = propertyName2Sparson(db, propertyName);
-
         } else {
             predicate = propertyUri;
         }
@@ -317,6 +326,9 @@ export var query2whereClause = function(db, modelType, query, options) {
             object = {$eq: object};
         }
 
+        /**
+         * build values filter
+         */
         _.forOwn(object, (value, operator) => {
 
             let rdfValue;
@@ -324,6 +336,9 @@ export var query2whereClause = function(db, modelType, query, options) {
                 rdfValue = value.map((item) => {
                    return buildRdfValue(db, modelType, propertyName, item);
                 });
+            } else if (idAsValue) {
+                let relationProperty = modelClass.schema.getProperty(propertyName);
+                rdfValue = instanceRdfUri(db[relationProperty.type], value);
             } else {
                 rdfValue = buildRdfValue(db, modelType, propertyName, value);
             }
