@@ -38,6 +38,8 @@ var processDbTest = function(db, testQuery) {
                     console.log('------------------');
                     console.log('>>>', chalk.blue(inspect(testQuery, {depth: 10, colors: true})));
                     console.log('------------------');
+                    console.log(error);
+                    console.log(error.stack);
                     return reject(e);
                 }
                 return resolve();
@@ -60,6 +62,8 @@ var processDbTest = function(db, testQuery) {
                     console.log('------------------');
                     console.log('>>>', chalk.blue(inspect(testQuery, {depth: 10, colors: true})));
                     console.log('------------------');
+                    console.log(error);
+                    console.log(error.stack);
                     return reject(e);
                 }
 
