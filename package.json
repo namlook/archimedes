@@ -7,7 +7,7 @@
   "scripts": {
     "prepublish": "npm run build",
     "lint": "eslint src tests",
-    "build": "eslint src tests ;  babel src --optional runtime --out-dir lib --source-maps",
+    "build": "eslint src tests && babel src --optional runtime --out-dir lib --source-maps",
     "watch": "babel src --watch --optional runtime --out-dir lib --source-maps",
     "test": "eslint src tests && lab -T tests/transform.js tests -vSl",
     "coverage": "lab -T tests/transform.js -r html -o coverage.html tests"
@@ -34,6 +34,6 @@
     "n3": "^0.4.3",
     "querystring": "^0.2.0",
     "request": "^2.58.0",
-    "sparqljs": "^1.1.2"
+    "sparqljs": "git://github.com/namlook/SPARQL.js.git"
   }
 }
