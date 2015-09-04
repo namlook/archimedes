@@ -149,8 +149,10 @@ export default function(db, modelClass, attrs) {
             internals.attrs[name] = _.sortBy(_.without(propValues, ...values));
 
             if (internals.attrs[name].length === 0) {
-                this.unset(name);
+                // don't use unset() here, just remove the attribute from the object
+                delete internals.attrs[name];
             }
+
 
             return this;
         },
