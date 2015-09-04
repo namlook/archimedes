@@ -330,6 +330,10 @@ export default function(config) {
                         group: [
                             {expression: `?aggregatedPropertyName`}
                         ],
+                        order: [
+                            {expression: '?value', descending: true},
+                            {expression: '?aggregatedPropertyName'}
+                        ],
                         limit: 50
                     };
 
@@ -349,7 +353,7 @@ export default function(config) {
                         data.forEach((item) => {
                             results.push({
                                 label: item.aggregatedPropertyName.value,
-                                value: item.value.value
+                                value: parseFloat(item.value.value)
                             });
                         });
                         return resolve(results);
@@ -611,7 +615,6 @@ export default function(config) {
                             ]
                         });
                     }
-
 
                     try {
                         var sparql = new SparqlGenerator().stringify(sparson);

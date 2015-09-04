@@ -72,7 +72,7 @@ var processTest = function(db, testQuery) {
 };
 
 
-describe('group by', function(){
+describe('#groupBy()', function(){
 
     var db;
     before(function(done) {
