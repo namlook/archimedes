@@ -4,24 +4,24 @@ export default [
         model: 'User',
         groupBy: 'gender',
         results: [
-            { label: 'male', value: '3'},
-            { label: 'female', value: '2' }
+            { label: 'male', value: 3},
+            { label: 'female', value: 2 }
         ]
     },
     {
         model: 'User',
         groupBy: {property: 'gender'},
         results: [
-            { label: 'male', value: '3'},
-            { label: 'female', value: '2' }
+            { label: 'male', value: 3},
+            { label: 'female', value: 2 }
         ]
     },
     {
         model: 'User',
         groupBy: {property: 'gender', aggregation: 'count'},
         results: [
-            { label: 'male', value: '3'},
-            { label: 'female', value: '2' }
+            { label: 'male', value: 3},
+            { label: 'female', value: 2 }
         ]
     },
     {
@@ -32,8 +32,8 @@ export default [
             }
         },
         results: [
-            { label: 'male', value: '3'},
-            { label: 'female', value: '2' }
+            { label: 'male', value: 3},
+            { label: 'female', value: 2 }
         ]
     },
     {
@@ -41,7 +41,7 @@ export default [
         groupBy: 'gender',
         query: {gender: 'male'},
         results: [
-            { label: 'male', value: '3' }
+            { label: 'male', value: 3 }
         ]
     },
 
@@ -50,8 +50,8 @@ export default [
         model: 'BlogPost',
         groupBy: 'author.gender',
         results: [
-            { label: 'male', value: '6'},
-            { label: 'female', value: '4' }
+            { label: 'male', value: 6},
+            { label: 'female', value: 4 }
         ]
     },
 
@@ -64,8 +64,8 @@ export default [
             }
         },
         results: [
-            { label: 'male', value: '2.5'},
-            { label: 'female', value: '1.5' }
+            { label: 'male', value: 2.5 },
+            { label: 'female', value: 1.5 }
         ]
     },
 
@@ -78,8 +78,8 @@ export default [
             }
         },
         results: [
-            { label: 'male', value: '5'},
-            { label: 'female', value: '3' }
+            { label: 'male', value: 5},
+            { label: 'female', value: 3 }
         ]
     }
 ];

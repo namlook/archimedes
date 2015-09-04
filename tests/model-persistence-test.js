@@ -355,8 +355,8 @@ describe('Model persistence', function() {
                 return db.User.groupBy({property: 'gender', aggregation: 'count'});
             }).then((results) => {
                 expect(results).to.deep.equal([
-                    { label: 'female', value: '4' },
-                    { label: 'male', value: '6' }
+                    { label: 'male', value: 6 },
+                    { label: 'female', value: 4 }
                 ]);
                 done();
             }).catch((error) => {
@@ -381,7 +381,7 @@ describe('Model persistence', function() {
                     {property: 'gender', aggregation: 'count'},
                     {gender: 'male'});
             }).then((results) => {
-                expect(results).to.deep.equal([{ label: 'male', value: '6' }]);
+                expect(results).to.deep.equal([{ label: 'male', value: 6 }]);
                 done();
             }).catch((error) => {
                 console.log(error);
@@ -419,8 +419,8 @@ describe('Model persistence', function() {
                 );
             }).then((results) => {
                 expect(results).to.deep.equal([
-                    { label: 'female', value: '4' },
-                    { label: 'male', value: '6' }
+                    { label: 'male', value: 6 },
+                    { label: 'female', value: 4 }
                 ]);
                 done();
             }).catch((error) => {
@@ -448,8 +448,8 @@ describe('Model persistence', function() {
                 });
             }).then((results) => {
                 expect(results).to.deep.equal([
-                    { label: 'false', value: '1' },
-                    { label: 'true', value: '0.8' }
+                    { label: 'false', value: 1 },
+                    { label: 'true', value: 0.8 }
                 ]);
                 done();
             }).catch((error) => {
@@ -458,12 +458,25 @@ describe('Model persistence', function() {
             });
         });
 
-        it('should throw an error if the property is unknown', (done) => {
+        it('should throw an error if the property aggregator is unknown', (done) => {
             return db.User.groupBy({
-                property: 'ratting'
+                property: 'unknownProperty'
             }).catch((error) => {
                 expect(error).to.exist();
-                expect(error.message).to.equal('unknown property "ratting" on model "User"');
+                expect(error.message).to.equal('malformed aggregator');
+                expect(error.extra).to.equal('unknown property aggregator "unknownProperty" on model "User"');
+                done();
+            });
+        });
+
+        it('should throw an error if the property target is unknown', (done) => {
+            return db.User.groupBy({
+                property: 'gender',
+                aggregation: {operator: 'count', target: 'unknownProperty'}
+            }).catch((error) => {
+                expect(error).to.exist();
+                expect(error.message).to.equal('malformed aggregator');
+                expect(error.extra).to.equal('unknown property target "unknownProperty" on model "User"');
                 done();
             });
         });
@@ -475,6 +488,7 @@ describe('Model persistence', function() {
             }).catch((error) => {
                 expect(error).to.exist();
                 expect(error.message).to.equal('malformed aggregator');
+                expect(error.extra).to.equal('"operator" must be one of [count, sum, avg, min, max]');
                 done();
             });
         });
