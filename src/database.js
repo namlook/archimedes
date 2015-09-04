@@ -6,6 +6,7 @@ import queryValidator from './query-validator';
 import {findOptionsValidator} from './options-validator';
 import groupByValidator from './group-by-validator';
 
+
 var validPropertyTypes = [
     'string',
     'number',
@@ -414,7 +415,15 @@ export default function(dbAdapter, config) {
                 let {error: aggregatorError, value: validatedAggregator} = groupByValidator(aggregator);
 
                 if (aggregatorError) {
-                    return reject(new ValidationError('malformed aggregator', aggregatorError));
+                    return reject(new ValidationError('malformed aggregator', aggregatorError.details[0].message));
+                }
+
+                let modelSchema = this[modelType].schema;
+                if (!modelSchema.getProperty(validatedAggregator.property)) {
+                    return reject(new ValidationError('malformed aggregator', `unknown property aggregator "${validatedAggregator.property}" on model "${modelType}"`));
+                }
+                if (!modelSchema.getProperty(validatedAggregator.aggregation.target)) {
+                    return reject(new ValidationError('malformed aggregator', `unknown property target "${validatedAggregator.aggregation.target}" on model "${modelType}"`));
                 }
 
                 if (query && !_.isObject(query)) {
@@ -531,7 +540,10 @@ export default function(dbAdapter, config) {
                     promises.push(this.validate(modelType, pojo));
                 }
 
-                Promise.all(promises).then((pojos) => {
+                // return resolve(this.adapter.batchSync(modelType, data));
+
+
+                return Promise.all(promises).then((pojos) => {
                     resolve(this.adapter.batchSync(modelType, pojos));
                 }).catch((error) => {
                     reject(error);
@@ -563,6 +575,7 @@ export default function(dbAdapter, config) {
             });
         }
     };
+
 
 
     inner.adapter = dbAdapter(inner);

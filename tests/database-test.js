@@ -595,6 +595,27 @@ describe('Database', function() {
                 done();
             });
         });
+
+        it.skip('should handle 10000 records', (done) => {
+            let users = [];
+            for (let i = 0; i < 10000; i++) {
+                users.push({
+                    _id: `user${i}`,
+                    _type: 'User',
+                    name: `user ${i}`
+                });
+            }
+            db.batchSync('User', users).then(() => {
+                return db.count('User');
+            }).then((total) => {
+                console.log(total);
+                expect(total).to.equal(10000);
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
     });
 
 
@@ -629,14 +650,6 @@ describe('Database', function() {
                 console.log(error.stack);
             });
         });
-
-        // it('should reject if the id is not found', (done) => {
-        //     return db.delete('BlogPost', 'arf').catch((error) => {
-        //         expect(error).to.exist();
-        //         expect(error.message).to.equal('cannot found "arf" in database');
-        //         done();
-        //     });
-        // });
 
         it('should reject if no id is passed', (done) => {
             db.delete('BlogPost').catch((error) => {
@@ -740,6 +753,29 @@ describe('Database', function() {
             });
         });
 
+    });
+
+    describe('#stream()', () => {
+        it.skip('should return a readable stream', (done) => {
+            let users = [];
+            for (let i = 0; i < 300; i++) {
+                users.push({
+                    _id: `user${i}`,
+                    _type: 'User',
+                    name: `user ${i}`
+                });
+            }
+
+            db.batchSync('User', users).then(() => {
+                db.stream('User').then((stream) => {
+                    stream.pipe(process.stdout);
+                    done();
+                });
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
     });
 
     describe('#execute()', function() {
