@@ -42,11 +42,11 @@ describe('Model', function() {
 
             database().register({
                 BadModel: {
-                    mixin: ['UnknownModel']
+                    arf: ['UnknownModel']
                 }
             }).catch((error) => {
                 expect(error.name).to.equal('StructureError');
-                expect(error.message).to.equal('BadModel "mixin" is not allowed');
+                expect(error.message).to.equal('BadModel "arf" is not allowed (.arf)');
                 done();
             });
         });
@@ -113,7 +113,7 @@ describe('Model', function() {
                 }
             }).catch((error) => {
                 expect(error.name).to.equal('StructureError');
-                expect(error.message).to.equal('BadModel "arf" is not allowed (properties.title)');
+                expect(error.message).to.equal('BadModel "arf" is not allowed (properties.title.arf)');
                 done();
             });
         });
