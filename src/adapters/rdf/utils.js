@@ -297,7 +297,7 @@ export var query2whereClause = function(db, modelType, query, options) {
             propertyName = propertyName.split('.').slice(0, -1).join('.');
             let property = modelClass.schema.getProperty(propertyName);
             if (!property.isRelation()) {
-                throw new ValidationError(`${propertyName}._id not found on model ${modelClass.name}: ${propertyName} is not a relation`, err);
+                throw new ValidationError('Bad query', `${propertyName}._id not found on model ${modelClass.name}: ${propertyName} is not a relation`);
             }
             idAsValue = true;
         }

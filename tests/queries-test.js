@@ -34,13 +34,13 @@ var processDbTest = function(db, testQuery) {
                     if (error.extra) {
                         expect(error.extra).to.equal(testQuery.errorExtraMessage);
                     }
-                } catch (e) {
+                } catch (err) {
                     console.log('------------------');
                     console.log('>>>', chalk.blue(inspect(testQuery, {depth: 10, colors: true})));
                     console.log('------------------');
-                    console.log(error);
-                    console.log(error.stack);
-                    return reject(e);
+                    console.log(err);
+                    console.log(err.stack);
+                    return reject(err);
                 }
                 return resolve();
             });
@@ -58,13 +58,13 @@ var processDbTest = function(db, testQuery) {
                     if (testQuery.results) {
                         expect(results).to.deep.equal(testQuery.results);
                     }
-                } catch(e) {
+                } catch(error) {
                     console.log('------------------');
                     console.log('>>>', chalk.blue(inspect(testQuery, {depth: 10, colors: true})));
                     console.log('------------------');
                     console.log(error);
                     console.log(error.stack);
-                    return reject(e);
+                    return reject(error);
                 }
 
                 return resolve();
