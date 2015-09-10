@@ -1,5 +1,6 @@
 
 import _ from 'lodash';
+import uuid from 'uuid';
 import modelFactory from './model';
 import {ValidationError, StructureError} from './errors';
 import queryValidator from './query-validator';
@@ -172,9 +173,10 @@ export default function(dbAdapter, config) {
          * @returns {string} - the model id
          */
         buildModelId() {
-            let now = new Date();
-            let rand = Math.floor(Math.random() * 10000);
-            return parseInt(rand).toString(36) + parseInt(now.getTime()).toString(36);
+            return uuid.v4();
+            // let now = new Date();
+            // let rand = Math.floor(Math.random() * 10000);
+            // return parseInt(rand).toString(36) + parseInt(now.getTime()).toString(36);
         },
 
 

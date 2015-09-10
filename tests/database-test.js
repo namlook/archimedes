@@ -12,6 +12,7 @@ import store from './db';
 import archimedes from '../lib/database';
 
 import _ from 'lodash';
+import uuid from 'uuid';
 
 describe('Database', function() {
 
@@ -470,6 +471,9 @@ describe('Database', function() {
             }).then((savedPojo) => {
                 savedPojoId = savedPojo._id;
                 expect(savedPojo._id).to.exist();
+
+                expect(uuid.parse(savedPojoId)[0]).to.not.equal(0);
+
                 expect(savedPojo._type).to.equal('BlogPost');
                 expect(savedPojo.title).to.equal('the post');
                 expect(savedPojo.ratting).to.equal(4);
