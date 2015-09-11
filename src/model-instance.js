@@ -17,13 +17,21 @@ export default function(db, modelClass, attrs) {
         _type: modelClass.name,
         db: db,
 
+
+        /**
+         * Store the instance into the database.
+         * If the instance is already saved (ie has an id), then
+         * an update is performed, otherwise a sync is fired.
+         *
+         * @returns a promise which resolve into the saved document
+         */
         save() {
             return new Promise((resolve, reject) => {
                 if (!this._id) {
                     db.sync(this._type, this.attrs()).then((pojo) => {
                         let modelInstance = this.Model.wrap(pojo);
                         this._id = pojo._id;
-                        this.set('_id', pojo._id);
+                        _.set(internals.attrs, '_id', pojo._id);
                         this.clearPending();
                         return resolve(modelInstance);
                     }).catch(reject);
@@ -51,7 +59,6 @@ export default function(db, modelClass, attrs) {
         },
 
 
-        // get: // use _.partial and _get ?
         /**
          * Returns the property value
          *
@@ -63,7 +70,6 @@ export default function(db, modelClass, attrs) {
         },
 
 
-        // set: // use _.partial and _.set ?
         /**
          * Sets the property value
          *
@@ -73,6 +79,18 @@ export default function(db, modelClass, attrs) {
          */
         set(name, value) {
             let oldValue = this.get(name);
+
+            // if the property is an array, make a full replacement
+            // by using the push/pull operators
+            let property = this.Model.schema.getProperty(name);
+            if (property.isArray()) {
+                if (oldValue != null) {
+                    this.pull(name, oldValue);
+                }
+                this.push(name, value);
+                return this;
+            }
+
             if (oldValue != null) {
                 internals.pendingOperations.push({operator: 'unset', property: name, value: oldValue});
             }
@@ -90,6 +108,14 @@ export default function(db, modelClass, attrs) {
          */
         unset(name) {
             let value = this.get(name);
+
+            // if the property is an array, unset via the pull operator
+            let property = this.Model.schema.getProperty(name);
+            if (property.isArray()) {
+                this.pull(name, value);
+                return this;
+            }
+
             internals.pendingOperations.push({operator: 'unset', property: name, value: value});
             delete internals.attrs[name];
             return this;
@@ -118,7 +144,9 @@ export default function(db, modelClass, attrs) {
 
             values = _.flatten(values);
 
-            internals.pendingOperations.push({operator: 'push', property: name, value: values});
+            for (let i = 0; i < values.length; i++) {
+                internals.pendingOperations.push({operator: 'push', property: name, value: values[i]});
+            }
 
 
             values = _.uniq(propValues.concat(values));
@@ -144,7 +172,9 @@ export default function(db, modelClass, attrs) {
                 values = [values];
             }
 
-            internals.pendingOperations.push({operator: 'pull', property: name, value: values});
+            for (let i = 0; i < values.length; i++) {
+                internals.pendingOperations.push({operator: 'pull', property: name, value: values[i]});
+            }
 
             internals.attrs[name] = _.sortBy(_.without(propValues, ...values));
 
@@ -166,13 +196,6 @@ export default function(db, modelClass, attrs) {
          */
         validate() {
             return db.validate(this._type, internals.attrs);
-            // return new Promise((resolve, reject) => {
-            //     let {error, value} = this.Model.schema.validate(internals.attrs);
-            //     if (error) {
-            //         return reject(new ValidationError('Bad value', error));
-            //     }
-            //     return resolve(value);
-            // });
         },
 
 
@@ -184,12 +207,29 @@ export default function(db, modelClass, attrs) {
             return JSON.stringify(this.attrs());
         },
 
+        /**
+         * Returns all pending operations. An operations is represented as:
+         *
+         *  {
+         *      operator: <string>, // set/unset/pull/push
+         *      property: <string>, // the propertyName
+         *      value: <any>, // the value of the operation
+         *  }
+         *
+         * @returns an array of all pending operations
+         */
         pending() {
             return internals.pendingOperations;
         },
 
+        /**
+         * Clears all pending operations
+         *
+         * @returns this
+         */
         clearPending() {
             internals.pendingOperations = [];
+            return this;
         }
     };
 }

@@ -32,20 +32,74 @@ describe('Model instance persistance', function() {
     });
 
     describe('#pending()', function() {
-        it('should return the pending operations', (done) => {
+
+        it('should return all pending operations', (done) => {
             let blogPost = db.BlogPost.create();
-            blogPost.set('title', 'the title')
-                    .set('isPublished', true)
-                    .push('tags', ['foo', 'bar'])
-                    .push('tags', 'baz');
+            blogPost.set('title', 'the title');
+            blogPost.set('tags', ['foo', 'bar']);
+
             let pending = blogPost.pending();
-            expect(pending.length).to.equal(4);
-            expect(pending).to.deep.equal([
-                { operator: 'set', property: 'title', value: 'the title' },
-                { operator: 'set', property: 'isPublished', value: true },
-                { operator: 'push', property: 'tags', value: [ 'foo', 'bar' ] },
-                { operator: 'push', property: 'tags', value: [ 'baz' ] }
-            ]);
+            expect(pending.length).to.equal(3);
+
+            expect(pending[0].operator).to.equal('set');
+            expect(pending[0].property).to.equal('title');
+            expect(pending[0].value).to.equal('the title');
+
+            expect(pending[1].operator).to.equal('push');
+            expect(pending[1].property).to.equal('tags');
+            expect(pending[1].value).to.equal('foo');
+
+            expect(pending[2].operator).to.equal('push');
+            expect(pending[2].property).to.equal('tags');
+            expect(pending[2].value).to.equal('bar');
+
+
+            blogPost.set('title', 'new title');
+            blogPost.set('tags', ['toto', 'titi']);
+
+            pending = blogPost.pending();
+
+            expect(pending[3].operator).to.equal('unset');
+            expect(pending[3].property).to.equal('title');
+            expect(pending[3].value).to.equal('the title');
+
+            expect(pending[4].operator).to.equal('set');
+            expect(pending[4].property).to.equal('title');
+            expect(pending[4].value).to.equal('new title');
+
+            expect(pending[5].operator).to.equal('pull');
+            expect(pending[5].property).to.equal('tags');
+            expect(pending[5].value).to.equal('bar');
+
+            expect(pending[6].operator).to.equal('pull');
+            expect(pending[6].property).to.equal('tags');
+            expect(pending[6].value).to.equal('foo');
+
+            expect(pending[7].operator).to.equal('push');
+            expect(pending[7].property).to.equal('tags');
+            expect(pending[7].value).to.equal('toto');
+
+            expect(pending[8].operator).to.equal('push');
+            expect(pending[8].property).to.equal('tags');
+            expect(pending[8].value).to.equal('titi');
+
+            blogPost.unset('title');
+            blogPost.unset('tags');
+
+            pending = blogPost.pending();
+
+            expect(pending[9].operator).to.equal('unset');
+            expect(pending[9].property).to.equal('title');
+            expect(pending[9].value).to.equal('new title');
+
+            expect(pending[10].operator).to.equal('pull');
+            expect(pending[10].property).to.equal('tags');
+            expect(pending[10].value).to.equal('titi');
+
+            expect(pending[11].operator).to.equal('pull');
+            expect(pending[11].property).to.equal('tags');
+            expect(pending[11].value).to.equal('toto');
+
             done();
         });
     });
@@ -90,6 +144,33 @@ describe('Model instance persistance', function() {
             });
         });
 
+        it('should keep the integrity after many operations', (done) => {
+            let blogPost = db.BlogPost.create();
+            expect(blogPost._id).to.not.exist();
+
+            blogPost.set('title', 'the title')
+                    .set('isPublished', true)
+                    .push('tags', ['foo', 'bar'])
+                    .push('tags', 'baz');
+
+
+            blogPost.save().then((savedBlogPost) => {
+                expect(blogPost._id).to.exist();
+                blogPost.set('isPublished', false);
+                blogPost.pull('tags', ['baz', 'foo']);
+                blogPost.push('tags', 'arf');
+                return blogPost.save();
+            }).then(() => {
+                return db.fetch(blogPost._type, blogPost._id);
+            }).then((fetchedBlogPost) => {
+                expect(fetchedBlogPost).to.deep.equal(blogPost.attrs());
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+
 
         it('should clear all pending operations', (done) => {
             let blogPost = db.BlogPost.create();
@@ -98,7 +179,7 @@ describe('Model instance persistance', function() {
                     .push('tags', ['foo', 'bar'])
                     .push('tags', 'baz');
 
-            expect(blogPost.pending().length).to.equal(4);
+            expect(blogPost.pending().length).to.equal(5);
             blogPost.save().then((savedBlogPost) => {
                 expect(blogPost.pending().length).to.equal(0);
                 expect(savedBlogPost.pending().length).to.equal(0);

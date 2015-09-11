@@ -47,6 +47,19 @@ describe('Model Instance', function() {
             done();
         });
 
+        it('should replace a property array', (done) => {
+            let blogPost = db.BlogPost.create();
+            expect(blogPost.attrs().tags).to.not.exist();
+            blogPost.set('tags', ['foo', 'bar']);
+            expect(blogPost.attrs().tags).to.only.include(['foo', 'bar']);
+            blogPost.set('tags', ['toto', 'titi']);
+            expect(blogPost.attrs().tags).to.only.include(['toto', 'titi']);
+            blogPost.set('tags', 'foo');
+            expect(blogPost.attrs().tags).to.be.an.array();
+            blogPost.validate().then(() => {
+                done();
+            });
+        });
 
         it('should return the model instance', (done) => {
             let blogPost = db.BlogPost.create();
@@ -57,7 +70,6 @@ describe('Model Instance', function() {
             expect(modelInstance.attrs().title).to.equal('the title');
             done();
         });
-
     });
 
 
@@ -194,5 +206,4 @@ describe('Model Instance', function() {
             done();
         });
     });
-
 });

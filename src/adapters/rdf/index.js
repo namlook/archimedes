@@ -572,35 +572,35 @@ export default function(config) {
 
 
                     var objectVariableIndex = 0;
-                    var deletewhereTriples = [];
+                    // var deletewhereTriples = [];
                     var insertTriples = operations.map((operation) => {
                         if (_.contains(['set', 'push'], operation.operator)) {
                             let triple = operation2triple(db, modelType, uri, operation);
-                            deletewhereTriples.push([{
-                                subject: uri,
-                                predicate: triple.predicate,
-                                object: `?o${objectVariableIndex++}`
-                            }]);
+                            // deletewhereTriples.push([{
+                            //     subject: uri,
+                            //     predicate: triple.predicate,
+                            //     object: `?o${objectVariableIndex++}`
+                            // }]);
                             return triple;
                         }
                     });
                     insertTriples = _.compact(insertTriples);
 
 
-                    if (deletewhereTriples.length) {
-                        deletewhereTriples.forEach((dwTriples) => {
-                            sparson.updates.push({
-                                updateType: 'deletewhere',
-                                delete: [
-                                    {
-                                        type: 'graph',
-                                        name: config.graphUri,
-                                        triples: dwTriples
-                                    }
-                                ]
-                            });
-                        });
-                    }
+                    // if (deletewhereTriples.length) {
+                    //     deletewhereTriples.forEach((dwTriples) => {
+                    //         sparson.updates.push({
+                    //             updateType: 'deletewhere',
+                    //             delete: [
+                    //                 {
+                    //                     type: 'graph',
+                    //                     name: config.graphUri,
+                    //                     triples: dwTriples
+                    //                 }
+                    //             ]
+                    //         });
+                    //     });
+                    // }
 
 
                     if (insertTriples.length) {
@@ -616,11 +616,24 @@ export default function(config) {
                         });
                     }
 
+                    // console.log(' ');
+                    // console.log(' ');
+                    // console.log(' ');
+                    // console.dir(sparson, {depth: 10});
+                    // console.log(' ');
+                    // console.log(' ');
+                    // console.log(' ');
+
                     try {
                         var sparql = new SparqlGenerator().stringify(sparson);
                     } catch(sparqlGeneratorError) {
                         return reject(sparqlGeneratorError);
                     }
+
+                    // console.log(sparql);
+                    // console.log(' ');
+                    // console.log(' ');
+                    // console.log(' ');
 
                     this.execute(sparql).then(() => {
                         return resolve();
