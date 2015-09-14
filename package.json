@@ -29,7 +29,7 @@
   },
   "dependencies": {
     "joi": "^6.5.0",
-    "lodash": "^3.9.3",
+    "lodash": "3.10.1",
     "moment": "^2.10.3",
     "n3": "^0.4.3",
     "querystring": "^0.2.0",
