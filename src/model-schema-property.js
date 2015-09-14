@@ -155,6 +155,16 @@ export default class ModelSchemaProperty {
         return this._validator.validate(value);
     }
 
+    validateItem(value) {
+        if (!this.isArray()) {
+            throw new Error(`validateItem: the property ${this.name} is not an array`);
+        }
+        value = [value];
+        let {error, value: validatedValue} = this._validator.validate(value);
+        value = validatedValue[0];
+        return {error, value};
+    }
+
     fixture() {
         var value;
         if (this.isRelation()) {

@@ -6,6 +6,7 @@ import {ValidationError, StructureError} from './errors';
 import queryValidator from './query-validator';
 import {findOptionsValidator} from './options-validator';
 import groupByValidator from './group-by-validator';
+import operationsValidator from './operations-validator';
 
 
 var validPropertyTypes = [
@@ -221,6 +222,37 @@ export default function(dbAdapter, config) {
 
                 }
 
+            });
+        },
+
+        _validateOperations(modelType, operations) {
+            return new Promise((resolve, reject) => {
+                let modelSchema = this[modelType].schema;
+                operationsValidator(operations).then(() => {
+                    operations.forEach((operation) => {
+                        let property = modelSchema.getProperty(operation.property);
+                        if (!property) {
+                            return reject(new ValidationError('Unknown property',
+                                `unknown property "${operation.property}" on model "${modelType}"`));
+                        }
+
+                        let validationResults;
+                        if (property.isArray()) {
+                            validationResults = property.validateItem(operation.value);
+                        } else {
+                            validationResults = property.validate(operation.value);
+                        }
+
+                        let {error, value} = validationResults;
+                        if (error) {
+                            return reject(new ValidationError('Bad value', error));
+                        }
+                        operation.value = value;
+                    });
+                    return resolve(operations);
+                }).catch((error) => {
+                    return reject(new ValidationError('Bad operations', error));
+                });
             });
         },
 
@@ -466,7 +498,11 @@ export default function(dbAdapter, config) {
                     return reject(new Error('update: operations should be an array'));
                 }
 
-                return resolve(this.adapter.update(modelType, modelId, operations));
+                this._validateOperations(modelType, operations).then((validatedOperations) => {
+                    return resolve(this.adapter.update(modelType, modelId, validatedOperations));
+                }).catch((error) => {
+                    return reject(error);
+                });
             });
         },
 

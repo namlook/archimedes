@@ -571,7 +571,7 @@ export default function(config) {
                     }
 
 
-                    var objectVariableIndex = 0;
+                    // var objectVariableIndex = 0;
                     // var deletewhereTriples = [];
                     var insertTriples = operations.map((operation) => {
                         if (_.contains(['set', 'push'], operation.operator)) {

@@ -418,6 +418,7 @@ describe('Database', function() {
             db.sync('BlogPost', {_id: 'thepost', title: 'the post'}).then(() => {
                 return db.update('BlogPost', 'thepost', [
                     {operator: 'set', property: 'isPublished', value: true},
+                    {operator: 'unset', property: 'title', value: 'the post'},
                     {operator: 'set', property: 'title', value: 'new title'}
                 ]);
             }).then(() => {
@@ -430,6 +431,56 @@ describe('Database', function() {
                 console.log(error);
                 console.log(error.stack);
             });
+        });
+
+        it('should cast the values if needed', (done) => {
+            db.sync('BlogPost', {_id: 'thepost', title: 'the post'}).then(() => {
+                return db.update('BlogPost', 'thepost', [
+                    {operator: 'set', property: 'isPublished', value: 'true'},
+                    {operator: 'set', property: 'publishedDate', value: '1984-08-02T22:00:00.000Z'}
+                ]);
+            }).then(() => {
+                return db.fetch('BlogPost', 'thepost');
+            }).then((doc) => {
+                expect(doc.isPublished).to.be.a.boolean();
+                expect(doc.publishedDate).to.be.a.date();
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+
+        describe('should validate the operations before syncing', function() {
+
+            it('and throw an error when the property is unknown', (done) => {
+                db.sync('BlogPost', {_id: 'thepost', title: 'the post'}).then(() => {
+                    return db.update('BlogPost', 'thepost', [
+                        {operator: 'set', property: 'unknownProperty', value: 'arf'}
+                    ]);
+                }).catch((error) => {
+                    expect(error).to.exist();
+                    expect(error.name).to.equal('ValidationError');
+                    expect(error.message).to.equal('Unknown property');
+                    expect(error.extra).to.equal('unknown property "unknownProperty" on model "BlogPost"');
+                    done();
+                });
+            });
+
+            it('and throw an error if the value is bad', (done) => {
+                db.sync('BlogPost', {_id: 'thepost', title: 'the post'}).then(() => {
+                    return db.update('BlogPost', 'thepost', [
+                        {operator: 'set', property: 'isPublished', value: 'arf'}
+                    ]);
+                }).catch((error) => {
+                    expect(error).to.exist();
+                    expect(error.name).to.equal('ValidationError');
+                    expect(error.message).to.equal('Bad value');
+                    expect(error.extra).to.equal('"isPublished" must be a boolean');
+                    done();
+                });
+            });
+
         });
 
         it('should reject if the operations are not an array', (done) => {
