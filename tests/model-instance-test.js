@@ -206,4 +206,68 @@ describe('Model Instance', function() {
             done();
         });
     });
+
+    describe('#toJsonApi()', function() {
+        it('should convert an instance into json api format', (done) => {
+            let blogPost = db.BlogPost.create({
+                _id: 'thepost',
+                title: 'the post',
+                publishedDate: new Date(2015, 8, 14),
+                isPublished: true,
+                ratting: 3,
+                tags: ['foo', 'bar'],
+                author: {_id: 'user1', _type: 'User'},
+                comments: [
+                    {_id: 'comment1', _type: 'Comment'},
+                    {_id: 'comment2', _type: 'Comment'}
+                ]
+            });
+
+            let jsonApi = blogPost.toJsonApi();
+            expect(jsonApi.data).to.be.an.object();
+            expect(jsonApi.data.type).to.equal('BlogPost');
+            expect(jsonApi.data.id).to.equal('thepost');
+            expect(jsonApi.data.title).to.not.exist();
+            expect(jsonApi.data.attributes).to.be.an.object();
+            expect(jsonApi.data.attributes.title).to.equal('the post');
+            expect(jsonApi.data.attributes).to.only.include([
+                'title', 'publishedDate', 'isPublished', 'ratting', 'tags']);
+            expect(jsonApi.data.attributes.tags).to.be.an.array();
+            expect(jsonApi.data.attributes.tags).to.only.include(['foo', 'bar']);
+            expect(jsonApi.data.relationships).to.be.an.object();
+            expect(jsonApi.data.relationships).to.only.include(['author', 'comments']);
+            expect(jsonApi.data.relationships.author.data).to.be.an.object();
+            expect(jsonApi.data.relationships.author.data.id).to.equal('user1');
+            expect(jsonApi.data.relationships.author.data.type).to.equal('User');
+            expect(jsonApi.data.relationships.comments.data).to.be.an.array();
+            expect(jsonApi.data.relationships.comments.data[0].id).to.equal('comment1');
+            expect(jsonApi.data.relationships.comments.data[0].type).to.equal('Comment');
+            done();
+        });
+
+        it('should not include the id if not exists', (done) => {
+            let blogPost = db.BlogPost.create({
+                title: 'the post'
+            });
+
+            let jsonApi = blogPost.toJsonApi();
+            expect(jsonApi.data.id).to.not.exist();
+            expect(jsonApi.data.type).to.equal('BlogPost');
+            expect(jsonApi.data.attributes.title).to.equal('the post');
+            expect(jsonApi.data.relationships).to.not.exist();
+            done();
+        });
+
+        it('should not include attributes if not needed', (done) => {
+            let blogPost = db.BlogPost.create({
+                author: {_id: 'user1', _type: 'User'}
+            });
+
+            let jsonApi = blogPost.toJsonApi();
+            expect(jsonApi.data.id).to.not.exist();
+            expect(jsonApi.data.type).to.equal('BlogPost');
+            expect(jsonApi.data.attributes).to.not.exist();
+            done();
+        });
+    });
 });

@@ -245,6 +245,66 @@ export default function(db, modelClass, attrs) {
         },
 
         /**
+         * Returns the model instance as into valid json api format
+         *
+         * @returns {object}
+         */
+        toJsonApi() {
+
+            let attributes = {};
+            let relationships = {};
+
+            this.Model.schema.properties.forEach((property) => {
+                let value = this.get(property.name);
+
+                if (property.isRelation()) {
+                    if (property.isArray()) {
+                        if (value && !_.isEmpty(value)) {
+                            value = value.map((o) => {
+                                return {id: o._id, type: o._type};
+                            });
+                        } else {
+                            value = null;
+                        }
+                    } else if (value) {
+                        value = {id: value._id, type: value._type};
+                    }
+
+                    if (value != null) {
+                        relationships[property.name] = {
+                            data: value
+                        };
+                    }
+                } else {
+                    if (value != null) {
+                        attributes[property.name] = value;
+                    }
+                }
+
+            });
+
+            let jsonApiData = {
+                data: {
+                    type: modelClass.name
+                }
+            };
+
+            if (this.get('_id')) {
+                jsonApiData.data.id = this.get('_id');
+            }
+
+            if (!_.isEmpty(attributes)) {
+                jsonApiData.data.attributes = attributes;
+            }
+
+            if (!_.isEmpty(relationships)) {
+                jsonApiData.data.relationships = relationships;
+            }
+
+            return jsonApiData;
+        },
+
+        /**
          * Returns all pending operations. An operations is represented as:
          *
          *  {
