@@ -102,6 +102,36 @@ describe('Model instance persistance', function() {
 
             done();
         });
+
+        it('should not add operation if the value is the same', (done) => {
+            let blogPost = db.BlogPost.create({title: 'the post'});
+            blogPost.set('title', 'the post');
+            expect(blogPost.pending()).to.be.empty();
+            blogPost.set('isPublished', false);
+            expect(blogPost.pending().length).to.equal(1);
+            blogPost.set('isPublished', false);
+            expect(blogPost.pending().length).to.equal(1);
+            blogPost.set('publishedDate', new Date(Date.UTC(1984, 7, 3)));
+            expect(blogPost.pending().length).to.equal(2);
+            blogPost.set('publishedDate', '1984-08-03');
+            expect(blogPost.pending().length).to.equal(2);
+            done();
+        });
+
+        it('should not push operation if the value is already present', (done) => {
+            let dates = [
+                new Date(1984, 7, 3),
+                new Date(1987, 5, 1),
+                new Date(2015, 6, 30)];
+            let blogPost = db.GenericType.create({dates: dates});
+            expect(blogPost.pending()).to.be.empty();
+            blogPost.push('dates', new Date(1984, 7, 3));
+            expect(blogPost.pending()).to.be.empty();
+            blogPost.push('dates', new Date(2011, 2, 25));
+            expect(blogPost.pending().length).to.equal(1);
+            done();
+        });
+
     });
 
 
@@ -154,7 +184,7 @@ describe('Model instance persistance', function() {
                     .push('tags', 'baz');
 
 
-            blogPost.save().then((savedBlogPost) => {
+            blogPost.save().then(() => {
                 expect(blogPost._id).to.exist();
                 blogPost.set('isPublished', false);
                 blogPost.pull('tags', ['baz', 'foo']);

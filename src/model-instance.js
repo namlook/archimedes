@@ -80,22 +80,31 @@ export default function(db, modelClass, attrs) {
         set(name, value) {
             let oldValue = this.get(name);
 
+            let property = this.Model.schema.getProperty(name);
             // if the property is an array, make a full replacement
             // by using the push/pull operators
-            let property = this.Model.schema.getProperty(name);
             if (property.isArray()) {
+
                 if (oldValue != null) {
                     this.pull(name, oldValue);
                 }
                 this.push(name, value);
-                return this;
+
+            } else {
+                let {value: validatedValue} = property.validate(value);
+
+                if (_.isEqual(oldValue, validatedValue)) {
+                    return this;
+                }
+
+                if (oldValue != null) {
+                    internals.pendingOperations.push({operator: 'unset', property: name, value: oldValue});
+                }
+                internals.pendingOperations.push({operator: 'set', property: name, value: value});
+                _.set(internals.attrs, name, value);
+
             }
 
-            if (oldValue != null) {
-                internals.pendingOperations.push({operator: 'unset', property: name, value: oldValue});
-            }
-            internals.pendingOperations.push({operator: 'set', property: name, value: value});
-            _.set(internals.attrs, name, value);
             return this;
         },
 
@@ -113,11 +122,11 @@ export default function(db, modelClass, attrs) {
             let property = this.Model.schema.getProperty(name);
             if (property.isArray()) {
                 this.pull(name, value);
-                return this;
+            } else {
+                internals.pendingOperations.push({operator: 'unset', property: name, value: value});
+                delete internals.attrs[name];
             }
 
-            internals.pendingOperations.push({operator: 'unset', property: name, value: value});
-            delete internals.attrs[name];
             return this;
         },
 
@@ -136,22 +145,41 @@ export default function(db, modelClass, attrs) {
                 return this;
             }
 
-            let propValues = internals.attrs[name] || [];
-
             if (!_.isArray(values)) {
                 values = [values];
             }
 
             values = _.flatten(values);
 
+            let property = this.Model.schema.getProperty(name);
+            values = property.validate(values).value;
+
+
+            let oldValues = internals.attrs[name] || [];
+            let acceptedValues = [];
+
+            let isNewValue = function(value) {
+                return !_.findLast(oldValues, (item) => {
+                    return _.isEqual(item, value);
+                });
+            };
+
             for (let i = 0; i < values.length; i++) {
-                internals.pendingOperations.push({operator: 'push', property: name, value: values[i]});
+
+                /**
+                 * Only append value that don't already exists
+                 */
+                if (isNewValue(values[i])) {
+                    internals.pendingOperations.push({operator: 'push', property: name, value: values[i]});
+                    acceptedValues.push(values[i]);
+                }
             }
 
+            let uniqValues = _.uniq(oldValues.concat(acceptedValues), (item) => {
+                return JSON.stringify(item);
+            });
 
-            values = _.uniq(propValues.concat(values));
-
-            internals.attrs[name] = _.sortBy(values);
+            internals.attrs[name] = _.sortBy(uniqValues);
 
             return this;
         },

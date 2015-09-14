@@ -31,7 +31,7 @@ describe('ModelSchema', function() {
 
     it('should returns all model property infos', (done) => {
         let properties = db.BlogPost.schema.properties;
-        expect(properties.length).to.equal(11);
+        expect(properties.length).to.equal(12);
         done();
     });
 

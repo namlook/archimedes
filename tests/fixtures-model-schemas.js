@@ -87,7 +87,16 @@ export default {
                 items: 'string'
             },
             updatedDate: 'date',
+            publishedDate: 'date',
             isPublished: 'boolean'
+        }
+    },
+    GenericType: {
+        properties: {
+            dates: {
+                type: 'array',
+                items: 'date'
+            }
         }
     }
 };
