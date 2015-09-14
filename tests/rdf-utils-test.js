@@ -25,7 +25,7 @@ describe('Rdf utils', function() {
     var db;
     before(function(done) {
         triplestore({
-            graphUri: 'http://test.org',
+            graphUri: 'http://tests.archimedes.org',
             endpoint: 'http://localhost:8890/sparql' // not used here
         }).register(modelSchemas)
           .then((registeredDb) => {
@@ -47,17 +47,17 @@ describe('Rdf utils', function() {
             };
             let triples = pojo2triples(db, 'BlogPost', pojo);
             expect(triples).to.deep.equal([
-              { subject: 'http://test.org/instances/foo',
+              { subject: 'http://tests.archimedes.org/instances/foo',
                 predicate: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type',
-                object: 'http://test.org/classes/BlogPost' },
-              { subject: 'http://test.org/instances/foo',
-                predicate: 'http://test.org/properties/title',
+                object: 'http://tests.archimedes.org/classes/BlogPost' },
+              { subject: 'http://tests.archimedes.org/instances/foo',
+                predicate: 'http://tests.archimedes.org/properties/title',
                 object: '"the title"' },
-              { subject: 'http://test.org/instances/foo',
-                predicate: 'http://test.org/properties/ratting',
+              { subject: 'http://tests.archimedes.org/instances/foo',
+                predicate: 'http://tests.archimedes.org/properties/ratting',
                 object: '"5"^^http://www.w3.org/2001/XMLSchema#integer' },
-              { subject: 'http://test.org/instances/foo',
-                predicate: 'http://test.org/properties/isPublished',
+              { subject: 'http://tests.archimedes.org/instances/foo',
+                predicate: 'http://tests.archimedes.org/properties/isPublished',
                 object: '"true"^^http://www.w3.org/2001/XMLSchema#boolean' }
             ]);
 
@@ -93,13 +93,13 @@ describe('Rdf utils', function() {
                          predicate: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type',
                          object: '?_type0' },
                        { subject: '?s',
-                         predicate: 'http://test.org/properties/title',
+                         predicate: 'http://tests.archimedes.org/properties/title',
                          object: '?title0' },
                        { subject: '?s',
-                         predicate: 'http://test.org/properties/ratting',
+                         predicate: 'http://tests.archimedes.org/properties/ratting',
                          object: '?ratting0' },
                        { subject: '?s',
-                         predicate: 'http://test.org/properties/isPublished',
+                         predicate: 'http://tests.archimedes.org/properties/isPublished',
                          object: '?isPublished0' }
                     ]
                 },
@@ -111,7 +111,7 @@ describe('Rdf utils', function() {
                         args: [
                           { type: 'operation',
                             operator: '=',
-                            args: [ '?_type0', 'http://test.org/classes/BlogPost' ] },
+                            args: [ '?_type0', 'http://tests.archimedes.org/classes/BlogPost' ] },
                           { type: 'operation',
                             operator: '=',
                             args: [ '?title0', '"the title"' ] },
@@ -135,7 +135,7 @@ describe('Rdf utils', function() {
 
     describe('uri2id', function(){
         it('should convert an uri into an instance id', (done) => {
-            let uri = 'http://test.org/instances/foo';
+            let uri = 'http://tests.archimedes.org/instances/foo';
             let id = uri2id(db.BlogPost, uri);
             expect(id).to.equal('foo');
             done();
@@ -144,7 +144,7 @@ describe('Rdf utils', function() {
 
     describe('uri2property', function(){
         it('should convert an uri into an property name', (done) => {
-            let uri = 'http://test.org/properties/ratting';
+            let uri = 'http://tests.archimedes.org/properties/ratting';
             let propertyName = uri2property(db.BlogPost, uri);
             expect(propertyName).to.equal('ratting');
             done();
@@ -154,7 +154,7 @@ describe('Rdf utils', function() {
 
     describe('operation2triples', function(){
         it('should convert an operation into a bunch of triples', (done) => {
-            let uri = 'http://test.org/instance/123';
+            let uri = 'http://tests.archimedes.org/instance/123';
             let operation = {
                 operator: 'pull',
                 property: 'ratting',
@@ -163,7 +163,7 @@ describe('Rdf utils', function() {
 
             let triple = operation2triple(db, 'BlogPost', uri, operation);
             expect(triple.subject).to.equal(uri);
-            expect(triple.predicate).to.equal('http://test.org/properties/ratting');
+            expect(triple.predicate).to.equal('http://tests.archimedes.org/properties/ratting');
             expect(triple.object).to.equal('"1"^^http://www.w3.org/2001/XMLSchema#integer');
             done();
         });
@@ -173,11 +173,11 @@ describe('Rdf utils', function() {
     describe('rdfDoc2pojo', function(){
         it('should convert a rdf document into property pojo', (done) => {
             let rdfDoc = {
-                _id: 'http://test.org/instances/1ntibnqg067',
-                'http://www.w3.org/1999/02/22-rdf-syntax-ns#type': ['http://test.org/classes/BlogPost'],
-                'http://test.org/properties/title': ['the post'],
-                'http://test.org/properties/ratting': [5],
-                'http://test.org/properties/author': ['http://test.org/instances/namlook']
+                _id: 'http://tests.archimedes.org/instances/1ntibnqg067',
+                'http://www.w3.org/1999/02/22-rdf-syntax-ns#type': ['http://tests.archimedes.org/classes/BlogPost'],
+                'http://tests.archimedes.org/properties/title': ['the post'],
+                'http://tests.archimedes.org/properties/ratting': [5],
+                'http://tests.archimedes.org/properties/author': ['http://tests.archimedes.org/instances/namlook']
             };
 
             let pojo = rdfDoc2pojo(db, 'BlogPost', rdfDoc);

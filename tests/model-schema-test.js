@@ -149,6 +149,17 @@ describe('ModelSchema', function() {
             expect(error[1].message).to.equal('"isPublished" must be a boolean');
             done();
         });
+
+        it('should return an error when validating a pojo with unknown properties', (done) => {
+            let pojo = {
+                title: 'the string',
+                unknownProperty: 'arf'
+            };
+            var {error} = db.BlogPost.schema.validate(pojo);
+            expect(error[0].message).to.equal('"unknownProperty" is not allowed');
+            expect(error[0].path).to.equal('.unknownProperty');
+            done();
+        });
     });
 });
 

@@ -81,6 +81,15 @@ export default function(db, modelClass, attrs) {
             let oldValue = this.get(name);
 
             let property = this.Model.schema.getProperty(name);
+
+            // if an unknown property name is passed, let's add it anyway.
+            // the database.validate() method will take care of the rest
+            if (!property) {
+                internals.pendingOperations.push({operator: 'set', property: name, value: value});
+                _.set(internals.attrs, name, value);
+                return this;
+            }
+
             // if the property is an array, make a full replacement
             // by using the push/pull operators
             if (property.isArray()) {
