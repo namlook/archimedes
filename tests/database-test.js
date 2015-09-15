@@ -207,6 +207,24 @@ describe('Database', function() {
                 console.log(error.stack);
             });
         });
+
+        it('should fetch multiple ids', (done) => {
+            var data = [];
+            for (let i = 0; i < 10; i++) {
+                data.push({_id: `bp${i}`, _type: 'BlogPost', title: `post ${i}`, ratting: i % 5});
+            }
+            db.batchSync('BlogPost', data).then(() => {
+                return db.find('BlogPost', {_id: {$in: ['bp2', 'bp5', 'bp8', 'bp9']}});
+            }).then((results) => {
+                expect(results.length).to.equal(4);
+                expect(results.map((o) => o._id)).to.only.include(
+                    ['bp2', 'bp5', 'bp8', 'bp9']);
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
     });
 
 
@@ -382,6 +400,7 @@ describe('Database', function() {
                 console.log(error.stack);
             });
         });
+
 
         it('should reject if no model type is specified', (done) => {
             db.fetch().catch((error) => {
