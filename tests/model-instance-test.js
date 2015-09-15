@@ -9,6 +9,8 @@ var before = lab.before;
 // var beforeEach = lab.beforeEach;
 var expect = Code.expect;
 
+import _ from 'lodash';
+
 import store from './db';
 
 describe('Model Instance', function() {
@@ -267,6 +269,112 @@ describe('Model Instance', function() {
             expect(jsonApi.data.id).to.not.exist();
             expect(jsonApi.data.type).to.equal('BlogPost');
             expect(jsonApi.data.attributes).to.not.exist();
+            done();
+        });
+
+        it('should include links whe a base uri is passed', (done) => {
+          let blogPost = db.BlogPost.create({
+                _id: 'thepost',
+                title: 'the post',
+                author: {_id: 'user1', _type: 'User'},
+                comments: [
+                    {_id: 'comment1', _type: 'Comment'},
+                    {_id: 'comment2', _type: 'Comment'}
+                ]
+            });
+
+            let baseUri = 'http://testuri.org/blog-post/thepost';
+
+            let jsonApi = blogPost.toJsonApi(baseUri);
+            expect(jsonApi.data.id).to.exist();
+            expect(jsonApi.data.type).to.equal('BlogPost');
+            expect(jsonApi.data.links).to.be.an.object();
+            expect(jsonApi.data.links.self).to.equal(baseUri);
+            expect(jsonApi.data.attributes).to.be.an.object();
+
+            let author = jsonApi.data.relationships.author;
+            expect(author.data.id).to.equal('user1');
+            expect(author.links).to.be.an.object();
+            expect(author.links.self).to.equal(`${baseUri}/relationships/author`);
+            expect(author.links.related).to.equal(`${baseUri}/author`);
+
+            let comments = jsonApi.data.relationships.comments;
+            expect(comments.data[0].id).to.equal('comment1');
+            expect(comments.links.self).to.equal(`${baseUri}/relationships/comments`);
+            expect(comments.links.related).to.equal(`${baseUri}/comments`);
+
+            done();
+        });
+
+        it('should fill an array with all relationship references', (done) => {
+            let blogPost = db.BlogPost.create({
+                _id: 'thepost',
+                title: 'the post',
+                author: {_id: 'user1', _type: 'User'},
+                comments: [
+                    {_id: 'comment1', _type: 'Comment'},
+                    {_id: 'comment2', _type: 'Comment'}
+                ]
+            });
+
+            let baseUri = 'http://testuri.org/blog-post/thepost';
+            let included = [];
+
+            let jsonApi = blogPost.toJsonApi(baseUri, included);
+            expect(jsonApi.data.id).to.equal('thepost');
+            expect(jsonApi.data.type).to.equal('BlogPost');
+            expect(jsonApi.data.links).to.be.an.object();
+            expect(jsonApi.data.links.self).to.equal(baseUri);
+            expect(jsonApi.data.attributes).to.be.an.object();
+
+            expect(included.length).to.equal(3);
+            expect(included).to.deep.equal([
+                {id: 'user1', type: 'User'},
+                {id: 'comment1', type: 'Comment'},
+                {id: 'comment2', type: 'Comment'}
+            ]);
+            done();
+        });
+
+
+        it('should fill the relationships array with only uniq values', (done) => {
+            let blogPost = db.BlogPost.create({
+                _id: 'thepost',
+                title: 'the post',
+                author: {_id: 'user1', _type: 'User'},
+                comments: [
+                    {_id: 'comment1', _type: 'Comment'},
+                    {_id: 'comment2', _type: 'Comment'}
+                ]
+            });
+
+            let baseUri = 'http://testuri.org/blog-post/thepost';
+            let included = [];
+            let jsonApi = blogPost.toJsonApi(baseUri, included);
+
+            expect(included.length).to.equal(3);
+            expect(jsonApi.data.id).to.equal('thepost');
+
+            let blogPost2 = db.BlogPost.create({
+                _id: 'thepost2',
+                title: 'the post 2',
+                author: {_id: 'user2', _type: 'User'},
+                comments: [
+                    {_id: 'comment1', _type: 'Comment'},
+                    {_id: 'comment3', _type: 'Comment'}
+                ]
+            });
+
+            let jsonApi2 = blogPost2.toJsonApi(baseUri, included);
+            expect(jsonApi2.data.id).to.equal('thepost2');
+            expect(_.sortBy(included, 'id')).to.deep.equal([
+                {id: 'comment1', type: 'Comment'},
+                {id: 'comment2', type: 'Comment'},
+                {id: 'comment3', type: 'Comment'},
+                {id: 'user1', type: 'User'},
+                {id: 'user2', type: 'User'}
+            ]);
+
             done();
         });
     });

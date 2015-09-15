@@ -249,10 +249,14 @@ export default function(db, modelClass, attrs) {
          *
          * @returns {object}
          */
-        toJsonApi() {
+        toJsonApi(baseUri, included) {
 
             let attributes = {};
             let relationships = {};
+
+            if (included && !_.isArray(included)) {
+                throw new Error('toJsonApi(): included should be an array');
+            }
 
             this.Model.schema.properties.forEach((property) => {
                 let value = this.get(property.name);
@@ -261,19 +265,35 @@ export default function(db, modelClass, attrs) {
                     if (property.isArray()) {
                         if (value && !_.isEmpty(value)) {
                             value = value.map((o) => {
-                                return {id: o._id, type: o._type};
+                                let rel = {id: o._id, type: o._type};
+                                if (included) {
+                                    included.push(rel);
+                                }
+                                return rel;
                             });
                         } else {
                             value = null;
                         }
                     } else if (value) {
                         value = {id: value._id, type: value._type};
+                        if (included) {
+                            included.push(value);
+                        }
                     }
 
                     if (value != null) {
-                        relationships[property.name] = {
+                        let relationshipsData = {
                             data: value
                         };
+
+                        if (baseUri) {
+                            relationshipsData.links = {
+                                self: `${baseUri}/relationships/${property.name}`,
+                                related: `${baseUri}/${property.name}`
+                            };
+                        }
+
+                        relationships[property.name] = relationshipsData;
                     }
                 } else {
                     if (value != null) {
@@ -299,6 +319,20 @@ export default function(db, modelClass, attrs) {
 
             if (!_.isEmpty(relationships)) {
                 jsonApiData.data.relationships = relationships;
+            }
+
+            if (baseUri) {
+                jsonApiData.data.links = {
+                    self: baseUri
+                };
+            }
+
+            if (included && included.length) {
+                let uniqIncluded = _.uniq(included, (o) => `${o.type}/${o.id}`);
+                included.length = 0; // clear the array without loosing the reference
+                uniqIncluded.forEach((item) => {
+                    included.push(item);
+                });
             }
 
             return jsonApiData;
