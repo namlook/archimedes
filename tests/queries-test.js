@@ -186,7 +186,9 @@ describe('query', function(){
         if (testQuery.skip) {
             testLauncher = it.skip;
         }
-        testLauncher(`db> ${testQuery.model}: ${inspect(testQuery.query)} (${inspect(testQuery.options)})`, {parallel: false}, testDbFn(testQuery));
+        if (!testQuery.only) {
+            testLauncher(`db> ${testQuery.model}: ${inspect(testQuery.query)} (${inspect(testQuery.options)})`, {parallel: false}, testDbFn(testQuery));
+        }
         testLauncher(`model> ${testQuery.model}: ${inspect(testQuery.query)} (${inspect(testQuery.options)})`, {parallel: false}, testModelFn(testQuery));
     }
 });
