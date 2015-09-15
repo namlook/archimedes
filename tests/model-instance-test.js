@@ -320,7 +320,7 @@ describe('Model Instance', function() {
             let baseUri = 'http://testuri.org/blog-post/thepost';
             let included = [];
 
-            let jsonApi = blogPost.toJsonApi(baseUri, included);
+            let jsonApi = blogPost.toJsonApi(baseUri, {properties: true, included: included});
             expect(jsonApi.data.id).to.equal('thepost');
             expect(jsonApi.data.type).to.equal('BlogPost');
             expect(jsonApi.data.links).to.be.an.object();
@@ -332,6 +332,34 @@ describe('Model Instance', function() {
                 {id: 'user1', type: 'User'},
                 {id: 'comment1', type: 'Comment'},
                 {id: 'comment2', type: 'Comment'}
+            ]);
+            done();
+        });
+
+        it('should fill an array with only specified relations', (done) => {
+            let blogPost = db.BlogPost.create({
+                _id: 'thepost',
+                title: 'the post',
+                author: {_id: 'user1', _type: 'User'},
+                comments: [
+                    {_id: 'comment1', _type: 'Comment'},
+                    {_id: 'comment2', _type: 'Comment'}
+                ]
+            });
+
+            let baseUri = 'http://testuri.org/blog-post/thepost';
+            let included = [];
+
+            let jsonApi = blogPost.toJsonApi(baseUri, {properties: 'author', included: included});
+            expect(jsonApi.data.id).to.equal('thepost');
+            expect(jsonApi.data.type).to.equal('BlogPost');
+            expect(jsonApi.data.links).to.be.an.object();
+            expect(jsonApi.data.links.self).to.equal(baseUri);
+            expect(jsonApi.data.attributes).to.be.an.object();
+
+            expect(included.length).to.equal(1);
+            expect(included).to.deep.equal([
+                {id: 'user1', type: 'User'}
             ]);
             done();
         });

@@ -249,10 +249,24 @@ export default function(db, modelClass, attrs) {
          *
          * @returns {object}
          */
-        toJsonApi(baseUri, included) {
+        toJsonApi(baseUri, include) {
 
             let attributes = {};
             let relationships = {};
+
+            if (_.isArray(include)) {
+                include = {properties: true, included: include};
+            }
+
+            let {properties: includedProperties, included} = include || {};
+
+            if (includedProperties === 1) {
+                includedProperties = true;
+            }
+
+            if (includedProperties && !_.isArray(includedProperties) && !_.isBoolean(includedProperties)) {
+                includedProperties = [includedProperties];
+            }
 
             if (included && !_.isArray(included)) {
                 throw new Error('toJsonApi(): included should be an array');
@@ -261,12 +275,14 @@ export default function(db, modelClass, attrs) {
             this.Model.schema.properties.forEach((property) => {
                 let value = this.get(property.name);
 
+                let shouldBeIncluded = (_.isBoolean(includedProperties) && includedProperties) || _.includes(includedProperties, property.name);
+
                 if (property.isRelation()) {
                     if (property.isArray()) {
                         if (value && !_.isEmpty(value)) {
                             value = value.map((o) => {
                                 let rel = {id: o._id, type: o._type};
-                                if (included) {
+                                if (shouldBeIncluded) {
                                     included.push(rel);
                                 }
                                 return rel;
@@ -276,7 +292,7 @@ export default function(db, modelClass, attrs) {
                         }
                     } else if (value) {
                         value = {id: value._id, type: value._type};
-                        if (included) {
+                        if (shouldBeIncluded) {
                             included.push(value);
                         }
                     }
