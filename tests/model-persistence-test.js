@@ -91,6 +91,25 @@ describe('Model persistence', function() {
         });
 
 
+        it('should fetch multiple ids', (done) => {
+            var data = [];
+            for (let i = 0; i < 10; i++) {
+                data.push({_id: `bp${i}`, _type: 'BlogPost', title: `post ${i}`, isPublished: Boolean(i % 2)});
+            }
+            db.batchSync('BlogPost', data).then((savedData) => {
+                expect(savedData.length).to.equal(10);
+                return db.BlogPost.find({_id: {$in: ['bp1', 'bp4', 'bp8', 'bp9']}});
+            }).then((results) => {
+                expect(results.length).to.equal(4);
+                expect(results[0]._archimedesModelInstance).to.be.true();
+                expect(results.map((o) => o._id)).to.only.include(['bp1', 'bp4', 'bp8', 'bp9']);
+                done();
+            }).catch((error) => {
+                console.log(error.stack);
+            });
+        });
+
+
         it('should reject if the query isnt valid', (done) => {
             return db.BlogPost.find({arf: true}).catch((error) => {
                 expect(error).to.exist();
@@ -99,7 +118,6 @@ describe('Model persistence', function() {
                 done();
             });
         });
-
 
 
         it('should validate the query and cast values if needed', (done) => {

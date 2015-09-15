@@ -100,6 +100,13 @@ export default function(config) {
                      * which is faster
                      */
                     if (query._id) {
+                        if (_.isObject(query._id)) {
+                            let promises = query._id.$in.map((id) => {
+                                return this.fetch(modelType, id, options);
+                            });
+                            return resolve(Promise.all(promises));
+                        }
+
                         return this.fetch(modelType, query._id, options).then((pojo) => {
                             var results = [];
                             if (pojo) {

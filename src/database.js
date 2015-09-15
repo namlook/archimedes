@@ -342,7 +342,7 @@ export default function(dbAdapter, config) {
          * which match the id
          *
          * @params {string} modelType - the model type
-         * @params {string} id - the model id
+         * @params {string|Array} id- the model id or an array of ids
          * @params {?object} options
          * @returns a promise
          */
@@ -366,11 +366,14 @@ export default function(dbAdapter, config) {
 
                 this.adapter.fetch(modelType, id, options).then((pojo) => {
                     if (pojo) {
+
+                        /** cast values **/
                         this.validate(modelType, pojo).then((validatedPojo) => {
                             resolve(validatedPojo);
                         }).catch((error) => {
                             reject(error);
                         });
+
                     } else {
                         process.nextTick(resolve);
                     }

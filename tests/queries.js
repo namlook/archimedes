@@ -257,6 +257,17 @@ export default [
         ]
     },
 
+    /*** ids ***/
+    {
+        model: 'BlogPost',
+        query: {_id: {$in: ['blogpost6', 'blogpost7', 'blogpost8']}},
+        ids: [
+            'blogpost6',
+            'blogpost7',
+            'blogpost8'
+        ]
+    },
+
 
     /*** relations ***/
     {
@@ -317,7 +328,6 @@ export default [
         query: {'contents.ratting': 2},
         ids: ['user2', 'user3']
     },
-
 
 
     /**** options ****/
@@ -442,6 +452,7 @@ export default [
             }
         ]
     },
+
 
     /*** bad queries ***/
     {
