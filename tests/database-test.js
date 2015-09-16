@@ -66,7 +66,7 @@ describe('Database', function() {
             expect(contents[0].name).to.equal('contents');
             expect(contents[0].modelSchema.name).to.equal('User');
 
-            let reversedProperties = contents[0].reverseProperties();
+            let reversedProperties = contents[0].fromReversedProperties();
             expect(reversedProperties.length).to.equal(4);
             let modelNames = reversedProperties.map(o => o.modelSchema.name);
             expect(modelNames).to.include([

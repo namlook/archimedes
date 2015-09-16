@@ -73,10 +73,32 @@ describe('ModelSchemaProperty', function() {
         done();
     });
 
+    it('should return true if the property is a reversed property', (done) => {
+        let reversedProperty = db.User.schema.getProperty('contents');
+        let isReversed = reversedProperty.isReversed();
+        expect(isReversed).to.be.true();
+
+
+        let property = db.User.schema.getProperty('name');
+        let isReversed2 = property.isReversed();
+        expect(isReversed2).to.be.false();
+        done();
+    });
+
+    it('should return all reversed properties', (done) => {
+        let property = db.Content.schema.getProperty('author');
+        let reversedProperty = property.reversedProperty();
+        expect(reversedProperty.name).to.be.equal('contents');
+
+        let reversedProperty2 = db.User.schema.getProperty('contents');
+        let properties = reversedProperty2.reversedProperty();
+        expect(properties).to.not.exist();
+        done();
+    });
 
     it('should return all properties that match the reversed property', (done) => {
         let reverseProperty = db.User.schema.getProperty('contents');
-        let properties = reverseProperty.reverseProperties();
+        let properties = reverseProperty.fromReversedProperties();
         expect(properties.length).to.equal(4);
         let modelNames = properties.map(o => o.modelSchema.name);
         expect(modelNames).to.include(['Content', 'Book', 'Ebook', 'BlogPost']);

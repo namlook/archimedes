@@ -362,6 +362,19 @@ export default [
             'user4'
         ]
     },
+    {
+        model: 'Comment',
+        query: {'onlineContents._id': 'blogpost7'},
+        ids: [
+            'comment07',
+            'comment17',
+            'comment27',
+            'comment37',
+            'comment47',
+            'comment57',
+            'comment67'
+        ]
+    },
 
 
     /**** options ****/

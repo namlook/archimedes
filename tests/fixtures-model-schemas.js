@@ -41,7 +41,8 @@ export default {
             slug: 'string',
             comments: {
                 type: 'array',
-                items: 'Comment'
+                items: 'Comment',
+                reverse: 'onlineContents'
             },
             tags: {
                 type: 'array',

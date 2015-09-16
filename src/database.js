@@ -55,8 +55,12 @@ export default function(dbAdapter, config) {
 
                         if (propConfig.reverse) {
                             if (typeof propConfig.reverse === 'string') {
+                                let propConfigType = propConfig.type;
+                                if (propConfigType === 'array') {
+                                    propConfigType = propConfig.items.type;
+                                }
                                 propConfig.reverse = {
-                                    type: propConfig.type,
+                                    type: propConfigType,
                                     name: propConfig.reverse
                                 };
                                 modelConfig.properties[propName] = propConfig;

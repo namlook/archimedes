@@ -83,15 +83,45 @@ export default class ModelSchemaProperty {
         return !!this.config.abstract;
     }
 
-    isReverse() {
+    isReversed() {
         return !!_.get(this.config, 'abstract.fromReverse');
     }
 
-    reverseProperties() {
+    /** return the reversed properties if 'reverse' is specified in
+     * the property config. Returns null otherwise.
+     *
+     *  Example for the author property with the following config:
+     *
+     *  Comment: {
+     *      author: {
+     *          type: 'User',
+     *          reverse: 'comments'
+     *      }
+     *  }
+     *
+     *  `authorProperty.reversedProperty()`` will returns the `User.comments` property
+     *
+     *
+     * @return a reversed (abstract) property if the property
+     */
+    reversedProperty() {
+        let db = this.modelSchema.db;
+        let {type: reversedType, name: reversedName} = _.get(this.config, 'reverse', {});
+        if (reversedType) {
+            return db[reversedType].schema.getProperty(reversedName);
+        }
+    }
+
+    /** returns all properties that match the reversed property
+     *
+     * @returns an array of properties
+     */
+    fromReversedProperties() {
         let db = this.modelSchema.db;
         let {property, type} = _.get(this.config, 'abstract.fromReverse', {});
         return db.findProperties(property, type);
     }
+
 
     get propagateDeletion() {
         return !!this.config.propagateDeletion;

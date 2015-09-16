@@ -46,9 +46,9 @@ export var propertyName2Sparson = function(db, propertyNames) {
         let properties = db.findProperties(propertyName);
 
         properties = properties.map((property) => {
-            if (property.isReverse()) {
+            if (property.isReversed()) {
 
-                property = property.reverseProperties();
+                property = property.fromReversedProperties();
                 let propertyUris = _.uniq(property.map((o) => o.meta.rdfUri));
                 if (propertyUris.length > 1) {
                     propertyUris = {

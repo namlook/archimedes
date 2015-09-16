@@ -29,8 +29,8 @@ export default class ModelSchema {
             let relation = this.getProperty(propertyName.split('.')[0]);
             let relationPropertyName = propertyName.split('.').slice(1).join('.');
 
-            if (relation.isReverse()) {
-                let reversedProperties = relation.reverseProperties();
+            if (relation.isReversed()) {
+                let reversedProperties = relation.fromReversedProperties();
                 reversedProperties = _.flatten(reversedProperties.map((prop) => {
                     return prop.modelSchema.getProperty(relationPropertyName);
                 }));
