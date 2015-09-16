@@ -486,6 +486,18 @@ export default [
             }
         ]
     },
+    {
+        model: 'User',
+        query: {'comments.body': 'this thing rocks !'},
+        options: {distinct: true},
+        ids: [
+            'user0',
+            'user1',
+            'user2',
+            'user3',
+            'user4'
+        ]
+    },
 
     /*** bad queries ***/
     {

@@ -11,7 +11,8 @@ var findOptionsSchemaValidator = {
     fields: joi.alternatives().try(
         joi.array().items(joi.string()),
         joi.string()
-    )
+    ),
+    distinct: joi.boolean().default(false)
 };
 
 export var findOptionsValidator = function(options) {

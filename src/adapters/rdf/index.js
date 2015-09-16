@@ -129,7 +129,8 @@ export default function(config) {
                         },
                         where: whereClause,
                         order: orderBy,
-                        limit: options.limit
+                        limit: options.limit,
+                        distinct: options.distinct
                     };
 
 
