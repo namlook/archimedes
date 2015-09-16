@@ -328,6 +328,40 @@ export default [
         query: {'contents.ratting': 2},
         ids: ['user2', 'user3']
     },
+    {
+        model: 'User',
+        query: {'comments._id': 'comment03'},
+        ids: ['user3']
+    },
+    {
+        model: 'User',
+        query: {'comments._id': {$in: ['comment03', 'comment02']}},
+        ids: ['user2', 'user3']
+    },
+    {
+        model: 'User',
+        query: {'comments.body': 'this thing rocks !'},
+        ids: [
+            'user0',
+            'user0',
+            'user0',
+            'user1',
+            'user1',
+            'user1',
+            'user1',
+            'user2',
+            'user2',
+            'user2',
+            'user2',
+            'user2',
+            'user3',
+            'user3',
+            'user4',
+            'user4',
+            'user4',
+            'user4'
+        ]
+    },
 
 
     /**** options ****/
@@ -452,7 +486,6 @@ export default [
             }
         ]
     },
-
 
     /*** bad queries ***/
     {

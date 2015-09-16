@@ -293,21 +293,21 @@ export var query2whereClause = function(db, modelType, query, options) {
         }
 
         let idAsValue = false;
-        if (_.endsWith(propertyName, '._id')) {
-            propertyName = propertyName.split('.').slice(0, -1).join('.');
-            let property = modelClass.schema.getProperty(propertyName);
-            if (!property.isRelation()) {
-                throw new ValidationError('Bad query', `${propertyName}._id not found on model ${modelClass.name}: ${propertyName} is not a relation`);
-            }
-            idAsValue = true;
-        }
+        let predicate, propertyUri;
 
-        var propertyUri = propertyRdfUri(modelClass, propertyName);
-
-        let predicate;
         if (_.contains(propertyName, '.')) {
+            if (_.endsWith(propertyName, '._id')) {
+                propertyName = propertyName.split('.').slice(0, -1).join('.');
+                let property = modelClass.schema.getProperty(propertyName);
+                if (!property.isRelation()) {
+                    throw new ValidationError('Bad query', `${propertyName}._id not found on model ${modelClass.name}: ${propertyName} is not a relation`);
+                }
+                idAsValue = true;
+            }
+            propertyUri = propertyRdfUri(modelClass, propertyName);
             predicate = propertyName2Sparson(db, propertyName);
         } else {
+            propertyUri = propertyRdfUri(modelClass, propertyName);
             predicate = propertyUri;
         }
 
@@ -331,16 +331,30 @@ export var query2whereClause = function(db, modelType, query, options) {
          */
         _.forOwn(object, (value, operator) => {
 
+            /** build the rdf value **/
             let rdfValue;
+            let relationProperty = modelClass.schema.getProperty(propertyName);
+
             if (_.isArray(value)) {
-                rdfValue = value.map((item) => {
-                   return buildRdfValue(db, modelType, propertyName, item);
-                });
-            } else if (idAsValue) {
-                let relationProperty = modelClass.schema.getProperty(propertyName);
-                rdfValue = instanceRdfUri(db[relationProperty.type], value);
+
+                if (idAsValue) {
+                    rdfValue = value.map((item) => {
+                        return instanceRdfUri(db[relationProperty.type], item);
+                    });
+                } else {
+                    rdfValue = value.map((item) => {
+                       return buildRdfValue(db, modelType, propertyName, item);
+                    });
+                }
+
             } else {
-                rdfValue = buildRdfValue(db, modelType, propertyName, value);
+
+                if (idAsValue) {
+                    rdfValue = instanceRdfUri(db[relationProperty.type], value);
+                } else {
+                    rdfValue = buildRdfValue(db, modelType, propertyName, value);
+                }
+
             }
 
 
