@@ -1,5 +1,6 @@
 
 import _ from 'lodash';
+import csv from 'csv';
 
 export default function(db, modelClass, attrs) {
 
@@ -242,6 +243,67 @@ export default function(db, modelClass, attrs) {
 
         toJSON() {
             return JSON.stringify(this.attrs());
+        },
+
+        toCsv(options) {
+            return new Promise((resolve, reject) => {
+                options = options || {};
+                let delimiter = options.delimiter || ',';
+                let fields = options.fields;
+
+                let properties;
+                if (fields) {
+                    properties = [];
+                    for (let i = 0; i < fields.length; i++) {
+                        let propertyName = fields[i];
+                        let property = this.Model.schema.getProperty(propertyName);
+                        if (!property) {
+                            reject(new Error(`fields: unknown property "${propertyName}"`));
+                        }
+                        properties.push(property);
+                    }
+                } else {
+                    properties = this.Model.schema.properties;
+                }
+
+                properties = _.sortBy(properties, 'name');
+
+                let values = properties.map((property) => {
+                    let value = this.get(property.name);
+
+                    if (!_.isArray(value)) {
+                        if (value != null) {
+                            value = [value];
+                        } else {
+                            value = [];
+                        }
+                    }
+
+                    if (property.isRelation()) {
+                        value = value.map((v) => v._id);
+                    }
+
+                    if (property.type === 'date') {
+                        value = value.map((d) => d.toUTCString());
+                    }
+
+                    return value.join('|');
+                });
+
+                values.unshift(this.get('_type'));
+                values.unshift(this.get('_id'));
+
+                let csvOptions = {delimiter: delimiter, eof: false};
+
+                csv.stringify([values], csvOptions, (err, output) => {
+                    if (err) {
+                        return reject(err);
+                    }
+
+                    return resolve(output);
+                });
+
+            });
         },
 
         /**

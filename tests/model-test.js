@@ -12,6 +12,8 @@ var expect = Code.expect;
 import {database} from './db';
 import store from './db';
 
+import csv from 'csv';
+
 describe('Model', function() {
 
     var db;
@@ -296,6 +298,57 @@ describe('Model', function() {
             expect(blogPost.get('_id')).to.equal('thepost');
             expect(blogPost._id).to.not.exist();
             expect(blogPost.get('title')).to.equal('the title');
+            done();
+        });
+    });
+
+    describe('#csvHeader()', function() {
+        it('should return all properties in csv format', (done) => {
+            let data = db.BlogPost.csvHeader();
+            csv.parse(data, {}, (err, results) => {
+                expect(err).to.not.exist();
+                expect(results[0]).to.deep.equal([
+                    '_id',
+                    '_type',
+                    'author',
+                    'backlinks',
+                    'body',
+                    'comments',
+                    'createdDate',
+                    'isPublished',
+                    'publishedDate',
+                    'ratting',
+                    'slug',
+                    'tags',
+                    'title',
+                    'updatedDate'
+                ]);
+                done();
+            });
+        });
+
+        it('should return only specified properties', (done) => {
+            let data = db.BlogPost.csvHeader({fields: ['ratting', 'slug']});
+            csv.parse(data, {}, (err, results) => {
+                expect(err).to.not.exist();
+                expect(results[0]).to.deep.equal([
+                    '_id',
+                    '_type',
+                    'ratting',
+                    'slug'
+                ]);
+                done();
+            });
+        });
+
+        it('should handle different delimiters', (done) => {
+            let options = {fields: ['ratting', 'slug'], delimiter: '\t'};
+            let data = db.BlogPost.csvHeader(options);
+            expect(data).to.equal('_id\t_type\tratting\tslug');
+
+            options.delimiter = '|';
+            let data2 = db.BlogPost.csvHeader(options);
+            expect(data2).to.equal('_id|_type|ratting|slug');
             done();
         });
     });

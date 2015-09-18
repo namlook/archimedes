@@ -28,6 +28,7 @@
     "source-map-support": "^0.3.2"
   },
   "dependencies": {
+    "csv": "^0.4.6",
     "joi": "^6.5.0",
     "lodash": "3.10.1",
     "moment": "^2.10.3",

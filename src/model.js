@@ -235,6 +235,31 @@ var modelFactory = function(db, name, modelClassSchema) {
 
         batchSync(data) {
             return db.batchSync(name, data);
+        },
+
+        csvHeader(options) {
+            options = options || {};
+
+            let delimiter = options.delimiter || ',';
+            let fields = options.fields;
+
+            let propertyNames;
+            if (fields) {
+                propertyNames = fields.map((propName) => {
+                    let prop = this.schema.getProperty(propName);
+                    if (prop) {
+                        return prop.name;
+                    }
+                });
+            } else {
+                propertyNames = this.schema.properties.map((prop) => prop.name);
+            }
+
+            propertyNames = _.sortBy(propertyNames);
+
+            propertyNames.unshift('_type');
+            propertyNames.unshift('_id');
+            return propertyNames.join(delimiter);
         }
     };
 

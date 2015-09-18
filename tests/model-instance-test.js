@@ -209,6 +209,118 @@ describe('Model Instance', function() {
         });
     });
 
+    describe('#toCsv()', function() {
+        it('should be a promise', (done) => {
+            let instance = db.BlogPost.create();
+            let promise = instance.toCsv();
+            expect(promise.then).to.be.a.function();
+            promise.then(() => {
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+
+        it('should return only specified property values', (done) => {
+            let blogPost = db.BlogPost.create({
+                _id: 'thepost',
+                title: 'the post',
+                publishedDate: new Date(Date.UTC(2015, 8, 14)),
+                updatedDate: new Date(Date.UTC(2015, 9, 14)),
+                isPublished: true,
+                ratting: 3,
+                tags: ['foo', 'bar'],
+                author: {_id: 'user1', _type: 'User'},
+                comments: [
+                    {_id: 'comment1', _type: 'Comment'},
+                    {_id: 'comment2', _type: 'Comment'}
+                ]
+            });
+
+            blogPost.toCsv({fields: ['ratting', 'isPublished']}).then((data) => {
+                expect(data).to.equal('thepost,BlogPost,true,3');
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+
+        it('should throw an error if the property specified is unknown', (done) => {
+            let blogPost = db.BlogPost.create({
+                _id: 'thepost',
+                title: 'the post',
+                publishedDate: new Date(Date.UTC(2015, 8, 14)),
+                updatedDate: new Date(Date.UTC(2015, 9, 14)),
+                isPublished: true,
+                ratting: 3,
+                tags: ['foo', 'bar'],
+                author: {_id: 'user1', _type: 'User'},
+                comments: [
+                    {_id: 'comment1', _type: 'Comment'},
+                    {_id: 'comment2', _type: 'Comment'}
+                ]
+            });
+
+            blogPost.toCsv({fields: ['unknown']}).catch((error) => {
+                expect(error.message).to.equal('fields: unknown property "unknown"');
+                done();
+            });
+        });
+
+        it('should return the property values into csv format', (done) => {
+            let blogPost = db.BlogPost.create({
+                _id: 'thepost',
+                title: 'the post',
+                publishedDate: new Date(Date.UTC(2015, 8, 14)),
+                updatedDate: new Date(Date.UTC(2015, 9, 14)),
+                isPublished: true,
+                ratting: 3,
+                tags: ['foo', 'bar'],
+                author: {_id: 'user1', _type: 'User'},
+                comments: [
+                    {_id: 'comment1', _type: 'Comment'},
+                    {_id: 'comment2', _type: 'Comment'}
+                ]
+            });
+
+            blogPost.toCsv().then((data) => {
+                expect(data).to.equal('thepost,BlogPost,user1,,,comment1|comment2,,true,"Mon, 14 Sep 2015 00:00:00 GMT",3,,foo|bar,the post,"Wed, 14 Oct 2015 00:00:00 GMT"');
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+
+        it('should custom the delimiter', (done) => {
+            let blogPost = db.BlogPost.create({
+                _id: 'thepost',
+                title: 'the post',
+                publishedDate: new Date(Date.UTC(2015, 8, 14)),
+                updatedDate: new Date(Date.UTC(2015, 9, 14)),
+                isPublished: true,
+                ratting: 3,
+                tags: ['foo', 'bar'],
+                author: {_id: 'user1', _type: 'User'},
+                comments: [
+                    {_id: 'comment1', _type: 'Comment'},
+                    {_id: 'comment2', _type: 'Comment'}
+                ]
+            });
+
+            blogPost.toCsv({delimiter: '\t'}).then((data) => {
+                expect(data).to.equal('thepost\tBlogPost\tuser1\t\t\tcomment1|comment2\t\ttrue\tMon, 14 Sep 2015 00:00:00 GMT\t3\t\tfoo|bar\tthe post\tWed, 14 Oct 2015 00:00:00 GMT');
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+
+    });
+
     describe('#toJsonApi()', function() {
         it('should convert an instance into json api format', (done) => {
             let blogPost = db.BlogPost.create({
