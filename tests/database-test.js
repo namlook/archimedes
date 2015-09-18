@@ -829,28 +829,6 @@ describe('Database', function() {
 
     });
 
-    describe('#stream()', () => {
-        it.skip('should return a readable stream', (done) => {
-            let users = [];
-            for (let i = 0; i < 300; i++) {
-                users.push({
-                    _id: `user${i}`,
-                    _type: 'User',
-                    name: `user ${i}`
-                });
-            }
-
-            db.batchSync('User', users).then(() => {
-                db.stream('User').then((stream) => {
-                    stream.pipe(process.stdout);
-                    done();
-                });
-            }).catch((error) => {
-                console.log(error);
-                console.log(error.stack);
-            });
-        });
-    });
 
     describe('#execute()', function() {
         it('should return a promise');
