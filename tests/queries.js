@@ -215,14 +215,14 @@ export default [
     /*** date ***/
     {
         model: 'BlogPost',
-        query: {createdDate: new Date(1984, 7, 3)},
+        query: {createdDate: new Date(Date.UTC(1984, 7, 3))},
         ids: [
             'blogpost2'
         ]
     },
     {
         model: 'BlogPost',
-        query: {createdDate: {$lt: new Date(1984, 7, 3)}},
+        query: {createdDate: {$lt: new Date(Date.UTC(1984, 7, 3))}},
         ids: [
             'blogpost0',
             'blogpost1'
@@ -230,7 +230,7 @@ export default [
     },
     {
         model: 'BlogPost',
-        query: {createdDate: {$lte: new Date(1984, 7, 3)}},
+        query: {createdDate: {$lte: new Date(Date.UTC(1984, 7, 3))}},
         ids: [
             'blogpost0',
             'blogpost1',
@@ -239,7 +239,7 @@ export default [
     },
     {
         model: 'BlogPost',
-        query: {createdDate: {$gt: new Date(1984, 7, 7)}},
+        query: {createdDate: {$gt: new Date(Date.UTC(1984, 7, 7))}},
         ids: [
             'blogpost7',
             'blogpost8',
@@ -248,7 +248,7 @@ export default [
     },
     {
         model: 'BlogPost',
-        query: {createdDate: {$gte: new Date(1984, 7, 7)}},
+        query: {createdDate: {$gte: new Date(Date.UTC(1984, 7, 7))}},
         ids: [
             'blogpost6',
             'blogpost7',
@@ -277,10 +277,46 @@ export default [
     },
     {
         model: 'BlogPost',
-        query: {'author.birthday': {$lt: new Date(1982, 1, 1)}},
+        query: {'author.birthday': {$lt: new Date(Date.UTC(1982, 1, 1))}},
         ids: [ 'blogpost0', 'blogpost1', 'blogpost5', 'blogpost6' ]
     },
     {
+        model: 'BlogPost',
+        query: {'credits.name': 'user 1'},
+        ids: [ 'blogpost2', 'blogpost3', 'blogpost6', 'blogpost7' ]
+    },
+    {
+        model: 'BlogPost',
+        query: {'credits.gender': 'female'},
+        ids: [ 'blogpost2', 'blogpost3', 'blogpost6', 'blogpost7' ]
+    },
+    {
+        model: 'BlogPost',
+        query: {'author._id': 'user1'},
+        ids: [ 'blogpost1', 'blogpost6' ]
+    },
+
+    /*** relations inverse ***/
+    {
+        skip: true,
+        model: 'User',
+        query: {'contents.ratting': 2},
+        ids: ['user2', 'user3']
+    },
+    {
+        skip: true,
+        model: 'User',
+        query: {'comments._id': 'comment03'},
+        ids: ['user3']
+    },
+    {
+        skip: true,
+        model: 'User',
+        query: {'comments._id': {$in: ['comment03', 'comment02']}},
+        ids: ['user2', 'user3']
+    },
+    {
+        skip: true,
         model: 'BlogPost',
         query: {'comments.body': 'this thing sucks !'},
         ids: [
@@ -293,52 +329,7 @@ export default [
         ]
     },
     {
-        model: 'BlogPost',
-        query: {'comments.author.gender': 'female'},
-        ids: [
-            'blogpost1',
-            'blogpost3',
-            'blogpost3',
-            'blogpost3',
-            'blogpost6',
-            'blogpost6',
-            'blogpost6',
-            'blogpost6',
-            'blogpost6',
-            'blogpost6'
-        ]
-    },
-    {
-        model: 'Comment',
-        query: {'author._id': 'user1'},
-        ids: [
-            'comment01',
-            'comment06',
-            'comment16',
-            'comment26',
-            'comment36',
-            'comment46',
-            'comment56'
-        ]
-    },
-
-    /*** relations inverse ***/
-    {
-        model: 'User',
-        query: {'contents.ratting': 2},
-        ids: ['user2', 'user3']
-    },
-    {
-        model: 'User',
-        query: {'comments._id': 'comment03'},
-        ids: ['user3']
-    },
-    {
-        model: 'User',
-        query: {'comments._id': {$in: ['comment03', 'comment02']}},
-        ids: ['user2', 'user3']
-    },
-    {
+        skip: true,
         model: 'User',
         query: {'comments.body': 'this thing rocks !'},
         ids: [
@@ -363,6 +354,7 @@ export default [
         ]
     },
     {
+        skip: true,
         model: 'Comment',
         query: {'onlineContents._id': 'blogpost7'},
         ids: [
@@ -500,6 +492,7 @@ export default [
         ]
     },
     {
+        skip: true,
         model: 'User',
         query: {'comments.body': 'this thing rocks !'},
         options: {distinct: true},

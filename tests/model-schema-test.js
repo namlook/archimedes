@@ -5,7 +5,6 @@ import Code from 'code';
 var describe = lab.describe;
 var it = lab.it;
 var before = lab.before;
-// var beforeEach = lab.beforeEach;
 var expect = Code.expect;
 
 import store from './db';
@@ -29,7 +28,7 @@ describe('ModelSchema', function() {
     });
 
 
-    it('should returns all model property infos', (done) => {
+    it('should return all model property infos', (done) => {
         let properties = db.BlogPost.schema.properties;
         expect(properties.length).to.equal(12);
         done();
@@ -38,7 +37,7 @@ describe('ModelSchema', function() {
 
     describe('#getProperty()', function() {
 
-        it('should returns a specific model property infos', (done) => {
+        it('should return a specific model property infos', (done) => {
             let properties = db.BlogPost.schema.getProperty('backlinks');
             expect(properties.name).to.equal('backlinks');
             expect(properties.config.type).to.equal('array');
@@ -48,14 +47,14 @@ describe('ModelSchema', function() {
         });
 
 
-        it('should returns undefined if a property is not specified', (done) => {
+        it('should return undefined if a property is not specified', (done) => {
             let properties = db.BlogPost.schema.getProperty('unknownProperty');
             expect(properties).to.not.exist();
             done();
         });
 
 
-        it('should returns all potential properties from a mixin', (done) => {
+        it('should return all potential properties from a mixin', (done) => {
             let properties = db.Content.schema.getProperty('isPublished');
             expect(properties.length).to.equal(1);
             expect(properties[0].modelSchema.name).to.equal('BlogPost');
@@ -68,7 +67,7 @@ describe('ModelSchema', function() {
         });
 
 
-        it('should returns a reverse property', (done) => {
+        it('should return a reverse property', (done) => {
             let property = db.User.schema.getProperty('contents');
             expect(property.isAbstract()).to.be.true();
             done();
@@ -76,7 +75,7 @@ describe('ModelSchema', function() {
 
 
         it('should return a deep related property', (done) => {
-            let name = db.BlogPost.schema.getProperty('comments.author.name');
+            let name = db.BlogPost.schema.getProperty('credits.name');
             expect(name.type).to.equal('string');
             done();
         });
@@ -107,7 +106,7 @@ describe('ModelSchema', function() {
 
     describe('#hasProperty()', function() {
 
-        it('should returns true if the model schema has a property', (done) => {
+        it('should return true if the model schema has a property', (done) => {
             let hasBacklinks = db.BlogPost.schema.hasProperty('backlinks');
             expect(hasBacklinks).to.be.true();
             let hasUnknownProperty = db.BlogPost.schema.hasProperty('unknownProperty');
@@ -116,7 +115,7 @@ describe('ModelSchema', function() {
         });
 
 
-        it('should returns true if the model schema has inherited propertyies', (done) => {
+        it('should return true if the model schema has inherited propertyies', (done) => {
             let hasReviewer = db.Content.schema.hasProperty('reviewer');
             expect(hasReviewer).to.be.true();
             let hasNoReviewer = db.User.schema.hasProperty('reviewer');

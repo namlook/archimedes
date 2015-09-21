@@ -30,7 +30,7 @@ describe('Model Instance validation', function() {
             title: 'the title',
             body: 'the body',
             author: {_id: 'me', _type: 'User'},
-            comments: [{_id: 'good', _type: 'Comment'}, {_id: 'ok', _type: 'Comment'}],
+            credits: [{_id: 'user1', _type: 'User'}, {_id: 'user2', _type: 'User'}],
             tags: ['super', 'content'],
             updatedDate: now,
             ratting: 5,
@@ -136,11 +136,11 @@ describe('Model Instance validation', function() {
 
 
         it('should return an error if the type is not a list of model instances', (done) => {
-            let blogPost = db.BlogPost.create({comments: ['foo', 2]});
+            let blogPost = db.BlogPost.create({credits: ['foo', 2]});
             blogPost.validate().catch((error) => {
                 expect(error.name).to.equal('ValidationError');
                 expect(error.message).to.equal('Bad value');
-                expect(error.extra).to.equal('"comments" must be an object');
+                expect(error.extra).to.equal('"credits" must be an object');
                 done();
             });
         });
@@ -149,11 +149,11 @@ describe('Model Instance validation', function() {
         it('should return an error if the relations are not saved', (done) => {
             let good = db.Comment.create({body: 'good'});
             let ok = db.Comment.create({body: "it's ok"});
-            let blogPost = db.BlogPost.create({comments: [good, ok]});
+            let blogPost = db.BlogPost.create({credits: [good, ok]});
             blogPost.validate().catch((error) => {
                 expect(error.name).to.equal('ValidationError');
                 expect(error.message).to.equal('Bad value');
-                expect(error.extra).to.equal('"comments._id" is required');
+                expect(error.extra).to.equal('"credits._id" is required');
                 done();
             });
         });
@@ -161,11 +161,11 @@ describe('Model Instance validation', function() {
         it('should return an error if the relation is not saved (even when _id is passed)', (done) => {
             let good = db.Comment.create({_id: 'good', body: 'good'});
             let ok = db.Comment.create({_id: 'ok', body: "it's ok"});
-            let blogPost = db.BlogPost.create({comments: [good, ok]});
+            let blogPost = db.BlogPost.create({credits: [good, ok]});
             blogPost.validate().catch((error) => {
                 expect(error.name).to.equal('ValidationError');
                 expect(error.message).to.equal('Bad value');
-                expect(error.extra).to.equal('"comments._id" is required');
+                expect(error.extra).to.equal('"credits._id" is required');
                 done();
             });
         });

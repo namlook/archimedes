@@ -170,18 +170,34 @@ describe('Model', function() {
     describe('[mixins]', function() {
 
         it('should aggregate properties', (done) => {
-            expect(db.BlogPost.properties).to.include([
-                'title', 'body', 'author', 'tags', 'comments', 'backlinks'
+            expect(db.BlogPost.properties).to.only.include([
+                'ratting',
+                'author',
+                'body',
+                'createdDate',
+                'slug',
+                'title',
+                'tags',
+                'credits',
+                'backlinks',
+                'updatedDate',
+                'publishedDate',
+                'isPublished'
             ]);
+
             expect(db.Book.properties).to.include([
-                'title', 'body', 'author', 'isbn'
+                'author',
+                'body',
+                'createdDate',
+                'isbn'
             ]);
+
             done();
         });
 
         it('should returns all aggregated mixins for a model', (done) => {
             expect(db.Ebook.mixinsChain).to.include(
-                ['Content', 'Book', 'AvailableOnline', 'Ebook']
+                ['Content', 'Book', 'OnlineContent', 'Ebook']
             );
             done();
         });
@@ -313,8 +329,8 @@ describe('Model', function() {
                     'author',
                     'backlinks',
                     'body',
-                    'comments',
                     'createdDate',
+                    'credits',
                     'isPublished',
                     'publishedDate',
                     'ratting',

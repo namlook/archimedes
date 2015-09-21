@@ -65,7 +65,7 @@ describe('ModelSchemaProperty', function() {
         let author = db.BlogPost.schema.getProperty('author');
         expect(author.isRelation()).to.be.true();
 
-        let comments = db.BlogPost.schema.getProperty('comments');
+        let comments = db.BlogPost.schema.getProperty('credits');
         expect(comments.isRelation()).to.be.true();
 
         let ratting = db.BlogPost.schema.getProperty('ratting');
@@ -99,9 +99,16 @@ describe('ModelSchemaProperty', function() {
     it('should return all properties that match the reversed property', (done) => {
         let reverseProperty = db.User.schema.getProperty('contents');
         let properties = reverseProperty.fromReversedProperties();
-        expect(properties.length).to.equal(4);
+        expect(properties.length).to.equal(6);
         let modelNames = properties.map(o => o.modelSchema.name);
-        expect(modelNames).to.include(['Content', 'Book', 'Ebook', 'BlogPost']);
+        expect(modelNames).to.include([
+            'Content',
+            'OnlineContent',
+            'Comment',
+            'Book',
+            'Ebook',
+            'BlogPost'
+        ]);
         done();
     });
 

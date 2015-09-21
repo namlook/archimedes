@@ -1,5 +1,6 @@
 
 import store from './db';
+import _ from 'lodash';
 
 import {inspect} from 'util';
 
@@ -12,35 +13,34 @@ var generateTags = function(i) {
 };
 
 
-var generateComments = function(i) {
-    let _comments = [];
-    for (let k = 0; k < i % 8; k++) {
-        _comments.push({
-            _id: `comment${k}${i}`,
-            _type: 'Comment'
-        });
-    }
-    return _comments;
+var generateCredits = function(i) {
+    return _.range(0, i % 4).map((index) => {
+        return {
+            _id: `user${index}`,
+            _type: 'User'
+        };
+    });
 };
 
+
 /** blogposts **/
-var blogposts = [];
-for (let i = 0; i < 10; i++) {
-    blogposts.push({
+var blogposts = _.range(0, 10).map((i) => {
+    return {
         _id: `blogpost${i}`,
         title: `post ${i}`,
         body: `this is the body of the post ${i}`,
-        createdDate: new Date(1984, 7, i + 1),
+        createdDate: new Date(Date.UTC(1984, 7, i + 1)),
         author: {
             _id: `user${i % 5}`,
             _type: 'User'
         },
+        credits: generateCredits(i),
         tags: generateTags(i),
         ratting: i % 6,
-        isPublished: Boolean(i % 3),
-        comments: generateComments(i)
-    });
-}
+        isPublished: Boolean(i % 3)
+    };
+});
+
 
 /** comments **/
 var comments = [];
@@ -52,6 +52,7 @@ for (let i = 0; i < 10; i++) {
             _id: `comment${k}${i}`,
             _type: 'Comment',
             body: `this ${thing} ${sensation} !`,
+            target: {_id: `blogpost${i % 5}`, _type: 'BlogPost'},
             author: {
                 _id: `user${i % 5}`,
                 _type: 'User'
@@ -61,16 +62,15 @@ for (let i = 0; i < 10; i++) {
 }
 
 /** users **/
-var users = [];
-for (let i = 0; i < 5; i++) {
-    users.push({
+var users = _.range(0, 5).map((i) => {
+    return {
         _id: `user${i}`,
         _type: 'User',
         name: `user ${i}`,
         gender: i % 2 ? 'female' : 'male',
-        birthday: new Date(1980 + i, i, 10 + i)
-    });
-}
+        birthday: new Date(Date.UTC(1980 + i, i, 10 + i))
+    };
+});
 
 var verbose = false;
 export default function loadDb() {

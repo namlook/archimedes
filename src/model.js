@@ -38,6 +38,11 @@ var modelClassSchemaValidator = joi.object().keys({
         }),
         joi.string()
     )),
+    inverseRelationships: joi.object().pattern(/.+/, joi.object().keys({
+        type: joi.string(),
+        property: joi.string(),
+        propagateDeletion: joi.alternatives().try(joi.boolean(), joi.string())
+    })),
     methods: joi.object().pattern(/.+/, joi.func()),
     statics: joi.object().pattern(/.+/, joi.func())
 });

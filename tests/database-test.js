@@ -52,10 +52,17 @@ describe('Database', function() {
             expect(isPublished.length).to.equal(1);
             expect(isPublished[0].modelSchema.name).to.equal('BlogPost');
 
-            let title = db.findProperties('title');
-            expect(title.length).to.equal(4);
+            let title = db.findProperties('body');
+            expect(title.length).to.equal(6);
             let modelNames = title.map(o => o.modelSchema.name);
-            expect(modelNames).to.include(['Ebook', 'Book', 'BlogPost', 'Content']);
+            expect(modelNames).to.only.include([
+                'Content',
+                'OnlineContent',
+                'Comment',
+                'BlogPost',
+                'Book',
+                'Ebook'
+            ]);
 
             done();
         });
@@ -67,24 +74,24 @@ describe('Database', function() {
             expect(contents[0].modelSchema.name).to.equal('User');
 
             let reversedProperties = contents[0].fromReversedProperties();
-            expect(reversedProperties.length).to.equal(4);
+            expect(reversedProperties.length).to.equal(6);
             let modelNames = reversedProperties.map(o => o.modelSchema.name);
-            expect(modelNames).to.include([
-                'Content', 'Ebook', 'Book', 'BlogPost'
+            expect(modelNames).to.only.include([
+                'Content', 'OnlineContent', 'Ebook', 'Book', 'BlogPost', 'Comment'
             ]);
 
             let propNames = reversedProperties.map(o => o.name);
-            expect(propNames.length).to.equal(4);
-            expect(propNames).to.include(['author']);
+            expect(propNames.length).to.equal(6);
+            expect(propNames).to.only.include(['author']);
 
             done();
         });
 
         it('should return only the properties that match a mixin', (done) => {
-            let title = db.findProperties('title', 'Book');
+            let title = db.findProperties('body', 'Book');
             expect(title.length).to.equal(2);
             let modelNames = title.map(o => o.modelSchema.name);
-            expect(modelNames).to.include(['Ebook', 'Book']);
+            expect(modelNames).to.only.include(['Ebook', 'Book']);
 
             done();
         });

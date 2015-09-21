@@ -1,53 +1,7 @@
 
 export default {
-    User: {
+    Rateable: {
         properties: {
-            name: 'string',
-            gender: 'string',
-            birthday: 'date'
-        }
-    },
-    Content: {
-        properties: {
-            title: 'string',
-            body: 'string',
-            author: {
-                type: 'User',
-                reverse: 'contents'
-            },
-            createdDate: 'date'
-        },
-        methods: {
-            writtenBy() {
-                return this.get('author');
-            }
-        }
-    },
-    Comment: {
-        properties: {
-            body: 'string',
-            author: {
-                type: 'User',
-                reverse: 'comments'
-            },
-            comments: {
-                type: 'array',
-                items: 'Comment'
-            }
-        }
-    },
-    AvailableOnline: {
-        properties: {
-            slug: 'string',
-            comments: {
-                type: 'array',
-                items: 'Comment',
-                reverse: 'onlineContents'
-            },
-            tags: {
-                type: 'array',
-                items: 'string'
-            },
             ratting: {
                 type: 'number',
                 validate: [{precision: 2}, {min: 0}, {max: 5}],
@@ -55,6 +9,40 @@ export default {
                     deprecated: true
                 }
             }
+        }
+    },
+
+    Content: {
+        properties: {
+            author: {
+                type: 'User',
+                reverse: 'contents'
+            },
+            body: {
+                type: 'string'
+            },
+            createdDate: {
+                type: 'date'
+            }
+        },
+
+        methods: {
+            writtenBy() {
+                return this.get('author');
+            }
+        },
+
+        statics: {
+            utility() {
+                return 'ok';
+            }
+        }
+    },
+
+    OnlineContent: {
+        mixins: ['Content'],
+        properties: {
+            slug: 'string'
         },
         methods: {
             generateSlug() {
@@ -62,6 +50,43 @@ export default {
             }
         }
     },
+
+
+    Comment: {
+        mixins: ['Rateable', 'OnlineContent'],
+        properties: {
+            target: {
+                type: 'OnlineContent'
+                // reverse: 'comments'
+            }
+        }
+    },
+
+    BlogPost: {
+        mixins: ['Rateable', 'OnlineContent'],
+        properties: {
+            title: 'string',
+            tags: {
+                type: 'array',
+                items: 'string'
+            },
+            credits: {
+                type: 'array',
+                items: 'User'
+            },
+            backlinks: {
+                type: 'array',
+                items: {
+                    type: 'string',
+                    validate: ['uri']
+                }
+            },
+            updatedDate: 'date',
+            publishedDate: 'date',
+            isPublished: 'boolean'
+        }
+    },
+
     Book: {
         mixins: ['Content'],
         properties: {
@@ -77,21 +102,47 @@ export default {
             }
         }
     },
+
     Ebook: {
-        mixins: ['Book', 'AvailableOnline']
+        mixins: ['Book', 'OnlineContent']
     },
-    BlogPost: {
-        mixins: ['Content', 'AvailableOnline'],
+
+
+    User: {
         properties: {
-            backlinks: {
-                type: 'array',
-                items: 'string'
+            name: {
+                type: 'string'
             },
-            updatedDate: 'date',
-            publishedDate: 'date',
-            isPublished: 'boolean'
+            gender: {
+                type: 'string'
+            },
+            birthday: {
+                type: 'date'
+            }
+        },
+        inverseRelationships: {
+            blogPosts: {
+                type: 'BlogPost',
+                property: 'author',
+                propagateDeletion: true
+            },
+            reviewedBooks: {
+                type: 'Book',
+                property: 'reviewer',
+                propagateDeletion: 'reviewer'
+            },
+            contents: {
+                type: 'Content',
+                property: 'author',
+                propagateDeletion: 'author'
+            },
+            comments: {
+                type: 'Comment',
+                property: 'author'
+            }
         }
     },
+
     GenericType: {
         properties: {
             dates: {

@@ -232,9 +232,9 @@ describe('Model Instance', function() {
                 ratting: 3,
                 tags: ['foo', 'bar'],
                 author: {_id: 'user1', _type: 'User'},
-                comments: [
-                    {_id: 'comment1', _type: 'Comment'},
-                    {_id: 'comment2', _type: 'Comment'}
+                credits: [
+                    {_id: 'user1', _type: 'User'},
+                    {_id: 'user2', _type: 'User'}
                 ]
             });
 
@@ -257,9 +257,9 @@ describe('Model Instance', function() {
                 ratting: 3,
                 tags: ['foo', 'bar'],
                 author: {_id: 'user1', _type: 'User'},
-                comments: [
-                    {_id: 'comment1', _type: 'Comment'},
-                    {_id: 'comment2', _type: 'Comment'}
+                credits: [
+                    {_id: 'user1', _type: 'User'},
+                    {_id: 'user2', _type: 'User'}
                 ]
             });
 
@@ -279,14 +279,14 @@ describe('Model Instance', function() {
                 ratting: 3,
                 tags: ['foo', 'bar'],
                 author: {_id: 'user1', _type: 'User'},
-                comments: [
-                    {_id: 'comment1', _type: 'Comment'},
-                    {_id: 'comment2', _type: 'Comment'}
+                credits: [
+                    {_id: 'user1', _type: 'User'},
+                    {_id: 'user2', _type: 'User'}
                 ]
             });
 
             blogPost.toCsv().then((data) => {
-                expect(data).to.equal('thepost,BlogPost,user1,,,comment1|comment2,,true,"Mon, 14 Sep 2015 00:00:00 GMT",3,,foo|bar,the post,"Wed, 14 Oct 2015 00:00:00 GMT"');
+                expect(data).to.equal('thepost,BlogPost,user1,,,,user1|user2,true,"Mon, 14 Sep 2015 00:00:00 GMT",3,,foo|bar,the post,"Wed, 14 Oct 2015 00:00:00 GMT"');
                 done();
             }).catch((error) => {
                 console.log(error);
@@ -304,14 +304,14 @@ describe('Model Instance', function() {
                 ratting: 3,
                 tags: ['foo', 'bar'],
                 author: {_id: 'user1', _type: 'User'},
-                comments: [
-                    {_id: 'comment1', _type: 'Comment'},
-                    {_id: 'comment2', _type: 'Comment'}
+                credits: [
+                    {_id: 'user1', _type: 'User'},
+                    {_id: 'user2', _type: 'User'}
                 ]
             });
 
             blogPost.toCsv({delimiter: '\t'}).then((data) => {
-                expect(data).to.equal('thepost\tBlogPost\tuser1\t\t\tcomment1|comment2\t\ttrue\tMon, 14 Sep 2015 00:00:00 GMT\t3\t\tfoo|bar\tthe post\tWed, 14 Oct 2015 00:00:00 GMT');
+                expect(data).to.equal('thepost\tBlogPost\tuser1\t\t\t\tuser1|user2\ttrue\tMon, 14 Sep 2015 00:00:00 GMT\t3\t\tfoo|bar\tthe post\tWed, 14 Oct 2015 00:00:00 GMT');
                 done();
             }).catch((error) => {
                 console.log(error);
@@ -331,9 +331,9 @@ describe('Model Instance', function() {
                 ratting: 3,
                 tags: ['foo', 'bar'],
                 author: {_id: 'user1', _type: 'User'},
-                comments: [
-                    {_id: 'comment1', _type: 'Comment'},
-                    {_id: 'comment2', _type: 'Comment'}
+                credits: [
+                    {_id: 'user1', _type: 'User'},
+                    {_id: 'user2', _type: 'User'}
                 ]
             });
 
@@ -349,13 +349,13 @@ describe('Model Instance', function() {
             expect(jsonApi.data.attributes.tags).to.be.an.array();
             expect(jsonApi.data.attributes.tags).to.only.include(['foo', 'bar']);
             expect(jsonApi.data.relationships).to.be.an.object();
-            expect(jsonApi.data.relationships).to.only.include(['author', 'comments']);
+            expect(jsonApi.data.relationships).to.only.include(['author', 'credits']);
             expect(jsonApi.data.relationships.author.data).to.be.an.object();
             expect(jsonApi.data.relationships.author.data.id).to.equal('user1');
             expect(jsonApi.data.relationships.author.data.type).to.equal('User');
-            expect(jsonApi.data.relationships.comments.data).to.be.an.array();
-            expect(jsonApi.data.relationships.comments.data[0].id).to.equal('comment1');
-            expect(jsonApi.data.relationships.comments.data[0].type).to.equal('Comment');
+            expect(jsonApi.data.relationships.credits.data).to.be.an.array();
+            expect(jsonApi.data.relationships.credits.data[0].id).to.equal('user1');
+            expect(jsonApi.data.relationships.credits.data[0].type).to.equal('User');
             done();
         });
 
@@ -389,9 +389,9 @@ describe('Model Instance', function() {
                 _id: 'thepost',
                 title: 'the post',
                 author: {_id: 'user1', _type: 'User'},
-                comments: [
-                    {_id: 'comment1', _type: 'Comment'},
-                    {_id: 'comment2', _type: 'Comment'}
+                credits: [
+                    {_id: 'user1', _type: 'User'},
+                    {_id: 'user2', _type: 'User'}
                 ]
             });
 
@@ -410,10 +410,10 @@ describe('Model Instance', function() {
             expect(author.links.self).to.equal(`${baseUri}/relationships/author`);
             expect(author.links.related).to.equal(`${baseUri}/author`);
 
-            let comments = jsonApi.data.relationships.comments;
-            expect(comments.data[0].id).to.equal('comment1');
-            expect(comments.links.self).to.equal(`${baseUri}/relationships/comments`);
-            expect(comments.links.related).to.equal(`${baseUri}/comments`);
+            let credits = jsonApi.data.relationships.credits;
+            expect(credits.data[0].id).to.equal('user1');
+            expect(credits.links.self).to.equal(`${baseUri}/relationships/credits`);
+            expect(credits.links.related).to.equal(`${baseUri}/credits`);
 
             done();
         });
@@ -423,9 +423,9 @@ describe('Model Instance', function() {
                 _id: 'thepost',
                 title: 'the post',
                 author: {_id: 'user1', _type: 'User'},
-                comments: [
-                    {_id: 'comment1', _type: 'Comment'},
-                    {_id: 'comment2', _type: 'Comment'}
+                credits: [
+                    {_id: 'user1', _type: 'User'},
+                    {_id: 'user3', _type: 'User'}
                 ]
             });
 
@@ -439,11 +439,10 @@ describe('Model Instance', function() {
             expect(jsonApi.data.links.self).to.equal(baseUri);
             expect(jsonApi.data.attributes).to.be.an.object();
 
-            expect(included.length).to.equal(3);
+            expect(included.length).to.equal(2);
             expect(included).to.deep.equal([
                 {id: 'user1', type: 'User'},
-                {id: 'comment1', type: 'Comment'},
-                {id: 'comment2', type: 'Comment'}
+                {id: 'user3', type: 'User'}
             ]);
             done();
         });
@@ -453,9 +452,9 @@ describe('Model Instance', function() {
                 _id: 'thepost',
                 title: 'the post',
                 author: {_id: 'user1', _type: 'User'},
-                comments: [
-                    {_id: 'comment1', _type: 'Comment'},
-                    {_id: 'comment2', _type: 'Comment'}
+                credits: [
+                    {_id: 'user1', _type: 'User'},
+                    {_id: 'user3', _type: 'User'}
                 ]
             });
 
@@ -482,9 +481,9 @@ describe('Model Instance', function() {
                 _id: 'thepost',
                 title: 'the post',
                 author: {_id: 'user1', _type: 'User'},
-                comments: [
-                    {_id: 'comment1', _type: 'Comment'},
-                    {_id: 'comment2', _type: 'Comment'}
+                credits: [
+                    {_id: 'user3', _type: 'User'},
+                    {_id: 'user1', _type: 'User'}
                 ]
             });
 
@@ -492,27 +491,25 @@ describe('Model Instance', function() {
             let included = [];
             let jsonApi = blogPost.toJsonApi(baseUri, included);
 
-            expect(included.length).to.equal(3);
+            expect(included.length).to.equal(2);
             expect(jsonApi.data.id).to.equal('thepost');
 
             let blogPost2 = db.BlogPost.create({
                 _id: 'thepost2',
                 title: 'the post 2',
                 author: {_id: 'user2', _type: 'User'},
-                comments: [
-                    {_id: 'comment1', _type: 'Comment'},
-                    {_id: 'comment3', _type: 'Comment'}
+                credits: [
+                    {_id: 'user1', _type: 'User'},
+                    {_id: 'user3', _type: 'User'}
                 ]
             });
 
             let jsonApi2 = blogPost2.toJsonApi(baseUri, included);
             expect(jsonApi2.data.id).to.equal('thepost2');
             expect(_.sortBy(included, 'id')).to.deep.equal([
-                {id: 'comment1', type: 'Comment'},
-                {id: 'comment2', type: 'Comment'},
-                {id: 'comment3', type: 'Comment'},
                 {id: 'user1', type: 'User'},
-                {id: 'user2', type: 'User'}
+                {id: 'user2', type: 'User'},
+                {id: 'user3', type: 'User'}
             ]);
 
             done();
