@@ -1,6 +1,6 @@
 
 import {memory, triplestore} from '../lib';
-import modelSchemas from './fixtures-model-schemas';
+import modelSchemas from './schemas';
 
 
 var databases = {
