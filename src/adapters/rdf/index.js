@@ -289,7 +289,7 @@ export default function(config) {
                     var propertyUri = propertyRdfUri(db[modelType], property);
                     let predicate;
                     if (_.contains(property, '.')) {
-                        predicate = propertyName2Sparson(db, property);
+                        predicate = propertyName2Sparson(db[modelType], property);
                     } else {
                         predicate = propertyUri;
                     }
@@ -305,7 +305,7 @@ export default function(config) {
                     let targetPropertyUri = propertyRdfUri(db[modelType], target);
                     let aggregationPredicate;
                     if (_.contains(target, '.')) {
-                        aggregationPredicate = propertyName2Sparson(db, target);
+                        aggregationPredicate = propertyName2Sparson(db[modelType], target);
                     } else {
                         aggregationPredicate = targetPropertyUri;
                     }

@@ -14,8 +14,12 @@ export default class ModelSchema {
         this.name = modelClass.name;
         this.db = modelClass.db;
         this._properties = {};
+        this._inverseRelationships = {};
         _.forOwn(this.modelClass.properties, (_propConfig, _propName) => {
             this._properties[_propName] = new ModelSchemaProperty(_propName, _propConfig, this);
+        });
+        _.forOwn(this.modelClass.inverseRelationships, (_propConfig, _propName) => {
+            this._inverseRelationships[_propName] = new ModelSchemaProperty(_propName, _propConfig, this, true);
         });
         // this.fixtures = new ModelFixture(this);
     }
@@ -51,6 +55,10 @@ export default class ModelSchema {
         } else {
             property = this._properties[propertyName];
 
+            if (!property) {
+                property = this._inverseRelationships[propertyName];
+            }
+
             /**
              * if there is no property, maybe the property asked
              * is defined on another mixin. Let's create a list of potential
@@ -74,6 +82,14 @@ export default class ModelSchema {
             properties.push(this.getProperty(propertyName));
         });
         return properties;
+    }
+
+    get inverseRelationships() {
+        var inverseRelationships = [];
+        Object.keys(this.modelClass.inverseRelationships).forEach((propertyName) => {
+            inverseRelationships.push(this.getProperty(propertyName));
+        });
+        return inverseRelationships;
     }
 
     hasProperty(propertyName) {

@@ -68,41 +68,6 @@ export default function(dbAdapter, config) {
                         }
                         modelConfig.properties[propName] = propConfig;
                     });
-
-                    /**
-                     * if a relation has a reverse specified, create the abstract
-                     * property into the targeted model
-                     *
-                     * ex:
-                     *
-                     *     author: {
-                     *       type: 'User',
-                     *       reverse: 'contents'
-                     *     }
-                     *
-                     * will add the following property into the User model:
-                     *
-                     *      contents: {
-                     *        type: 'array',
-                     *        items: 'User',
-                     *        abstract: true
-                     *      }
-                     */
-                    _.forOwn(modelConfig.properties, (propConfig, propName) => {
-                        if (propConfig.reverse) {
-                            let {type: reverseType, name: reverseName} = propConfig.reverse;
-                            models[reverseType].properties[reverseName] = {
-                                type: 'array',
-                                items: {type: modelName},
-                                abstract: {
-                                    fromReverse: {
-                                        type: modelName,
-                                        property: propName
-                                    }
-                                }
-                            };
-                        }
-                    });
                 });
 
 
@@ -128,6 +93,15 @@ export default function(dbAdapter, config) {
                 this._propertiesMap = {};
                 _.forOwn(this.registeredModels, (model) => {
                     model.schema.properties.forEach((property) => {
+
+                        this._propertiesMap[property.name] = this._propertiesMap[property.name] || [];
+                        if (property) {
+                            this._propertiesMap[property.name].push(property);
+                        }
+
+                    });
+
+                    model.schema.inverseRelationships.forEach((property) => {
 
                         this._propertiesMap[property.name] = this._propertiesMap[property.name] || [];
                         if (property) {

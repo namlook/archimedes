@@ -15,8 +15,7 @@ export default {
     Content: {
         properties: {
             author: {
-                type: 'User',
-                reverse: 'contents'
+                type: 'User'
             },
             body: {
                 type: 'string'
@@ -44,6 +43,12 @@ export default {
         properties: {
             slug: 'string'
         },
+        inverseRelationships: {
+            comments: {
+                type: 'Comment',
+                property: 'target'
+            }
+        },
         methods: {
             generateSlug() {
                 return this.get('title').split(' ').join('-');
@@ -57,7 +62,6 @@ export default {
         properties: {
             target: {
                 type: 'OnlineContent'
-                // reverse: 'comments'
             }
         }
     },
@@ -92,8 +96,7 @@ export default {
         properties: {
             isbn: 'string',
             reviewer: {
-                type: 'User',
-                reverse: 'reviewedBooks'
+                type: 'User'
             }
         },
         statics: {

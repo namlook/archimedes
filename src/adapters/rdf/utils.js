@@ -40,49 +40,40 @@ export var propertyRdfUri = function(modelClass, propertyName) {
 };
 
 
-export var propertyName2Sparson = function(db, propertyNames) {
-    var items = [];
-    propertyNames.split('.').forEach((propertyName) => {
-        let properties = db.findProperties(propertyName);
+export var propertyName2Sparson = function(modelClass, propertyNames) {
+    let modelSchema = modelClass.schema;
+    let db = modelClass.db;
 
-        properties = properties.map((property) => {
-            if (property.isReversed()) {
+    let items = propertyNames.split('.').map((propertyName) => {
 
-                property = property.fromReversedProperties();
-                let propertyUris = _.uniq(property.map((o) => o.meta.rdfUri));
-                if (propertyUris.length > 1) {
-                    propertyUris = {
-                        type: 'path',
-                        pathType: '|',
-                        items: propertyUris
-                    };
-                }
+        let property = modelSchema.getProperty(propertyName);
 
-                return {
+        if (property.isRelation()) {
+            modelSchema = db[property.type].schema;
+        }
+
+
+        if (property.isReversed()) {
+
+            property = property.fromReversedProperties();
+
+            let propertyUris = _.uniq(property.map((o) => o.meta.rdfUri));
+            if (propertyUris.length > 1) {
+                propertyUris = {
                     type: 'path',
-                    pathType: '^',
+                    pathType: '|',
                     items: propertyUris
                 };
-
-            } else {
-                return property.meta.rdfUri;
             }
-        });
 
-        properties = _.uniq(properties);
-
-        if (properties.length === 1) {
-
-            items.push(properties[0]);
-
-        } else if (properties.length > 1) {
-
-            items.push({
+            return {
                 type: 'path',
-                pathType: '|',
-                items: properties
-            });
+                pathType: '^',
+                items: propertyUris
+            };
 
+        } else {
+            return property.meta.rdfUri;
         }
     });
 
@@ -305,7 +296,7 @@ export var query2whereClause = function(db, modelType, query, options) {
                 idAsValue = true;
             }
             propertyUri = propertyRdfUri(modelClass, propertyName);
-            predicate = propertyName2Sparson(db, propertyName);
+            predicate = propertyName2Sparson(modelClass, propertyName);
         } else {
             propertyUri = propertyRdfUri(modelClass, propertyName);
             predicate = propertyUri;

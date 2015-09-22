@@ -52,9 +52,9 @@ for (let i = 0; i < 10; i++) {
             _id: `comment${k}${i}`,
             _type: 'Comment',
             body: `this ${thing} ${sensation} !`,
-            target: {_id: `blogpost${i % 5}`, _type: 'BlogPost'},
+            target: {_id: `blogpost${i}`, _type: 'BlogPost'},
             author: {
-                _id: `user${i % 5}`,
+                _id: `user${k}`,
                 _type: 'User'
             }
         });

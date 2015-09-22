@@ -209,6 +209,104 @@ describe('Model Instance', function() {
         });
     });
 
+    describe('inverse relationships', function() {
+        it('should be a promise', (done) => {
+            let instance = db.BlogPost.create();
+            let promise = instance.comments();
+            expect(promise.then).to.be.a.function();
+            done();
+        });
+
+
+        it('should return the relations', (done) => {
+            let blogPosts = [
+                {
+                    _id: 'theblogpost0',
+                    _type: 'BlogPost',
+                    title: 'hello world'
+                },
+                {
+                    _id: 'theblogpost1',
+                    _type: 'BlogPost',
+                    title: 'salut monde'
+                }
+            ];
+
+            let batchComments = _.range(0, 10).map((index) => {
+                return {
+                    _id: `comment${index}`,
+                    _type: 'Comment',
+                    target: {_id: `theblogpost${index % 2}`, _type: 'BlogPost'},
+                    body: `hello ${index}`
+                };
+            });
+
+            Promise.all([
+                db.batchSync('Comment', batchComments),
+                db.batchSync('BlogPost', blogPosts)
+            ]).then(() => {
+                return db.BlogPost.fetch('theblogpost0');
+            }).then((blogPost) => {
+                return blogPost.comments();
+            }).then((comments) => {
+                expect(comments.length).to.equal(5);
+                let commentIds = comments.map((comment) => comment._id);
+                expect(commentIds).to.only.include([
+                    'comment0',
+                    'comment2',
+                    'comment4',
+                    'comment6',
+                    'comment8'
+                ]);
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+
+        it('should filter the relations', (done) => {
+            let blogPosts = [
+                {
+                    _id: 'theblogpost0',
+                    _type: 'BlogPost',
+                    title: 'hello world'
+                },
+                {
+                    _id: 'theblogpost1',
+                    _type: 'BlogPost',
+                    title: 'salut monde'
+                }
+            ];
+
+            let batchComments = _.range(0, 10).map((index) => {
+                return {
+                    _id: `comment${index}`,
+                    _type: 'Comment',
+                    target: {_id: `theblogpost${index % 2}`, _type: 'BlogPost'},
+                    body: `hello ${index % 3}`
+                };
+            });
+
+            Promise.all([
+                db.batchSync('Comment', batchComments),
+                db.batchSync('BlogPost', blogPosts)
+            ]).then(() => {
+                return db.BlogPost.fetch('theblogpost0');
+            }).then((blogPost) => {
+                return blogPost.comments({'body': 'hello 2'});
+            }).then((comments) => {
+                expect(comments.length).to.equal(2);
+                let commentIds = comments.map((comment) => comment._id);
+                expect(commentIds).to.only.include(['comment2', 'comment8']);
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+    });
+
     describe('#toCsv()', function() {
         it('should be a promise', (done) => {
             let instance = db.BlogPost.create();

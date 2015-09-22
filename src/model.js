@@ -101,6 +101,15 @@ var modelFactory = function(db, name, modelClassSchema) {
 
 
     /**
+     * process the inversed relationships and aggregate them from mixins
+     */
+    var inverseRelationships = mixins.map(mixin => {
+        return mixin.inverseRelationships;
+    });
+    inverseRelationships = _.assign({}, ..._.compact(inverseRelationships));
+
+
+    /**
      * process the methods and aggregate them from mixins
      */
     var methods = mixins.map(mixin => {
@@ -134,6 +143,9 @@ var modelFactory = function(db, name, modelClassSchema) {
         _archimedesModel: true,
         properties: new function() {
             return properties;
+        },
+        inverseRelationships: new function() {
+            return inverseRelationships;
         },
         methods: new function() {
             return methods;

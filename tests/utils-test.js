@@ -10,7 +10,7 @@ var before = lab.before;
 var expect = Code.expect;
 
 import {triplestore} from '../lib';
-import modelSchemas from './fixtures-model-schemas';
+import modelSchemas from './schemas';
 import queryValidator from '../lib/query-validator';
 
 

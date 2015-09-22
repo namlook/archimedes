@@ -138,13 +138,15 @@ describe('Model', function() {
         });
 
         it('should process reverse relations', (done) => {
-            let propConf = db.User.properties.reviewedBooks;
+            let propConf = db.User.schema.getProperty('reviewedBooks').config;
             expect(propConf.type).to.equal('array');
+
             expect(propConf.items.type).to.equal('Book');
             expect(propConf.abstract).to.deep.equal({
                 fromReverse: {
                     type: 'Book',
-                    property: 'reviewer'
+                    property: 'reviewer',
+                    propagateDeletion: 'reviewer'
                 }
             });
 
@@ -153,13 +155,14 @@ describe('Model', function() {
             expect(prop.isArray()).to.be.true();
             expect(prop.type).to.equal('Book');
 
-            let propConf2 = db.User.properties.contents;
+            let propConf2 = db.User.schema.getProperty('contents').config;
             expect(propConf2.type).to.equal('array');
             expect(propConf2.items.type).to.equal('Content');
             expect(propConf2.abstract).to.deep.equal({
                 fromReverse: {
                     type: 'Content',
-                    property: 'author'
+                    property: 'author',
+                    propagateDeletion: 'author'
                 }
             });
             done();
@@ -190,6 +193,21 @@ describe('Model', function() {
                 'body',
                 'createdDate',
                 'isbn'
+            ]);
+
+            done();
+        });
+
+        it('should aggregate inverse relationships', (done) => {
+            expect(db.BlogPost.inverseRelationships).to.only.include([
+                'comments'
+            ]);
+
+            expect(db.User.inverseRelationships).to.include([
+                'blogPosts',
+                'comments',
+                'contents',
+                'reviewedBooks'
             ]);
 
             done();

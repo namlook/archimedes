@@ -12,7 +12,7 @@ export default function(db, modelClass, attrs) {
         attrs: attrs
     };
 
-    return {
+    let instance = {
         _archimedesModelInstance: true,
         Model: modelClass,
         _type: modelClass.name,
@@ -441,4 +441,27 @@ export default function(db, modelClass, attrs) {
             return this;
         }
     };
+
+    /**
+     * Attach the inverse relationships function
+     */
+    _.forOwn(modelClass.inverseRelationships, (propConfig, propName) => {
+        instance[propName] = function(query, options) {
+
+            query = query || {};
+            options = options || {};
+
+            return new Promise((resolve, reject) => {
+                if (!this._id) {
+                    return reject(new Error('cannot fetch relations from an unsaved instance'));
+                }
+
+                query[`${propConfig.property}._id`] = this._id;
+
+                return resolve(db[propConfig.type].find(query, options));
+            });
+        };
+    });
+
+    return instance;
 }

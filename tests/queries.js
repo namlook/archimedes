@@ -298,25 +298,21 @@ export default [
 
     /*** relations inverse ***/
     {
-        skip: true,
         model: 'User',
-        query: {'contents.ratting': 2},
+        query: {'blogPosts.ratting': 2},
         ids: ['user2', 'user3']
     },
     {
-        skip: true,
         model: 'User',
         query: {'comments._id': 'comment03'},
-        ids: ['user3']
+        ids: ['user0']
     },
     {
-        skip: true,
         model: 'User',
-        query: {'comments._id': {$in: ['comment03', 'comment02']}},
-        ids: ['user2', 'user3']
+        query: {'comments._id': {$in: ['comment03', 'comment12']}},
+        ids: ['user0', 'user1']
     },
     {
-        skip: true,
         model: 'BlogPost',
         query: {'comments.body': 'this thing sucks !'},
         ids: [
@@ -329,34 +325,19 @@ export default [
         ]
     },
     {
-        skip: true,
         model: 'User',
-        query: {'comments.body': 'this thing rocks !'},
+        query: {'comments.body': 'this thing sucks !'},
         ids: [
             'user0',
-            'user0',
-            'user0',
             'user1',
-            'user1',
-            'user1',
-            'user1',
-            'user2',
-            'user2',
-            'user2',
-            'user2',
             'user2',
             'user3',
-            'user3',
-            'user4',
-            'user4',
-            'user4',
             'user4'
         ]
     },
     {
-        skip: true,
         model: 'Comment',
-        query: {'onlineContents._id': 'blogpost7'},
+        query: {'target._id': 'blogpost7'},
         ids: [
             'comment07',
             'comment17',
@@ -492,16 +473,14 @@ export default [
         ]
     },
     {
-        skip: true,
-        model: 'User',
-        query: {'comments.body': 'this thing rocks !'},
+        model: 'BlogPost',
+        query: {'comments.body': 'this thing sucks !'},
         options: {distinct: true},
         ids: [
-            'user0',
-            'user1',
-            'user2',
-            'user3',
-            'user4'
+            'blogpost2',
+            'blogpost5',
+            'blogpost6',
+            'blogpost7'
         ]
     },
 

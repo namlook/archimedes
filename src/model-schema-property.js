@@ -54,7 +54,19 @@ var constraints2joi = function(modelName, propertyName, constraints, joiConstrai
 
 
 export default class ModelSchemaProperty {
-    constructor(name, config, modelSchema) {
+    constructor(name, config, modelSchema, isReversed) {
+        if (isReversed) {
+            config = {
+                type: 'array',
+                items: {
+                    type: config.type
+                },
+                abstract: {
+                    fromReverse: config
+                }
+            };
+        }
+
         this.name = name;
         this.config = config;
         this.modelSchema = modelSchema;
@@ -87,30 +99,6 @@ export default class ModelSchemaProperty {
         return !!_.get(this.config, 'abstract.fromReverse');
     }
 
-    /** return the reversed properties if 'reverse' is specified in
-     * the property config. Returns null otherwise.
-     *
-     *  Example for the author property with the following config:
-     *
-     *  Comment: {
-     *      author: {
-     *          type: 'User',
-     *          reverse: 'comments'
-     *      }
-     *  }
-     *
-     *  `authorProperty.reversedProperty()`` will returns the `User.comments` property
-     *
-     *
-     * @return a reversed (abstract) property if the property
-     */
-    reversedProperty() {
-        let db = this.modelSchema.db;
-        let {type: reversedType, name: reversedName} = _.get(this.config, 'reverse', {});
-        if (reversedType) {
-            return db[reversedType].schema.getProperty(reversedName);
-        }
-    }
 
     /** returns all properties that match the reversed property
      *
