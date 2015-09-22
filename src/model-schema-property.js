@@ -99,6 +99,52 @@ export default class ModelSchemaProperty {
         return !!_.get(this.config, 'abstract.fromReverse');
     }
 
+    /**
+     * Return the reversed properties if 'reverse' is specified in
+     * the property config. Returns null otherwise.
+     *
+     *  Example with Comment and User:
+     *
+     *  Comment: {
+     *     properties: {
+     *          author: {
+     *              type: 'User',
+     *        }
+     *     }
+     *  }
+     *
+     *   User: {
+     *       inverseRelationships: {
+     *           comments: {
+     *               type: 'Comment',
+     *               property: 'author'
+     *           }
+     *       }
+     *   }
+     *
+     *
+     *  `Comment.schema.getProperty('author').reversedProperty()`
+     *
+     *     will returns the `User.comments` property
+     *
+     *
+     * @return a reversed (abstract) property if the property
+     */
+    reversedProperty() {
+        let db = this.modelSchema.db;
+        let targetModelName = this.modelSchema.name;
+        if (this.isRelation()) {
+            let inverseRelationships = db[this.type].schema.inverseRelationships;
+            for (let i = 0; i < inverseRelationships.length; i++) {
+                let invRel = inverseRelationships[i];
+                let invRelProp = invRel.config.abstract.fromReverse.property;
+                if (invRel.type === targetModelName && invRelProp === this.name) {
+                    return db[this.type].schema.getProperty(invRel.name);
+                }
+            }
+        }
+    }
+
 
     /** returns all properties that match the reversed property
      *

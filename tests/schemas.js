@@ -46,7 +46,8 @@ export default {
         inverseRelationships: {
             comments: {
                 type: 'Comment',
-                property: 'target'
+                property: 'target',
+                propagateDeletion: true
             }
         },
         methods: {

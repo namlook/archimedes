@@ -85,6 +85,17 @@ describe('ModelSchemaProperty', function() {
         done();
     });
 
+    it('should return all reversed properties', (done) => {
+        let property = db.Comment.schema.getProperty('author');
+        let reversedProperty = property.reversedProperty();
+        expect(reversedProperty.name).to.be.equal('comments');
+
+        let reversedProperty2 = db.User.schema.getProperty('comments');
+        let properties = reversedProperty2.reversedProperty();
+        expect(properties).to.not.exist();
+        done();
+    });
+
     it('should return all properties that match the reversed property', (done) => {
         let reverseProperty = db.User.schema.getProperty('contents');
         let properties = reverseProperty.fromReversedProperties();
