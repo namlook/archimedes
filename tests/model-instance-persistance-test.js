@@ -9,6 +9,7 @@ var beforeEach = lab.beforeEach;
 var expect = Code.expect;
 
 import store from './db';
+import _ from 'lodash';
 
 describe('Model instance persistance', function() {
 
@@ -281,7 +282,106 @@ describe('Model instance persistance', function() {
             });
         });
 
+        it('should delete cascade', (done) => {
+            let users = _.range(0, 5).map((index) => {
+                return {
+                    _id: `user${index}`,
+                    _type: 'User',
+                    name: `user ${index}`
+                };
+            });
 
+            let blogposts = _.range(0, 10).map((index) => {
+                return {
+                    _id: `blogpost${index}`,
+                    _type: 'BlogPost',
+                    title: `hello ${index}`,
+                    author: {_id: `user${index % 2}`, _type: 'User'}
+                };
+            });
+
+            let comments = _.range(0, 10).map((index) => {
+                return {
+                    _id: `comment${index}`,
+                    _type: 'Comment',
+                    body: `comment ${index}`,
+                    author: {_id: `user${index % 2}`, _type: 'User'},
+                    target: {_id: `blogpost${index % 3}`, _type: 'BlogPost'}
+                };
+            });
+
+            Promise.all([
+                db.batchSync('User', users),
+                db.batchSync('BlogPost', blogposts),
+                db.batchSync('Comment', comments)
+            ]).then((data) => {
+            /** remove a blog post **/
+
+                return db.BlogPost.fetch('blogpost0');
+
+            }).then((blogPost0) => {
+
+                return blogPost0.delete();
+
+            }).then(() => {
+
+                return db.BlogPost.fetch('blogpost0');
+
+            }).then((noBlogPost0) => {
+
+                expect(noBlogPost0).to.not.exists();
+
+                return db.Comment.find({_id: {$in: [
+                    'comment0', 'comment3', 'comment6', 'comment9']}});
+
+            }).then((noComments) => {
+
+                expect(noComments.length).to.equal(0);
+
+            /** remove a user **/
+                return db.User.fetch('user1');
+
+            }).then((user1) => {
+
+                return user1.delete();
+
+            }).then(() => {
+
+                return db.fetch('User', 'user1');
+
+            }).then((noUser1) => {
+
+                expect(noUser1).to.not.exist();
+
+                return db.find('BlogPost', {_id: {$in: [
+                    'blogpost1', 'blogpost3', 'blogpost5', 'blogpost7', 'blogpost9']}});
+
+            }).then((noBlogPosts) => {
+
+                expect(noBlogPosts.length).to.equal(0);
+
+                return db.find('Comment', {_id: {$in: [
+                    'comment1', 'comment4', 'comment7']}})
+
+            }).then((noComments2) => {
+
+                console.log('noComments2', noComments2.length);
+                console.log(noComments2);
+                expect(noComments2.length).to.equal(0);
+
+                return db.fetch('Comment', 'comment5');
+
+            }).then((comment5) => {
+                console.log(comment5);
+                console.log('authors', comment5.author);
+                expect(comment5.author).to.not.exist();
+
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
     });
 
 });

@@ -142,7 +142,8 @@ export default {
             },
             comments: {
                 type: 'Comment',
-                property: 'author'
+                property: 'author',
+                propagateDeletion: 'author'
             }
         }
     },

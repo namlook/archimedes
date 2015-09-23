@@ -124,6 +124,32 @@ describe('ModelSchema', function() {
         });
     });
 
+    describe('#propagateDeletionProperties()', function() {
+        it('should return all properties that propagate the deletion', (done) => {
+            let properties = db.BlogPost.schema.propagateDeletionProperties;
+            expect(properties.length).to.equal(1);
+            expect(properties[0].name).to.equal('comments');
+            expect(properties[0].modelSchema.name).to.equal('BlogPost');
+
+            properties = db.User.schema.propagateDeletionProperties;
+            let data = properties.map((p) => {
+                return {
+                    propName: p.name,
+                    modelName: p.modelSchema.name
+                };
+            });
+
+            expect(properties.length).to.equal(4);
+            expect(data).to.deep.equal([
+                {propName: 'blogPosts', modelName: 'User'},
+                {propName: 'reviewedBooks', modelName: 'User'},
+                {propName: 'contents', modelName: 'User'},
+                {propName: 'comments', modelName: 'User'}
+            ]);
+            done();
+
+        });
+    });
 
     describe('#validate()', function() {
 

@@ -2,6 +2,8 @@
 import _ from 'lodash';
 import sparqlClient from './sparql-client';
 import {
+    classRdfUri,
+    propertyRdfUri,
     instanceRdfUri,
     query2whereClause,
     pojo2triples,
@@ -654,6 +656,99 @@ export default function(config) {
 
 
             delete(modelType, modelIdOrUri) {
+
+                let deleteCascade = function(_modelType, uri) {
+                    let deleteProps = db[_modelType].schema.propagateDeletionProperties;
+
+                    let deleteTriples = [{
+                        subject: uri,
+                        predicate: '?p',
+                        object: '?o'
+                    }];
+
+                    let whereClause = [{
+                        type: 'optional',
+                        patterns: [
+                            {
+                                type: 'bgp',
+                                triples: [{
+                                    subject: uri,
+                                    predicate: '?p',
+                                    object: '?o'
+                                }]
+                            }
+                        ]
+                    }];
+
+                    deleteProps.forEach((prop) => {
+
+                        let variable;
+                        let predictate;
+                        let type;
+                        let whereOptionalTriples = [];
+                        let propagateDeletionProperty = prop.propagateDeletion();
+                        let propagateDeletionType = prop.type;
+
+                        if (prop.isReversed()) {
+                            let props = prop.fromReversedProperties();
+                            prop = props[0]; // Check this !
+                            variable = `?${prop.modelSchema.name}_via_${prop.name}`;
+                            predictate = propertyRdfUri(db[prop.modelSchema.name], prop.name);
+                            type = classRdfUri(db[prop.modelSchema.name]);
+                            whereOptionalTriples.push({
+                                subject: variable,
+                                predicate: predictate,
+                                object: uri
+                            });
+
+                        } else {
+
+                            predictate = propertyRdfUri(db[_modelType], prop.name);
+
+                            variable = `?${prop.type}_via_${prop.name}`;
+                            type = classRdfUri(db[prop.type]);
+                            whereOptionalTriples.push({
+                                subject: uri,
+                                predicate: predictate,
+                                object: variable
+                            });
+                        }
+
+                        let variablePredicate = `${variable}Predicate`
+                        if (propagateDeletionProperty !== true) {
+                            variablePredicate = propertyRdfUri(db[propagateDeletionType], propagateDeletionProperty);
+                        }
+
+                        let statement = {
+                            subject: variable,
+                            predicate: variablePredicate,
+                            object: `${variable}Object`
+                        };
+
+                        deleteTriples.push(statement);
+                        whereOptionalTriples.push(statement);
+
+                        whereOptionalTriples.push({
+                            subject: variable,
+                            predicate: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type',
+                            object: type
+                        });
+
+                        whereClause.push({
+                            type: 'optional',
+                            patterns: [
+                                {
+                                    type: 'bgp',
+                                    triples: whereOptionalTriples
+                                }
+                            ]
+                        });
+                    });
+
+                    return {deleteTriples, whereClause};
+                };
+
+
                 return new Promise((resolve, reject) => {
 
                     var uri = modelIdOrUri;
@@ -662,11 +757,7 @@ export default function(config) {
                         uri = instanceRdfUri(db[modelType], modelIdOrUri);
                     }
 
-                    var triples = [{
-                        subject: uri,
-                        predicate: '?p',
-                        object: '?o'
-                    }];
+                    let {deleteTriples, whereClause} = deleteCascade(modelType, uri);
 
                     let sparson = {
                         type: 'update',
@@ -677,25 +768,32 @@ export default function(config) {
                                     {
                                         type: 'graph',
                                         name: config.graphUri,
-                                        triples: triples
+                                        triples: deleteTriples
                                     }
                                 ],
                                 insert: [],
-                                where: [
-                                    {
-                                        type: 'bgp',
-                                        triples: triples
-                                    }
-                                ]
+                                where: whereClause
                             }
                         ]
                     };
+
+                    // console.log('');
+                    // console.log('');
+                    // console.dir(sparson, {depth: 10});
+                    // console.log('');
+                    // console.log('');
 
                     try {
                         var sparql = new SparqlGenerator().stringify(sparson);
                     } catch(sparqlGeneratorError) {
                         return reject(sparqlGeneratorError);
                     }
+
+                    // console.log('');
+                    // console.log('');
+                    // console.log(sparql);
+                    // console.log('');
+                    // console.log('');
 
                     this.execute(sparql).then(() => {
                         return resolve();

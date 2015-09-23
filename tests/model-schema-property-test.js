@@ -135,4 +135,13 @@ describe('ModelSchemaProperty', function() {
         done();
     });
 
+    it('should return true if the property propagate the deletion', (done) => {
+        let bpComments = db.BlogPost.schema.getProperty('comments');
+        expect(bpComments.propagateDeletion()).to.be.true();
+
+        let userComments = db.User.schema.getProperty('comments');
+        expect(userComments.propagateDeletion()).to.equal('author');
+        done();
+    });
+
 });

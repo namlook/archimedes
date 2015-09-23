@@ -96,6 +96,23 @@ export default class ModelSchema {
         return !!this.getProperty(propertyName);
     }
 
+    /**
+     * Returns all properties (inverse or not) that propagate deletion
+     *
+     * @returns a list of ModelSchemaProperty
+     */
+    get propagateDeletionProperties() {
+        let allProperties = this.properties.concat(this.inverseRelationships);
+
+        let results = allProperties.map((property) => {
+            if (property.propagateDeletion()) {
+                return property;
+            }
+        });
+
+        return _.compact(results);
+    }
+
     validate(pojo, options, callback) {
         if (typeof options === 'function' && !callback) {
             callback = options;

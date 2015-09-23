@@ -99,6 +99,13 @@ export default class ModelSchemaProperty {
         return !!_.get(this.config, 'abstract.fromReverse');
     }
 
+    propagateDeletion() {
+        let config = this.config;
+        if (this.isAbstract()) {
+            config = this.config.abstract.fromReverse;
+        }
+        return _.get(config, 'propagateDeletion');
+    }
     /**
      * Return the reversed properties if 'reverse' is specified in
      * the property config. Returns null otherwise.
@@ -156,10 +163,6 @@ export default class ModelSchemaProperty {
         return db.findProperties(property, type);
     }
 
-
-    get propagateDeletion() {
-        return !!this.config.propagateDeletion;
-    }
 
     get validationConstraints() {
         let validations = this.config.validate || [];
