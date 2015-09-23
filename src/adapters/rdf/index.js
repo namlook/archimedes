@@ -660,25 +660,31 @@ export default function(config) {
                 let deleteCascade = function(_modelType, uri) {
                     let deleteProps = db[_modelType].schema.propagateDeletionProperties;
 
-                    let deleteTriples = [{
-                        subject: uri,
-                        predicate: '?p',
-                        object: '?o'
-                    }];
+                    let deleteTriples = [];
+                    let whereClause = [];
 
-                    let whereClause = [{
-                        type: 'optional',
-                        patterns: [
-                            {
-                                type: 'bgp',
-                                triples: [{
-                                    subject: uri,
-                                    predicate: '?p',
-                                    object: '?o'
-                                }]
-                            }
-                        ]
-                    }];
+                    if( !_.startsWith(uri, '?')) {
+                        deleteTriples.push({
+                            subject: uri,
+                            predicate: '?s',
+                            object: '?o'
+                        });
+
+                        whereClause.push({
+                            type: 'optional',
+                            patterns: [
+                                {
+                                    type: 'bgp',
+                                    triples: [{
+                                        subject: uri,
+                                        predicate: '?s',
+                                        object: '?o'
+                                    }]
+                                }
+                            ]
+                        });
+                    }
+
 
                     deleteProps.forEach((prop) => {
 
@@ -689,10 +695,17 @@ export default function(config) {
                         let propagateDeletionProperty = prop.propagateDeletion();
                         let propagateDeletionType = prop.type;
 
+                        let recusive = false;
+                        let variablePrefix = '';
+                        if (propagateDeletionType === _modelType) {
+                            recusive = true;
+                            variablePrefix = uri.slice(1); // strip the '?'
+                        }
+
                         if (prop.isReversed()) {
                             let props = prop.fromReversedProperties();
                             prop = props[0]; // Check this !
-                            variable = `?${prop.modelSchema.name}_via_${prop.name}`;
+                            variable = `?${variablePrefix}${prop.modelSchema.name}_via_${prop.name}`;
                             predictate = propertyRdfUri(db[prop.modelSchema.name], prop.name);
                             type = classRdfUri(db[prop.modelSchema.name]);
                             whereOptionalTriples.push({
@@ -700,12 +713,11 @@ export default function(config) {
                                 predicate: predictate,
                                 object: uri
                             });
-
                         } else {
 
                             predictate = propertyRdfUri(db[_modelType], prop.name);
 
-                            variable = `?${prop.type}_via_${prop.name}`;
+                            variable = `?${variablePrefix}${prop.type}_via_${prop.name}`;
                             type = classRdfUri(db[prop.type]);
                             whereOptionalTriples.push({
                                 subject: uri,
@@ -714,7 +726,8 @@ export default function(config) {
                             });
                         }
 
-                        let variablePredicate = `${variable}Predicate`
+
+                        let variablePredicate = `${variable}Predicate`;
                         if (propagateDeletionProperty !== true) {
                             variablePredicate = propertyRdfUri(db[propagateDeletionType], propagateDeletionProperty);
                         }
@@ -734,15 +747,26 @@ export default function(config) {
                             object: type
                         });
 
+                        let _inner;
+                        if (db[propagateDeletionType].schema.propagateDeletionProperties.length && !recusive) {
+                            _inner = deleteCascade(propagateDeletionType, variable);
+                            deleteTriples = deleteTriples.concat(_inner.deleteTriples);
+                        }
+
+                        let patterns = [{
+                            type: 'bgp',
+                            triples: whereOptionalTriples
+                        }];
+
+                        if (_inner) {
+                            patterns.push(_inner.whereClause);
+                        }
+
                         whereClause.push({
                             type: 'optional',
-                            patterns: [
-                                {
-                                    type: 'bgp',
-                                    triples: whereOptionalTriples
-                                }
-                            ]
+                            patterns: patterns
                         });
+
                     });
 
                     return {deleteTriples, whereClause};

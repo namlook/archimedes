@@ -314,7 +314,7 @@ describe('Model instance persistance', function() {
                 db.batchSync('User', users),
                 db.batchSync('BlogPost', blogposts),
                 db.batchSync('Comment', comments)
-            ]).then((data) => {
+            ]).then(() => {
             /** remove a blog post **/
 
                 return db.BlogPost.fetch('blogpost0');
@@ -325,18 +325,72 @@ describe('Model instance persistance', function() {
 
             }).then(() => {
 
-                return db.BlogPost.fetch('blogpost0');
+                return db.fetch('BlogPost', 'blogpost0');
 
             }).then((noBlogPost0) => {
 
                 expect(noBlogPost0).to.not.exists();
 
-                return db.Comment.find({_id: {$in: [
+                return db.find('Comment', {_id: {$in: [
                     'comment0', 'comment3', 'comment6', 'comment9']}});
 
             }).then((noComments) => {
 
                 expect(noComments.length).to.equal(0);
+
+                return db.find('Comment', {});
+
+             }).then((fetchedComments) => {
+
+                expect(fetchedComments.length).to.equal(6);
+
+                return db.find('User', {});
+
+            }).then((fetchedUsers) => {
+
+                expect(fetchedUsers.length).to.equal(5);
+
+                done();
+
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+
+        it('should delete cascade deep', (done) => {
+            let users = _.range(0, 5).map((index) => {
+                return {
+                    _id: `user${index}`,
+                    _type: 'User',
+                    name: `user ${index}`
+                };
+            });
+
+            let blogposts = _.range(0, 10).map((index) => {
+                return {
+                    _id: `blogpost${index}`,
+                    _type: 'BlogPost',
+                    title: `hello ${index}`,
+                    author: {_id: `user${index % 2}`, _type: 'User'}
+                };
+            });
+
+            let comments = _.range(0, 10).map((index) => {
+                return {
+                    _id: `comment${index}`,
+                    _type: 'Comment',
+                    body: `comment ${index}`,
+                    author: {_id: `user${index % 2}`, _type: 'User'},
+                    target: {_id: `blogpost${index % 3}`, _type: 'BlogPost'}
+                };
+            });
+
+            Promise.all([
+                db.batchSync('User', users),
+                db.batchSync('BlogPost', blogposts),
+                db.batchSync('Comment', comments)
+            ]).then(() => {
 
             /** remove a user **/
                 return db.User.fetch('user1');
@@ -344,6 +398,15 @@ describe('Model instance persistance', function() {
             }).then((user1) => {
 
                 return user1.delete();
+
+            /**
+             *  it should remove:
+             *
+             *  - blogPosts (1, 3, 5, 7, 9)
+             *  - comments:
+             *      - from blogPosts: (1, 4, 7)
+             *      - remove the author: (3, 5, 9)
+             */
 
             }).then(() => {
 
@@ -353,28 +416,76 @@ describe('Model instance persistance', function() {
 
                 expect(noUser1).to.not.exist();
 
-                return db.find('BlogPost', {_id: {$in: [
-                    'blogpost1', 'blogpost3', 'blogpost5', 'blogpost7', 'blogpost9']}});
+               return db.find('BlogPost', {});
 
-            }).then((noBlogPosts) => {
+            }).then((blogPosts) => {
 
-                expect(noBlogPosts.length).to.equal(0);
+                expect(blogPosts).to.deep.equal([
+                  { _id: 'blogpost0',
+                    title: 'hello 0',
+                    author: { _id: 'user0', _type: 'User' },
+                    _type: 'BlogPost' },
+                  { _id: 'blogpost2',
+                    title: 'hello 2',
+                    author: { _id: 'user0', _type: 'User' },
+                    _type: 'BlogPost' },
+                  { _id: 'blogpost4',
+                    title: 'hello 4',
+                    author: { _id: 'user0', _type: 'User' },
+                    _type: 'BlogPost' },
+                  { _id: 'blogpost6',
+                    title: 'hello 6',
+                    author: { _id: 'user0', _type: 'User' },
+                    _type: 'BlogPost' },
+                  { _id: 'blogpost8',
+                    title: 'hello 8',
+                    author: { _id: 'user0', _type: 'User' },
+                    _type: 'BlogPost' } ]);
 
-                return db.find('Comment', {_id: {$in: [
-                    'comment1', 'comment4', 'comment7']}})
+                return db.find('Comment', {});
 
-            }).then((noComments2) => {
+            }).then((fetchedComments) => {
+                expect(fetchedComments).to.deep.equal([
+                  { _id: 'comment0',
+                    author: { _id: 'user0', _type: 'User' },
+                    body: 'comment 0',
+                    target: { _id: 'blogpost0', _type: 'OnlineContent' },
+                    _type: 'Comment' },
+                  { _id: 'comment2',
+                    author: { _id: 'user0', _type: 'User' },
+                    body: 'comment 2',
+                    target: { _id: 'blogpost2', _type: 'OnlineContent' },
+                    _type: 'Comment' },
+                  { _id: 'comment3',
+                    body: 'comment 3',
+                    target: { _id: 'blogpost0', _type: 'OnlineContent' },
+                    _type: 'Comment' },
+                  { _id: 'comment5',
+                    body: 'comment 5',
+                    target: { _id: 'blogpost2', _type: 'OnlineContent' },
+                    _type: 'Comment' },
+                  { _id: 'comment6',
+                    author: { _id: 'user0', _type: 'User' },
+                    body: 'comment 6',
+                    target: { _id: 'blogpost0', _type: 'OnlineContent' },
+                    _type: 'Comment' },
+                  { _id: 'comment8',
+                    author: { _id: 'user0', _type: 'User' },
+                    body: 'comment 8',
+                    target: { _id: 'blogpost2', _type: 'OnlineContent' },
+                    _type: 'Comment' },
+                  { _id: 'comment9',
+                    body: 'comment 9',
+                    target: { _id: 'blogpost0', _type: 'OnlineContent' },
+                    _type: 'Comment' }
+                ]);
 
-                console.log('noComments2', noComments2.length);
-                console.log(noComments2);
-                expect(noComments2.length).to.equal(0);
+                return db.find('User', {});
 
-                return db.fetch('Comment', 'comment5');
+            }).then((fetchedUsers) => {
 
-            }).then((comment5) => {
-                console.log(comment5);
-                console.log('authors', comment5.author);
-                expect(comment5.author).to.not.exist();
+                expect(fetchedUsers.map((o) => o._id)).to.only.include([
+                    'user0', 'user2', 'user3', 'user4']);
 
                 done();
             }).catch((error) => {
