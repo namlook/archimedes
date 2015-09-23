@@ -2,8 +2,7 @@
 import _ from 'lodash';
 import sparqlClient from './sparql-client';
 import {
-    classRdfUri,
-    propertyRdfUri,
+    deleteCascade,
     instanceRdfUri,
     query2whereClause,
     pojo2triples,
@@ -657,122 +656,6 @@ export default function(config) {
 
             delete(modelType, modelIdOrUri) {
 
-                let deleteCascade = function(_modelType, uri) {
-                    let deleteProps = db[_modelType].schema.propagateDeletionProperties;
-
-                    let deleteTriples = [];
-                    let whereClause = [];
-
-                    if( !_.startsWith(uri, '?')) {
-                        deleteTriples.push({
-                            subject: uri,
-                            predicate: '?s',
-                            object: '?o'
-                        });
-
-                        whereClause.push({
-                            type: 'optional',
-                            patterns: [
-                                {
-                                    type: 'bgp',
-                                    triples: [{
-                                        subject: uri,
-                                        predicate: '?s',
-                                        object: '?o'
-                                    }]
-                                }
-                            ]
-                        });
-                    }
-
-
-                    deleteProps.forEach((prop) => {
-
-                        let variable;
-                        let predictate;
-                        let type;
-                        let whereOptionalTriples = [];
-                        let propagateDeletionProperty = prop.propagateDeletion();
-                        let propagateDeletionType = prop.type;
-
-                        let recusive = false;
-                        let variablePrefix = '';
-                        if (propagateDeletionType === _modelType) {
-                            recusive = true;
-                            variablePrefix = uri.slice(1); // strip the '?'
-                        }
-
-                        if (prop.isReversed()) {
-                            let props = prop.fromReversedProperties();
-                            prop = props[0]; // Check this !
-                            variable = `?${variablePrefix}${prop.modelSchema.name}_via_${prop.name}`;
-                            predictate = propertyRdfUri(db[prop.modelSchema.name], prop.name);
-                            type = classRdfUri(db[prop.modelSchema.name]);
-                            whereOptionalTriples.push({
-                                subject: variable,
-                                predicate: predictate,
-                                object: uri
-                            });
-                        } else {
-
-                            predictate = propertyRdfUri(db[_modelType], prop.name);
-
-                            variable = `?${variablePrefix}${prop.type}_via_${prop.name}`;
-                            type = classRdfUri(db[prop.type]);
-                            whereOptionalTriples.push({
-                                subject: uri,
-                                predicate: predictate,
-                                object: variable
-                            });
-                        }
-
-
-                        let variablePredicate = `${variable}Predicate`;
-                        if (propagateDeletionProperty !== true) {
-                            variablePredicate = propertyRdfUri(db[propagateDeletionType], propagateDeletionProperty);
-                        }
-
-                        let statement = {
-                            subject: variable,
-                            predicate: variablePredicate,
-                            object: `${variable}Object`
-                        };
-
-                        deleteTriples.push(statement);
-                        whereOptionalTriples.push(statement);
-
-                        whereOptionalTriples.push({
-                            subject: variable,
-                            predicate: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type',
-                            object: type
-                        });
-
-                        let _inner;
-                        if (db[propagateDeletionType].schema.propagateDeletionProperties.length && !recusive) {
-                            _inner = deleteCascade(propagateDeletionType, variable);
-                            deleteTriples = deleteTriples.concat(_inner.deleteTriples);
-                        }
-
-                        let patterns = [{
-                            type: 'bgp',
-                            triples: whereOptionalTriples
-                        }];
-
-                        if (_inner) {
-                            patterns.push(_inner.whereClause);
-                        }
-
-                        whereClause.push({
-                            type: 'optional',
-                            patterns: patterns
-                        });
-
-                    });
-
-                    return {deleteTriples, whereClause};
-                };
-
-
                 return new Promise((resolve, reject) => {
 
                     var uri = modelIdOrUri;
@@ -781,7 +664,7 @@ export default function(config) {
                         uri = instanceRdfUri(db[modelType], modelIdOrUri);
                     }
 
-                    let {deleteTriples, whereClause} = deleteCascade(modelType, uri);
+                    let {deleteTriples, whereClause} = deleteCascade(db, modelType, uri);
 
                     let sparson = {
                         type: 'update',
