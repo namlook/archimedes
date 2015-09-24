@@ -19,12 +19,12 @@
   "author": "Namlook",
   "license": "MIT",
   "devDependencies": {
-    "babel-core": "^5.6.15",
-    "babel-runtime": "^5.6.15",
+    "babel-core": "^5.8.25",
+    "babel-runtime": "^5.8.25",
     "chalk": "^1.1.0",
-    "code": "^1.4.1",
-    "eslint": "^0.24.0",
-    "lab": "^5.11.1",
+    "code": "^1.5.0",
+    "eslint": "^1.5.1",
+    "lab": "^5.18.1",
     "source-map-support": "^0.3.2"
   },
   "dependencies": {
