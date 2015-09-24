@@ -282,7 +282,151 @@ describe('Model instance persistance', function() {
             });
         });
 
+
         it('should delete cascade', (done) => {
+            let users = _.range(0, 5).map((index) => {
+                return {
+                    _id: `user${index}`,
+                    _type: 'User',
+                    name: `user ${index}`,
+                    genericStaff: {_id: `generic${index}`, _type: 'GenericType'}
+                };
+            });
+
+            let genericTypes = _.range(0, 5).map((index) => {
+                return {
+                    _id: `generic${index}`,
+                    _type: 'GenericType',
+                    text: `hello ${index}`
+                };
+            });
+
+            Promise.all([
+                db.batchSync('User', users),
+                db.batchSync('GenericType', genericTypes)
+            ]).then(() => {
+            /** remove a blog post **/
+
+                return db.User.fetch('user1');
+
+            }).then((user1) => {
+
+                return user1.delete();
+
+            }).then(() => {
+
+                return db.find('User');
+
+            }).then((fetchedUsers) => {
+
+                expect(fetchedUsers).to.deep.equal([
+                  { _id: 'user0',
+                    name: 'user 0',
+                    genericStaff: { _id: 'generic0', _type: 'GenericType' },
+                    _type: 'User' },
+                  { _id: 'user2',
+                    name: 'user 2',
+                    genericStaff: { _id: 'generic2', _type: 'GenericType' },
+                    _type: 'User' },
+                  { _id: 'user3',
+                    name: 'user 3',
+                    genericStaff: { _id: 'generic3', _type: 'GenericType' },
+                    _type: 'User' },
+                  { _id: 'user4',
+                    name: 'user 4',
+                    genericStaff: { _id: 'generic4', _type: 'GenericType' },
+                    _type: 'User' }
+                ]);
+
+                return db.find('GenericType');
+
+            }).then((fetchedGenericTypes) => {
+
+                expect(fetchedGenericTypes).to.deep.equal([
+                  { _id: 'generic0', text: 'hello 0', _type: 'GenericType' },
+                  { _id: 'generic2', text: 'hello 2', _type: 'GenericType' },
+                  { _id: 'generic3', text: 'hello 3', _type: 'GenericType' },
+                  { _id: 'generic4', text: 'hello 4', _type: 'GenericType' }
+                ]);
+
+                done();
+
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+
+
+        it('should delete cascade multi', (done) => {
+            let users = _.range(0, 5).map((index) => {
+                return {
+                    _id: `user${index}`,
+                    _type: 'User',
+                    name: `user ${index}`,
+                    genericStuff: [
+                        {_id: `generic${index}`, _type: 'GenericType'},
+                        {_id: `generic${index + 1}`, _type: 'GenericType'},
+                        {_id: `generic${index + 2}`, _type: 'GenericType'}
+                    ]
+
+                };
+            });
+
+            let genericTypes = _.range(0, 10).map((index) => {
+                return {
+                    _id: `generic${index}`,
+                    _type: 'GenericType',
+                    text: `hello ${index}`
+                };
+            });
+
+            Promise.all([
+                db.batchSync('User', users),
+                db.batchSync('GenericType', genericTypes)
+            ]).then(() => {
+            /** remove a blog post **/
+
+                return db.User.fetch('user1');
+
+            }).then((user1) => {
+
+                return user1.delete();
+
+            }).then(() => {
+
+                return db.find('User');
+
+            }).then((fetchedUsers) => {
+
+                expect(fetchedUsers.length).to.equal(4);
+                expect(fetchedUsers.map((o) => o._id)).to.only.include([
+                    'user0', 'user2', 'user3', 'user4']);
+
+                return db.find('GenericType');
+
+            }).then((fetchedGenericTypes) => {
+
+                expect(fetchedGenericTypes).to.deep.equal([
+                  { _id: 'generic0', text: 'hello 0', _type: 'GenericType' },
+                  { _id: 'generic4', text: 'hello 4', _type: 'GenericType' },
+                  { _id: 'generic5', text: 'hello 5', _type: 'GenericType' },
+                  { _id: 'generic6', text: 'hello 6', _type: 'GenericType' },
+                  { _id: 'generic7', text: 'hello 7', _type: 'GenericType' },
+                  { _id: 'generic8', text: 'hello 8', _type: 'GenericType' },
+                  { _id: 'generic9', text: 'hello 9', _type: 'GenericType' }
+                ]);
+
+                done();
+
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+
+
+        it('should delete cascade inverse relationships', (done) => {
             let users = _.range(0, 5).map((index) => {
                 return {
                     _id: `user${index}`,
@@ -358,7 +502,7 @@ describe('Model instance persistance', function() {
             });
         });
 
-        it('should delete cascade deep', (done) => {
+        it('should deep delete cascade inverse relationships', (done) => {
             let users = _.range(0, 5).map((index) => {
                 return {
                     _id: `user${index}`,

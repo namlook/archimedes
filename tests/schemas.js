@@ -122,6 +122,15 @@ export default {
             },
             birthday: {
                 type: 'date'
+            },
+            genericStaff: {
+                type: 'GenericType',
+                propagateDeletion: true
+            },
+            genericStuff: {
+                type: 'array',
+                items: 'GenericType',
+                propagateDeletion: true
             }
         },
         inverseRelationships: {
@@ -150,6 +159,7 @@ export default {
 
     GenericType: {
         properties: {
+            text: 'string',
             dates: {
                 type: 'array',
                 items: 'date'

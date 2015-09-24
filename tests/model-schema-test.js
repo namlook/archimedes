@@ -139,8 +139,10 @@ describe('ModelSchema', function() {
                 };
             });
 
-            expect(properties.length).to.equal(4);
+            expect(properties.length).to.equal(6);
             expect(data).to.deep.equal([
+                {propName: 'genericStaff', modelName: 'User'},
+                {propName: 'genericStuff', modelName: 'User'},
                 {propName: 'blogPosts', modelName: 'User'},
                 {propName: 'reviewedBooks', modelName: 'User'},
                 {propName: 'contents', modelName: 'User'},

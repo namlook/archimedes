@@ -21,10 +21,7 @@ var modelClassSchemaValidator = joi.object().keys({
     properties: joi.object().pattern(/.+/, joi.alternatives().try(
         joi.object().keys(propertyConfigValidator).keys({
             items: joi.alternatives().try(joi.string(), propertyConfigValidator),
-            reverse: joi.alternatives().try(joi.string(), joi.object().keys({
-                type: joi.string(),
-                name: joi.string()
-            })),
+            propagateDeletion: joi.boolean(),
             abstract: joi.alternatives().try(
                 joi.boolean().default(false),
                 joi.object().keys({
