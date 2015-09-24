@@ -29,12 +29,12 @@
   },
   "dependencies": {
     "csv": "^0.4.6",
-    "joi": "^6.5.0",
+    "joi": "^6.7.1",
     "lodash": "3.10.1",
-    "moment": "^2.10.3",
+    "moment": "^2.10.6",
     "n3": "^0.4.3",
     "querystring": "^0.2.0",
-    "request": "^2.58.0",
+    "request": "^2.63.0",
     "sparqljs": "git://github.com/namlook/SPARQL.js.git",
     "uuid": "^2.0.1"
   }
