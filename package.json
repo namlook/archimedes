@@ -23,7 +23,7 @@
     "babel-runtime": "^5.8.25",
     "chalk": "^1.1.0",
     "code": "^1.5.0",
-    "eslint": "^1.5.1",
+    "eslint": "^0.24.1",
     "lab": "^5.18.1",
     "source-map-support": "^0.3.2"
   },
