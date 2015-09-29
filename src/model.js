@@ -4,6 +4,7 @@ import joi from 'joi';
 import modelInstance from './model-instance';
 import {StructureError} from './errors';
 import ModelSchema from './model-schema';
+import inflector from 'inflected';
 
 
 var propertyConfigValidator = {
@@ -123,6 +124,17 @@ var modelFactory = function(db, name, modelClassSchema) {
     });
     staticMethods = _.assign({}, ..._.compact(staticMethods));
 
+
+    /**
+     * fill meta stuff
+     */
+
+    let meta = modelClassSchema.meta;
+    let dasherizedName = inflector.dasherize(inflector.underscore(name));
+    modelClassSchema.meta.names = {
+        dasherized: dasherizedName,
+        plural: meta.pluralize || inflector.pluralize(dasherizedName)
+    };
 
     /**
      * construct the Model

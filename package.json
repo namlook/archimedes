@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "csv": "^0.4.6",
+    "inflected": "^1.1.6",
     "joi": "^6.7.1",
     "lodash": "3.10.1",
     "moment": "^2.10.6",

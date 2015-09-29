@@ -290,7 +290,8 @@ export default function(db, modelClass, attrs) {
                     return value.join('|');
                 });
 
-                values.unshift(this.get('_type'));
+                // values.unshift(this.get('_type'));
+                values.unshift(this.Model.meta.names.plural);
                 values.unshift(this.get('_id'));
 
                 let csvOptions = {delimiter: delimiter, eof: false};
@@ -343,7 +344,7 @@ export default function(db, modelClass, attrs) {
                     if (property.isArray()) {
                         if (value && !_.isEmpty(value)) {
                             value = value.map((o) => {
-                                let rel = {id: o._id, type: o._type};
+                                let rel = {id: o._id, type: db[o._type].meta.names.plural};
                                 if (shouldBeIncluded) {
                                     included.push(rel);
                                 }
@@ -353,7 +354,7 @@ export default function(db, modelClass, attrs) {
                             value = null;
                         }
                     } else if (value) {
-                        value = {id: value._id, type: value._type};
+                        value = {id: value._id, type: db[value._type].meta.names.plural};
                         if (shouldBeIncluded) {
                             included.push(value);
                         }
@@ -383,7 +384,7 @@ export default function(db, modelClass, attrs) {
 
             let jsonApiData = {
                 data: {
-                    type: modelClass.name
+                    type: modelClass.meta.names.plural
                 }
             };
 

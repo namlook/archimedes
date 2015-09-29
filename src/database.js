@@ -28,7 +28,18 @@ export default function(dbAdapter, config) {
         config: config,
         modelSchemas: null,
         registeredModels: {},
+        _modelsByPlural: {},
 
+        /**
+         * Hooks fired before the register() method.
+         *
+         * Its main purpose is to register the model definitions
+         * into the database so the model classes can be accessible
+         * from the database: `db.MyModel`.
+         *
+         * @params {Object} - the models to register
+         * @returns a promise which resolve into the database
+         */
         beforeRegister(models) {
             return new Promise((resolve, reject) => {
 
@@ -75,57 +86,15 @@ export default function(dbAdapter, config) {
             });
         },
 
+        /**
+         * Hooks fired after the register() method
+         *
+         * @params {Object} - the database
+         * @returns a promise which resolve into the database
+         */
         afterRegister(db) {
             return this.adapter.afterRegister(db);
         },
-
-
-        /**
-         * Returns all properties which match the reverse
-         * property name
-         *
-         * @params {string} propertyName
-         * @params {?string} mixinName - the name of the mixin to restraint the lookup
-         * @returns a list of ModelSchemaProperty objects
-         */
-        findProperties(propertyName, mixinName) {
-            if (!this._propertiesMap) {
-                this._propertiesMap = {};
-                _.forOwn(this.registeredModels, (model) => {
-                    model.schema.properties.forEach((property) => {
-
-                        this._propertiesMap[property.name] = this._propertiesMap[property.name] || [];
-                        if (property) {
-                            this._propertiesMap[property.name].push(property);
-                        }
-
-                    });
-
-                    model.schema.inverseRelationships.forEach((property) => {
-
-                        this._propertiesMap[property.name] = this._propertiesMap[property.name] || [];
-                        if (property) {
-                            this._propertiesMap[property.name].push(property);
-                        }
-
-                    });
-                });
-            }
-
-            let properties = this._propertiesMap[propertyName];
-
-            if (mixinName) {
-                let filterFn = function(item) {
-                    let modelClass = item.modelSchema.modelClass;
-                    return _.contains(modelClass.mixinsChain, mixinName);
-                };
-
-                properties = _.filter(properties, filterFn);
-            }
-
-            return properties;
-        },
-
 
 
         /**
@@ -139,11 +108,22 @@ export default function(dbAdapter, config) {
                 _.forOwn(processedModels, (ModelConfig, name) => {
                     this[name] = modelFactory(this, name, ModelConfig);
                     this.registeredModels[name] = this[name];
+                    this._modelsByPlural[this[name].meta.names.plural] = this[name];
                 });
                 return this;
             }).then((db) => {
                 return this.afterRegister(db);
             });
+        },
+
+        /**
+         * Returns the model related to its plural name
+         *
+         * @params {string} - the plural name
+         * @returns the model class
+         */
+        getModelFromPlural(pluralName) {
+            return this._modelsByPlural[pluralName];
         },
 
         /**
@@ -233,6 +213,53 @@ export default function(dbAdapter, config) {
                 });
             });
         },
+
+        /**
+         * Returns all properties which match the reverse
+         * property name
+         *
+         * @params {string} propertyName
+         * @params {?string} mixinName - the name of the mixin to restraint the lookup
+         * @returns a list of ModelSchemaProperty objects
+         */
+        findProperties(propertyName, mixinName) {
+            if (!this._propertiesMap) {
+                this._propertiesMap = {};
+                _.forOwn(this.registeredModels, (model) => {
+                    model.schema.properties.forEach((property) => {
+
+                        this._propertiesMap[property.name] = this._propertiesMap[property.name] || [];
+                        if (property) {
+                            this._propertiesMap[property.name].push(property);
+                        }
+
+                    });
+
+                    model.schema.inverseRelationships.forEach((property) => {
+
+                        this._propertiesMap[property.name] = this._propertiesMap[property.name] || [];
+                        if (property) {
+                            this._propertiesMap[property.name].push(property);
+                        }
+
+                    });
+                });
+            }
+
+            let properties = this._propertiesMap[propertyName];
+
+            if (mixinName) {
+                let filterFn = function(item) {
+                    let modelClass = item.modelSchema.modelClass;
+                    return _.contains(modelClass.mixinsChain, mixinName);
+                };
+
+                properties = _.filter(properties, filterFn);
+            }
+
+            return properties;
+        },
+
 
         /**
          * Returns a promise which resolve the records that match the query

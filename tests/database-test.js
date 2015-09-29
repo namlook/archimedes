@@ -45,6 +45,18 @@ describe('Database', function() {
         done();
     });
 
+    describe('#getModelFromPlural()', function() {
+        it('should return the model by its plural', (done) => {
+            let model = db.getModelFromPlural('blog-posts');
+            expect(model.name).to.equal('BlogPost');
+
+            let model2 = db.getModelFromPlural('users');
+            expect(model2.name).to.equal('User');
+
+            done();
+        });
+    });
+
     describe('#findProperties()', function() {
 
         it('should return a list of properties that match the name', (done) => {

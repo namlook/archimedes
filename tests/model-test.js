@@ -304,6 +304,21 @@ describe('Model', function() {
     });
 
 
+    describe('[meta]', function() {
+
+        it('should contains different representation of the model name', (done) => {
+            let names = db.BlogPost.meta.names;
+            expect(names.dasherized).to.equal('blog-post');
+            expect(names.plural).to.equal('blog-posts');
+
+            let names2 = db.User.meta.names;
+            expect(names2.dasherized).to.equal('user');
+            expect(names2.plural).to.equal('users');
+            done();
+        });
+    });
+
+
     describe('#create()', function() {
 
         it('should create a model instance', (done) => {
