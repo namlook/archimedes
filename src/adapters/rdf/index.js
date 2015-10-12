@@ -13,6 +13,17 @@ import {
     propertyName2Sparson} from './utils';
 import {Generator as SparqlGenerator} from 'sparqljs';
 
+
+const RDF_DATATYPES = {
+    'http://www.w3.org/2001/XMLSchema#integer': 'number',
+    'http://www.w3.org/2001/XMLSchema#decimal': 'number',
+    'http://www.w3.org/2001/XMLSchema#float': 'number',
+    'http://www.w3.org/2001/XMLSchema#double': 'number',
+    'http://www.w3.org/2001/XMLSchema#boolean': 'boolean',
+    'http://www.w3.org/2001/XMLSchema#dateTime': 'date'
+};
+
+
 export default function(config) {
     config = config || {};
 
@@ -211,18 +222,38 @@ export default function(config) {
                     this.execute(sparql).then((data) => {
                         if (!data.length) {
                             return resolve();
-                            // return reject(new Error(`document ${uri} no found`));
                         }
 
-                        let rdfDoc = {};
-                        for(let i = 0; i < data.length; i++) {
-                            let {subject, predicate, object} = data[i];
-                            rdfDoc._id = subject.value;
-                            rdfDoc[predicate.value] = rdfDoc[predicate.value] || [];
-                            rdfDoc[predicate.value].push(object.value);
-                        }
+                        const rdfDoc = data.reduce((doc, item) => {
 
-                        let pojo = rdfDoc2pojo(db, modelType, rdfDoc);
+                            let {subject, predicate, object} = item;
+                            doc._id = subject.value;
+                            doc[predicate.value] = doc[predicate.value] || [];
+
+                            if (object.datatype) {
+                                const datatype = RDF_DATATYPES[object.datatype];
+
+                                if (datatype === 'number') {
+                                    object.value = parseFloat(object.value);
+                                } else if (datatype === 'date') {
+                                    object.value = new Date(object.value);
+                                } else if (datatype === 'boolean') {
+                                    if (['true', '1', 1, 'yes'].indexOf(object.value) > -1) {
+                                        object.value = true;
+                                    } else {
+                                        object.value = false;
+                                    }
+                                } else {
+                                    console.log('UNKNOWN DATATYPE !!!', object.datatype);
+                                }
+                            }
+
+                            doc[predicate.value].push(object.value);
+                            return doc;
+
+                        }, {});
+
+                        const pojo = rdfDoc2pojo(db, modelType, rdfDoc);
                         return resolve(pojo);
                     }).catch((error) => {
                         return reject(error);

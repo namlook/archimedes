@@ -227,6 +227,46 @@ describe('Database', function() {
             });
         });
 
+        it('should fetch dates', (done) => {
+            let date1 = new Date(Date.UTC(2015, 30, 6));
+            let date2 = new Date(Date.UTC(1984, 7, 3));
+            let date3 = new Date(Date.UTC(1987, 5, 1));
+            let data = [
+                {
+                    _id: 'post1',
+                    createdDate: date1
+                },
+                {
+                    _id: 'post2',
+                    createdDate: date2
+                },
+                {
+                    _id: 'post3',
+                    createdDate: date3
+                }
+            ];
+
+
+            db.batchSync('BlogPost', data).then((savedData) => {
+                expect(savedData).to.deep.equal([
+                    { _id: 'post1', createdDate: date1, _type: 'BlogPost' },
+                    { _id: 'post2', createdDate: date2, _type: 'BlogPost' },
+                    { _id: 'post3', createdDate: date3, _type: 'BlogPost' }
+                ]);
+                return db.find('BlogPost');
+            }).then((fetchedData) => {
+                expect(fetchedData).to.deep.equal([
+                    { _id: 'post1', createdDate: date1, _type: 'BlogPost' },
+                    { _id: 'post2', createdDate: date2, _type: 'BlogPost' },
+                    { _id: 'post3', createdDate: date3, _type: 'BlogPost' }
+                ]);
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+
         it('should fetch multiple ids', (done) => {
             var data = [];
             for (let i = 0; i < 10; i++) {

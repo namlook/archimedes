@@ -8,7 +8,6 @@ import {findOptionsValidator} from './options-validator';
 import groupByValidator from './group-by-validator';
 import operationsValidator from './operations-validator';
 
-
 var validPropertyTypes = [
     'string',
     'number',
@@ -152,22 +151,34 @@ export default function(dbAdapter, config) {
         validate(modelType, pojo) {
             return new Promise((resolve, reject) => {
 
+                if (!this[modelType]) {
+                    return reject(new ValidationError(
+                        `Unknown type ${modelType}`, {pojo: pojo}));
+                }
+
                 var modelSchema = this[modelType].schema;
                 let {error, value} = modelSchema.validate(pojo);
-
                 if (error) {
                     pojo = pojo || {};
 
                     /*** hack for virtuoso: boolean are returned as integers **/
-                    let propertyName = error[0].path;
-                    let badValue = pojo[propertyName];
-                    if (error[0].type === 'boolean.base' && _.contains([1, 0], badValue)) {
-                        pojo[propertyName] = Boolean(badValue);
+                    let virtuosoFix = false;
+
+                    error.forEach((detail) => {
+                        let propertyName = detail.path;
+                        let badValue = pojo[propertyName];
+                        if (detail.type === 'boolean.base' && _.contains([1, 0], badValue)) {
+                            virtuosoFix = true;
+                            pojo[propertyName] = Boolean(badValue);
+                        }
+                    });
+
+                    if (virtuosoFix) {
                         process.nextTick(() => {
                             this.validate(modelType, pojo).then((validatedPojo) => {
                                 resolve(validatedPojo);
                             }).catch((validationError) => {
-                                reject(validationError);
+                                reject(new ValidationError('Bad value', validationError));
                             });
                         });
                     } else {
@@ -179,7 +190,6 @@ export default function(dbAdapter, config) {
                     resolve(value);
 
                 }
-
             });
         },
 
@@ -306,12 +316,7 @@ export default function(dbAdapter, config) {
                 }
 
                 this.adapter.find(modelType, validatedQuery, validatedOptions).then((data) => {
-                    let promises = _.compact(data).map((item) => {
-                        return this.validate(modelType, item);
-                    });
-
-                    return resolve(Promise.all(promises));
-
+                    return resolve(_.compact(data));
                 }).catch((findError) => {
                     return reject(findError);
                 });
