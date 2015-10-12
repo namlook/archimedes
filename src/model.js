@@ -23,6 +23,8 @@ var modelClassSchemaValidator = joi.object().keys({
         joi.object().keys(propertyConfigValidator).keys({
             items: joi.alternatives().try(joi.string(), propertyConfigValidator),
             propagateDeletion: joi.boolean(),
+            label: joi.string(),
+            description: joi.string(),
             abstract: joi.alternatives().try(
                 joi.boolean().default(false),
                 joi.object().keys({
@@ -39,6 +41,8 @@ var modelClassSchemaValidator = joi.object().keys({
     inverseRelationships: joi.object().pattern(/.+/, joi.object().keys({
         type: joi.string(),
         property: joi.string(),
+        label: joi.string(),
+        description: joi.string(),
         propagateDeletion: joi.alternatives().try(joi.boolean(), joi.string())
     })),
     methods: joi.object().pattern(/.+/, joi.func()),
@@ -131,9 +135,10 @@ var modelFactory = function(db, name, modelClassSchema) {
 
     let meta = modelClassSchema.meta;
     let dasherizedName = inflector.dasherize(inflector.underscore(name));
+    let plural = _.get(meta, 'names.plural');
     modelClassSchema.meta.names = {
         dasherized: dasherizedName,
-        plural: meta.pluralize || inflector.pluralize(dasherizedName)
+        plural: plural || inflector.pluralize(dasherizedName)
     };
 
     /**
