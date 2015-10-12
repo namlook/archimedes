@@ -144,7 +144,12 @@ export default class ModelSchema {
             return {error, value};
         }
 
-        joi.validate(pojo, this._validator, options, callback);
+        joi.validate(pojo, this._validator, options, function(error, value) {
+            if (error) {
+                return callback(error.details);
+            }
+            return callback(null, value);
+        });
     }
 
     get _validator() {
