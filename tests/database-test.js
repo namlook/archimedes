@@ -675,7 +675,7 @@ describe('Database', function() {
         });
 
 
-        it('should reject if the document are not valid', (done) => {
+        it('should reject if the documents are not valid', (done) => {
             var data = [];
             for (let i = 0; i < 10; i++) {
                 data.push({_id: `bp${i}`, _type: 'BlogPost', title: `post ${i}`, isPublished: 'arf'});

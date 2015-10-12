@@ -479,7 +479,6 @@ describe('Model instance persistance', function() {
                     'comment0', 'comment3', 'comment6', 'comment9']}});
 
             }).then((noComments) => {
-
                 expect(noComments.length).to.equal(0);
 
                 return db.find('Comment', {});
