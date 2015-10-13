@@ -53,9 +53,9 @@ export var propertyName2Sparson = function(modelClass, propertyNames) {
         }
 
 
-        if (property.isReversed()) {
+        if (property.isInverseRelationship()) {
 
-            property = property.fromReversedProperties();
+            property = property.getPropertiesFromInverseRelationship();
 
             let propertyUris = _.uniq(property.map((o) => o.meta.rdfUri));
             if (propertyUris.length > 1) {
@@ -562,8 +562,8 @@ export var deleteCascade = function(db, _modelType, uri) {
             variablePrefix = uri.slice(1); // strip the '?'
         }
 
-        if (prop.isReversed()) {
-            let props = prop.fromReversedProperties();
+        if (prop.isInverseRelationship()) {
+            let props = prop.getPropertiesFromInverseRelationship();
             prop = props[0]; // Check this !
             variable = `?${variablePrefix}${prop.modelSchema.name}_via_${prop.name}`;
             predictate = propertyRdfUri(db[prop.modelSchema.name], prop.name);

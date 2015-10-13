@@ -54,8 +54,8 @@ var constraints2joi = function(modelName, propertyName, constraints, joiConstrai
 
 
 export default class ModelSchemaProperty {
-    constructor(name, config, modelSchema, isReversed) {
-        if (isReversed) {
+    constructor(name, config, modelSchema, isInverseRelationship) {
+        if (isInverseRelationship) {
             config = {
                 type: 'array',
                 items: {
@@ -95,7 +95,7 @@ export default class ModelSchemaProperty {
         return !!this.config.abstract;
     }
 
-    isReversed() {
+    isInverseRelationship() {
         return !!_.get(this.config, 'abstract.fromReverse');
     }
 
@@ -137,7 +137,7 @@ export default class ModelSchemaProperty {
      *
      * @return a reversed (abstract) property if the property
      */
-    reversedProperty() {
+    getInverseRelationshipFromProperty() {
         let db = this.modelSchema.db;
         let targetModelName = this.modelSchema.name;
         if (this.isRelation()) {
@@ -157,7 +157,7 @@ export default class ModelSchemaProperty {
      *
      * @returns an array of properties
      */
-    fromReversedProperties() {
+    getPropertiesFromInverseRelationship() {
         let db = this.modelSchema.db;
         let {property, type} = _.get(this.config, 'abstract.fromReverse', {});
         return db.findProperties(property, type);

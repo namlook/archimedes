@@ -73,32 +73,32 @@ describe('ModelSchemaProperty', function() {
         done();
     });
 
-    it('should return true if the property is a reversed property', (done) => {
+    it('should return true if the property is an inverse relationship', (done) => {
         let reversedProperty = db.User.schema.getProperty('contents');
-        let isReversed = reversedProperty.isReversed();
-        expect(isReversed).to.be.true();
+        let isInverseRel = reversedProperty.isInverseRelationship();
+        expect(isInverseRel).to.be.true();
 
 
         let property = db.User.schema.getProperty('name');
-        let isReversed2 = property.isReversed();
-        expect(isReversed2).to.be.false();
+        let isInverseRel2 = property.isInverseRelationship();
+        expect(isInverseRel2).to.be.false();
         done();
     });
 
-    it('should return all reversed properties', (done) => {
+    it('should return all inverse relationship', (done) => {
         let property = db.Comment.schema.getProperty('author');
-        let reversedProperty = property.reversedProperty();
+        let reversedProperty = property.getInverseRelationshipFromProperty();
         expect(reversedProperty.name).to.be.equal('comments');
 
         let reversedProperty2 = db.User.schema.getProperty('comments');
-        let properties = reversedProperty2.reversedProperty();
+        let properties = reversedProperty2.getInverseRelationshipFromProperty();
         expect(properties).to.not.exist();
         done();
     });
 
-    it('should return all properties that match the reversed property', (done) => {
-        let reverseProperty = db.User.schema.getProperty('contents');
-        let properties = reverseProperty.fromReversedProperties();
+    it('should return all properties that match the inverse relationship', (done) => {
+        let inverseRelationship = db.User.schema.getProperty('contents');
+        let properties = inverseRelationship.getPropertiesFromInverseRelationship();
         expect(properties.length).to.equal(6);
         let modelNames = properties.map(o => o.modelSchema.name);
         expect(modelNames).to.include([
