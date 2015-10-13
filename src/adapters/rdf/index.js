@@ -23,6 +23,8 @@ const RDF_DATATYPES = {
     'http://www.w3.org/2001/XMLSchema#dateTime': 'date'
 };
 
+import Promise from 'bluebird';
+
 
 export default function(config) {
     config = config || {};
@@ -163,14 +165,142 @@ export default function(config) {
 
                     this.execute(sparql).then((data) => {
                         let uris = data.map(o => o.s.value);
-                        let promises = uris.map((uri) => {
-                            return this.fetch(modelType, uri, options);
-                        });
-                        resolve(Promise.all(promises));
+
+                        if (uris.length === 1) {
+                            this.fetch(modelType, uris[0], options).then((pojo) => {
+                                return resolve([pojo]);
+                            }).catch((fetchError) => {
+                                return reject(fetchError);
+                            });
+                        } else {
+                            let promises = _.chunk(uris, 30).map((chunkUris) => {
+                                return this.describe(modelType, chunkUris, options);
+                            });
+                            Promise.all(promises).then((resultArrays) => {
+                                resolve(_.flatten(resultArrays));
+                            }).catch((describeError) => {
+                                reject(describeError);
+                            });
+                        }
+
                     }).catch((error) => {
                         reject(error);
                     });
 
+                });
+            },
+
+            describe(modelType, modelIdsOrUris, options) {
+                return new Promise((resolve, reject) => {
+                    options.variableIndex = 0;
+
+                    let modelClass = db[modelType];
+
+                    if (!_.isArray(modelIdsOrUris)) {
+                        modelIdsOrUris = [modelIdsOrUris];
+                    }
+
+                    let uris = modelIdsOrUris.map((modelIdOrUri) => {
+                        let uri = modelIdOrUri;
+                        if (!_.startsWith(modelIdOrUri, 'http://')) {
+                            uri = instanceRdfUri(modelClass, modelIdOrUri);
+                        }
+                        return uri;
+                    });
+
+                    let template = [];
+                    let index = 0;
+                    let reduceError = false;
+                    let patterns = uris.reduce((_patterns, uri) => {
+                        if (reduceError) {
+                            return null;
+                        }
+
+                        let triples;
+                        try {
+                            triples = constructTriples(modelClass, uri, options);
+                        } catch(e) {
+                            reduceError = e;
+                            return null;
+                        }
+                        _patterns.push({
+                            type: 'bgp',
+                            triples: triples
+                        });
+                        template.push(triples);
+                        index++;
+                        return _patterns;
+                    }, []);
+
+                    if (reduceError) {
+                        return reject(reduceError);
+                    }
+
+                    let whereClause = patterns;
+                    if (patterns.length > 1) {
+                        whereClause = {
+                            type: 'union',
+                            patterns: patterns
+                        };
+                    }
+
+                    let sparson = {
+                        type: 'query',
+                        queryType: 'CONSTRUCT',
+                        from: {
+                            'default': [config.graphUri]
+                        },
+                        template: template,
+                        where: whereClause
+                    };
+
+                    /*** generate the sparql from the sparson ***/
+                    let sparql;
+                    try {
+                        sparql = new SparqlGenerator().stringify(sparson);
+                    } catch(generatorError) {
+                        return reject(generatorError);
+                    }
+
+                    this.execute(sparql).then((data) => {
+                        if (!data.length) {
+                            return resolve();
+                        }
+
+                        const rdfDocs = data.reduce((_rdfDocs, item) => {
+
+                            let {subject, predicate, object} = item;
+                            let doc = _rdfDocs[subject.value] || {};
+                            doc._id = subject.value;
+                            doc[predicate.value] = doc[predicate.value] || [];
+
+                            if (object.datatype) {
+                                const datatype = RDF_DATATYPES[object.datatype];
+                                if (datatype === 'number') {
+                                    object.value = parseFloat(object.value);
+                                } else if (datatype === 'date') {
+                                    object.value = new Date(object.value);
+                                } else if (datatype === 'boolean') {
+                                    if (['true', '1', 1, 'yes'].indexOf(object.value) > -1) {
+                                        object.value = true;
+                                    } else {
+                                        object.value = false;
+                                    }
+                                } else {
+                                    console.log('UNKNOWN DATATYPE !!!', object.datatype);
+                                }
+                            }
+
+                            doc[predicate.value].push(object.value);
+                            _rdfDocs[subject.value] = doc;
+                            return _rdfDocs;
+                        }, {});
+
+                        let pojos = uris.map((uri) => {
+                            return rdfDoc2pojo(db, modelType, rdfDocs[uri]);
+                        });
+                        return resolve(pojos);
+                    });
                 });
             },
 
@@ -386,13 +516,22 @@ export default function(config) {
                         return reject(generatorError);
                     }
 
-                    // console.log(sparql);
-
                     this.execute(sparql).then((data) => {
                         let results = [];
+
+                        let isLabelBoolean = db[modelType].schema.getProperty(property).type === 'boolean';
+
                         data.forEach((item) => {
+                            /** Virtuoso hack: convert integer as boolean **/
+                            let label = item.aggregatedPropertyName.value;
+                            if (isLabelBoolean) {
+                                if (!isNaN(parseFloat(label))) {
+                                    label = Boolean(parseFloat(label));
+                                }
+                            }
+                            /*****/
                             results.push({
-                                label: item.aggregatedPropertyName.value,
+                                label: `${label}`,
                                 value: parseFloat(item.value.value)
                             });
                         });

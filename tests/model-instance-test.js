@@ -211,10 +211,12 @@ describe('Model Instance', function() {
 
     describe('inverse relationships', function() {
         it('should be a promise', (done) => {
-            let instance = db.BlogPost.create();
-            let promise = instance.comments();
-            expect(promise.then).to.be.a.function();
-            done();
+            let instance = db.BlogPost.create({title: 'bla'});
+            instance.save().then((savedInstance) => {
+                let promise = savedInstance.comments();
+                expect(promise.then).to.be.a.function();
+                done();
+            });
         });
 
 

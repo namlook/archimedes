@@ -3,6 +3,8 @@ import request from 'request';
 import querystring from 'querystring';
 import _ from 'lodash';
 
+import Promise from 'bluebird';
+
 var sparqlClient = function(endpoint) {
     var requestDefaults = {
         url: endpoint,
@@ -37,10 +39,8 @@ var sparqlClient = function(endpoint) {
             let requestOptions = Object.assign({}, requestDefaults, {
                 body: querystring.stringify(body)
             });
-
             return new Promise((resolve, reject) => {
                 process.nextTick(function() {
-
                     request.post(requestOptions, (err, response, resbody) => {
                         if (err) {
                             return reject(err);

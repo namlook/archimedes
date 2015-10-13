@@ -146,19 +146,26 @@ export var rdfDoc2pojo = function(db, modelType, rdfDoc) {
             return;
         }
 
-        let property = uri2property(modelClass, rdfProperty);
+        let propertyName = uri2property(modelClass, rdfProperty);
+
+        if (propertyName == null) {
+            // console.log(`WARNING ! ${rdfProperty} not found in ${modelType}'s schema`);
+            return;
+        }
+
+        let property = modelClass.schema.getProperty(propertyName);
 
 
-        if (property === '_type') {
+        if (propertyName === '_type') {
             pojo._type = modelClass.name;
             return;
         }
 
         var values = [];
-        var isRelation = modelClass.schema.getProperty(property).isRelation();
+        var isRelation = property.isRelation();
         rdfValues.forEach(function(rdfValue) {
             if (isRelation) {
-                let relationType = modelClass.schema.getProperty(property).type;
+                let relationType = property.type;
                 let relationId = uri2id(db[relationType], rdfValue);
                 values.push({_id: relationId, _type: relationType});
             } else {
@@ -166,8 +173,19 @@ export var rdfDoc2pojo = function(db, modelType, rdfDoc) {
             }
         });
 
+
+        // Virtuoso hack: convert integer as boolean
+        if (property.type === 'boolean' && values.length) {
+            values = values.map((value) => {
+                if (_.isNumber(value)) {
+                    return Boolean(value);
+                }
+                return value;
+            });
+        }
+
         var value;
-        if (!modelClass.schema.getProperty(property).isArray()) {
+        if (!property.isArray()) {
             value = values[0];
         } else {
             if (isRelation) {
@@ -177,7 +195,7 @@ export var rdfDoc2pojo = function(db, modelType, rdfDoc) {
             }
         }
 
-        pojo[property] = value;
+        pojo[propertyName] = value;
     });
 
     return pojo;
@@ -446,6 +464,9 @@ export var query2whereClause = function(db, modelType, query, options) {
 
 export var constructTriples = function(modelClass, uri, options) {
 
+    if (options.variableIndex == null) {
+        options.variableIndex = '';
+    }
     options.fields = options.fields || [];
     if (typeof options.fields === 'string') {
         options.fields = options.fields.split(',');
@@ -457,7 +478,7 @@ export var constructTriples = function(modelClass, uri, options) {
 
         triples = options.fields.map((propertyName) => {
 
-            let variable = `?${_.camelCase(propertyName)}${variableIdx++}`;
+            let variable = `?${_.camelCase(propertyName)}${options.variableIndex}o${variableIdx++}`;
 
             let propertyUri;
             try {
@@ -483,9 +504,13 @@ export var constructTriples = function(modelClass, uri, options) {
     } else {
         triples.push({
             subject: uri,
-            predicate: '?p',
-            object: '?o'
+            predicate: `?p${options.variableIndex}`,
+            object: `?o${options.variableIndex}`
         });
+    }
+
+    if (options.variableIndex !== '') {
+        options.variableIndex++;
     }
 
     return triples;

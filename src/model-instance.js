@@ -2,6 +2,8 @@
 import _ from 'lodash';
 import csv from 'csv';
 
+import Promise from 'bluebird';
+
 export default function(db, modelClass, attrs) {
 
     attrs = attrs || {};

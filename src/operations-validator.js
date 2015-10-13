@@ -1,6 +1,8 @@
 
 import joi from 'joi';
 
+import Promise from 'bluebird';
+
 let operationSchema = joi.array().items(joi.object().keys({
     operator: joi.string().required(),
     property: joi.string().required(),

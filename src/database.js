@@ -16,6 +16,8 @@ var validPropertyTypes = [
     'array'
 ];
 
+import Promise from 'bluebird';
+
 export default function(dbAdapter, config) {
 
     if (!dbAdapter) {
