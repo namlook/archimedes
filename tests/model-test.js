@@ -137,6 +137,28 @@ describe('Model', function() {
             });
         });
 
+        it('should throw an error if an inverse relationship is malfored', (done) => {
+            database().register({
+                ModelA: {
+                    properties: {
+                        modelb: 'ModelB'
+                    }
+                },
+                ModelB: {
+                    inverseRelationships: {
+                        modelsA: {
+                            type: 'ModelA',
+                            property: 'unknown'
+                        }
+                    }
+                }
+            }).catch((error) => {
+                expect(error.name).to.equal('StructureError');
+                expect(error.message).to.equal('unknown property "unknown" for model "ModelA" in the inverse relationship: ModelB.modelsA');
+                done();
+            });
+        });
+
         it('should process reverse relations', (done) => {
             let propConf = db.User.schema.getProperty('reviewedBooks').config;
             expect(propConf.type).to.equal('array');

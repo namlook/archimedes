@@ -104,16 +104,43 @@ export default function(dbAdapter, config) {
          * @params {Object} - {modelType: modelConfig}
          */
         register(models) {
-            return this.beforeRegister(models).then((processedModels) => {
-                this.modelSchemas = processedModels;
-                _.forOwn(processedModels, (ModelConfig, name) => {
-                    this[name] = modelFactory(this, name, ModelConfig);
-                    this.registeredModels[name] = this[name];
-                    this._modelsByPlural[this[name].meta.names.plural] = this[name];
+            return new Promise((resolve, reject) => {
+                return this.beforeRegister(models).then((processedModels) => {
+                    this.modelSchemas = processedModels;
+                    _.forOwn(processedModels, (ModelConfig, name) => {
+                        this[name] = modelFactory(this, name, ModelConfig);
+                        this.registeredModels[name] = this[name];
+                        this._modelsByPlural[this[name].meta.names.plural] = this[name];
+                    });
+                    return this;
+                }).then((db) => {
+                    try {
+                        this._checkInverseRelationships();
+                    } catch(error) {
+                        return reject(error)
+                    }
+                    return resolve(this.afterRegister(db));
                 });
-                return this;
-            }).then((db) => {
-                return this.afterRegister(db);
+            });
+        },
+
+
+        _checkInverseRelationships() {
+            _.forOwn(this.registeredModels, (model, name) => {
+                let {inverseRelationships} = model.schema;
+                let error = inverseRelationships.reduce((error, relation) => {
+                    let config = relation.config.abstract.fromReverse;
+                    let prop = this[config.type].schema.getProperty(config.property);
+                    if (!prop) {
+                        error = new StructureError(`unknown property "${config.property}" for model "${config.type}" in the inverse relationship: ${name}.${relation.name}`);
+                    }
+                    return error;
+                }, null)
+
+                if (error) {
+                    throw error;
+                }
+
             });
         },
 
