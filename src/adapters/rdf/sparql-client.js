@@ -5,8 +5,8 @@ import _ from 'lodash';
 
 import Promise from 'bluebird';
 
-var sparqlClient = function(endpoint) {
-    var requestDefaults = {
+let sparqlClient = function(endpoint) {
+    let requestDefaults = {
         url: endpoint,
         method: 'POST',
         encoding: 'utf8',
@@ -25,7 +25,7 @@ var sparqlClient = function(endpoint) {
             })).length;
 
 
-            var body;
+            let body;
             if (isQuery) {
                 body = {query: sparql};
             } else {
@@ -52,7 +52,7 @@ var sparqlClient = function(endpoint) {
 
                         process.nextTick(function() {
 
-                            var data;
+                            let data;
                             try {
                                 data = JSON.parse(resbody);
                             } catch (e) {
