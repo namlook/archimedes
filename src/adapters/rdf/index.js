@@ -35,7 +35,7 @@ export default function(config) {
 
     return function(db) {
 
-        var internals = {};
+        let internals = {};
         internals.store = [];
         internals.sparqlClient = sparqlClient(config.endpoint);
 
@@ -44,35 +44,34 @@ export default function(config) {
 
 
             beforeRegister(models) {
-                return new Promise((resolve) => {
-                    let graphUri = config.graphUri;
-                    let defaultClassRdfPrefix = `${graphUri}/classes`;
-                    let defaultInstanceRdfPrefix = `${graphUri}/instances`;
-                    let defaultPropertyRdfPrefix = `${graphUri}/properties`;
+                let graphUri = config.graphUri;
+                let defaultClassRdfPrefix = `${graphUri}/classes`;
+                let defaultInstanceRdfPrefix = `${graphUri}/instances`;
+                let defaultPropertyRdfPrefix = `${graphUri}/properties`;
 
 
-                    _.forOwn(models, (modelConfig, modelName) => {
-                        if (!_.get(modelConfig, 'meta.classRdfUri')) {
-                            _.set(modelConfig, 'meta.classRdfUri', `${defaultClassRdfPrefix}/${modelName}`);
+                _.forOwn(models, (modelConfig, modelName) => {
+                    if (!_.get(modelConfig, 'meta.classRdfUri')) {
+                        _.set(modelConfig, 'meta.classRdfUri', `${defaultClassRdfPrefix}/${modelName}`);
+                    }
+
+                    if (!_.get(modelConfig, 'meta.instanceRdfPrefix')) {
+                        _.set(modelConfig, 'meta.instanceRdfPrefix', defaultInstanceRdfPrefix);
+                    }
+
+                    _.forOwn(modelConfig.properties, (propConfig, propertyName) => {
+                        if (!_.get(propConfig, 'meta.rdfUri')) {
+                            _.set(propConfig, 'meta.rdfUri', `${defaultPropertyRdfPrefix}/${propertyName}`);
                         }
-
-                        if (!_.get(modelConfig, 'meta.instanceRdfPrefix')) {
-                            _.set(modelConfig, 'meta.instanceRdfPrefix', defaultInstanceRdfPrefix);
-                        }
-
-                        _.forOwn(modelConfig.properties, (propConfig, propertyName) => {
-                            if (!_.get(propConfig, 'meta.rdfUri')) {
-                                _.set(propConfig, 'meta.rdfUri', `${defaultPropertyRdfPrefix}/${propertyName}`);
-                            }
-                        });
                     });
-                    return resolve(models);
                 });
+
+                return Promise.resolve(models);
             },
 
 
             afterRegister(passedDb) {
-                return new Promise((resolve) => {
+                return Promise.resolve().then(() => {
                     _.forOwn(passedDb.registeredModels, (model) => {
 
                         let propertyUrisMapping = {};
@@ -83,7 +82,7 @@ export default function(config) {
                         _.set(model, 'meta.propertyUrisMapping', propertyUrisMapping);
                     });
 
-                    return resolve(passedDb);
+                    return passedDb;
                 });
             },
 
@@ -107,7 +106,7 @@ export default function(config) {
              * @returns a promise which resolve an array of documents
              */
             find(modelType, query, options) {
-                return new Promise((resolve, reject) => {
+                return Promise.resolve().then(() => {
 
                     /**
                      * if _id is present in the query, perform a `fetch()`
@@ -118,17 +117,15 @@ export default function(config) {
                             let promises = query._id.$in.map((id) => {
                                 return this.fetch(modelType, id, options);
                             });
-                            return resolve(Promise.all(promises));
+                            return Promise.all(promises);
                         }
 
                         return this.fetch(modelType, query._id, options).then((pojo) => {
-                            var results = [];
+                            let results = [];
                             if (pojo) {
                                 results.push(pojo);
                             }
-                            resolve(results);
-                        }).catch((error) => {
-                            return reject(error);
+                            return results;
                         });
                     }
 
@@ -156,42 +153,31 @@ export default function(config) {
                     sparson.order.push({expression: '?s'});
 
                     /*** generate the sparql from the sparson ***/
-                    let sparql;
-                    try {
-                        sparql = new SparqlGenerator().stringify(sparson);
-                    } catch(generatorError) {
-                        return reject(generatorError);
-                    }
+                    let sparql = new SparqlGenerator().stringify(sparson);
 
-                    this.execute(sparql).then((data) => {
+                    return this.execute(sparql).then((data) => {
                         let uris = data.map(o => o.s.value);
 
                         if (uris.length === 1) {
-                            this.fetch(modelType, uris[0], options).then((pojo) => {
-                                return resolve([pojo]);
-                            }).catch((fetchError) => {
-                                return reject(fetchError);
+                            return this.fetch(modelType, uris[0], options).then((pojo) => {
+                                return [pojo];
                             });
                         } else {
                             let promises = _.chunk(uris, 30).map((chunkUris) => {
                                 return this.describe(modelType, chunkUris, options);
                             });
-                            Promise.all(promises).then((resultArrays) => {
-                                resolve(_.flatten(resultArrays));
-                            }).catch((describeError) => {
-                                reject(describeError);
+                            return Promise.all(promises).then((resultArrays) => {
+                                return _.flatten(resultArrays);
                             });
                         }
-
-                    }).catch((error) => {
-                        reject(error);
                     });
 
                 });
             },
 
             describe(modelType, modelIdsOrUris, options) {
-                return new Promise((resolve, reject) => {
+                let uris;
+                return Promise.resolve().then(() => {
                     options.variableIndex = 0;
 
                     let modelClass = db[modelType];
@@ -200,7 +186,7 @@ export default function(config) {
                         modelIdsOrUris = [modelIdsOrUris];
                     }
 
-                    let uris = modelIdsOrUris.map((modelIdOrUri) => {
+                    uris = modelIdsOrUris.map((modelIdOrUri) => {
                         let uri = modelIdOrUri;
                         if (!_.startsWith(modelIdOrUri, 'http://')) {
                             uri = instanceRdfUri(modelClass, modelIdOrUri);
@@ -233,7 +219,7 @@ export default function(config) {
                     }, []);
 
                     if (reduceError) {
-                        return reject(reduceError);
+                        throw reduceError;
                     }
 
                     let whereClause = patterns;
@@ -255,52 +241,47 @@ export default function(config) {
                     };
 
                     /*** generate the sparql from the sparson ***/
-                    let sparql;
-                    try {
-                        sparql = new SparqlGenerator().stringify(sparson);
-                    } catch(generatorError) {
-                        return reject(generatorError);
+                    let sparql = new SparqlGenerator().stringify(sparson);
+
+                    return this.execute(sparql);
+                }).then((data) => {
+                    if (!data.length) {
+                        return null;
                     }
 
-                    this.execute(sparql).then((data) => {
-                        if (!data.length) {
-                            return resolve();
+                    const rdfDocs = data.reduce((_rdfDocs, item) => {
+
+                        let {subject, predicate, object} = item;
+                        let doc = _rdfDocs[subject.value] || {};
+                        doc._id = subject.value;
+                        doc[predicate.value] = doc[predicate.value] || [];
+
+                        if (object.datatype) {
+                            const datatype = RDF_DATATYPES[object.datatype];
+                            if (datatype === 'number') {
+                                object.value = parseFloat(object.value);
+                            } else if (datatype === 'date') {
+                                object.value = new Date(object.value);
+                            } else if (datatype === 'boolean') {
+                                if (['true', '1', 1, 'yes'].indexOf(object.value) > -1) {
+                                    object.value = true;
+                                } else {
+                                    object.value = false;
+                                }
+                            } else {
+                                console.log('UNKNOWN DATATYPE !!!', object.datatype);
+                            }
                         }
 
-                        const rdfDocs = data.reduce((_rdfDocs, item) => {
+                        doc[predicate.value].push(object.value);
+                        _rdfDocs[subject.value] = doc;
+                        return _rdfDocs;
+                    }, {});
 
-                            let {subject, predicate, object} = item;
-                            let doc = _rdfDocs[subject.value] || {};
-                            doc._id = subject.value;
-                            doc[predicate.value] = doc[predicate.value] || [];
-
-                            if (object.datatype) {
-                                const datatype = RDF_DATATYPES[object.datatype];
-                                if (datatype === 'number') {
-                                    object.value = parseFloat(object.value);
-                                } else if (datatype === 'date') {
-                                    object.value = new Date(object.value);
-                                } else if (datatype === 'boolean') {
-                                    if (['true', '1', 1, 'yes'].indexOf(object.value) > -1) {
-                                        object.value = true;
-                                    } else {
-                                        object.value = false;
-                                    }
-                                } else {
-                                    console.log('UNKNOWN DATATYPE !!!', object.datatype);
-                                }
-                            }
-
-                            doc[predicate.value].push(object.value);
-                            _rdfDocs[subject.value] = doc;
-                            return _rdfDocs;
-                        }, {});
-
-                        let pojos = uris.map((uri) => {
-                            return rdfDoc2pojo(db, modelType, rdfDocs[uri]);
-                        });
-                        return resolve(pojos);
+                    let pojos = uris.map((uri) => {
+                        return rdfDoc2pojo(db, modelType, rdfDocs[uri]);
                     });
+                    return pojos;
                 });
             },
 
@@ -314,11 +295,10 @@ export default function(config) {
              *      all properties of the fetched document
              */
             fetch(modelType, modelIdOrUri, options) {
+                return Promise.resolve().then(() => {
 
-                return new Promise((resolve, reject) => {
-
-                    var uri = modelIdOrUri;
-                    var modelClass = db[modelType];
+                    let uri = modelIdOrUri;
+                    let modelClass = db[modelType];
 
                     if (!_.startsWith(modelIdOrUri, 'http://')) {
                         uri = instanceRdfUri(modelClass, modelIdOrUri);
@@ -342,52 +322,44 @@ export default function(config) {
                     };
 
                     /*** generate the sparql from the sparson ***/
-                    let sparql;
-                    try {
-                        sparql = new SparqlGenerator().stringify(sparson);
-                    } catch(generatorError) {
-                        return reject(generatorError);
+                    let sparql = new SparqlGenerator().stringify(sparson);
+
+                    return this.execute(sparql);
+                }).then((data) => {
+                    if (!data.length) {
+                        return null;
                     }
 
-                    this.execute(sparql).then((data) => {
-                        if (!data.length) {
-                            return resolve();
+                    const rdfDoc = data.reduce((doc, item) => {
+
+                        let {subject, predicate, object} = item;
+                        doc._id = subject.value;
+                        doc[predicate.value] = doc[predicate.value] || [];
+
+                        if (object.datatype) {
+                            const datatype = RDF_DATATYPES[object.datatype];
+
+                            if (datatype === 'number') {
+                                object.value = parseFloat(object.value);
+                            } else if (datatype === 'date') {
+                                object.value = new Date(object.value);
+                            } else if (datatype === 'boolean') {
+                                if (['true', '1', 1, 'yes'].indexOf(object.value) > -1) {
+                                    object.value = true;
+                                } else {
+                                    object.value = false;
+                                }
+                            } else {
+                                console.log('UNKNOWN DATATYPE !!!', object.datatype);
+                            }
                         }
 
-                        const rdfDoc = data.reduce((doc, item) => {
+                        doc[predicate.value].push(object.value);
+                        return doc;
 
-                            let {subject, predicate, object} = item;
-                            doc._id = subject.value;
-                            doc[predicate.value] = doc[predicate.value] || [];
+                    }, {});
 
-                            if (object.datatype) {
-                                const datatype = RDF_DATATYPES[object.datatype];
-
-                                if (datatype === 'number') {
-                                    object.value = parseFloat(object.value);
-                                } else if (datatype === 'date') {
-                                    object.value = new Date(object.value);
-                                } else if (datatype === 'boolean') {
-                                    if (['true', '1', 1, 'yes'].indexOf(object.value) > -1) {
-                                        object.value = true;
-                                    } else {
-                                        object.value = false;
-                                    }
-                                } else {
-                                    console.log('UNKNOWN DATATYPE !!!', object.datatype);
-                                }
-                            }
-
-                            doc[predicate.value].push(object.value);
-                            return doc;
-
-                        }, {});
-
-                        const pojo = rdfDoc2pojo(db, modelType, rdfDoc);
-                        return resolve(pojo);
-                    }).catch((error) => {
-                        return reject(error);
-                    });
+                    return rdfDoc2pojo(db, modelType, rdfDoc);
                 });
             },
 
@@ -401,7 +373,7 @@ export default function(config) {
              *      of document that matches the query
              */
             count(modelType, query, options) {
-                return new Promise((resolve, reject) => {
+                return Promise.resolve().then(() => {
 
                     let {whereClause} = query2whereClause(db, modelType, query, options);
                     let sparson = {
@@ -424,31 +396,24 @@ export default function(config) {
                     };
 
                     /*** generate the sparql from the sparson ***/
-                    let sparql;
-                    try {
-                        sparql = new SparqlGenerator().stringify(sparson);
-                    } catch(generatorError) {
-                        return reject(generatorError);
-                    }
+                    let sparql = new SparqlGenerator().stringify(sparson);
 
-                    this.execute(sparql).then((data) => {
-                        return resolve(parseInt(data[0].count.value, 10));
-                    }).catch((error) => {
-                        reject(error);
-                    });
-
+                    return this.execute(sparql);
+                }).then((data) => {
+                    return parseInt(data[0].count.value, 10);
                 });
             },
 
 
             groupBy(modelType, aggregator, query, options) {
-                return new Promise((resolve, reject) => {
+                return Promise.resolve().then(() => {
+
                     let {whereClause} = query2whereClause(db, modelType, query, options);
 
                     let {property, aggregation} = aggregator;
 
                     /** construct the property value to perform the group by **/
-                    var propertyUri = propertyRdfUri(db[modelType], property);
+                    let propertyUri = propertyRdfUri(db[modelType], property);
                     let predicate;
                     if (_.contains(property, '.')) {
                         predicate = propertyName2Sparson(db[modelType], property);
@@ -509,14 +474,9 @@ export default function(config) {
 
 
                     /*** generate the sparql from the sparson ***/
-                    let sparql;
-                    try {
-                        sparql = new SparqlGenerator().stringify(sparson);
-                    } catch(generatorError) {
-                        return reject(generatorError);
-                    }
+                    let sparql = new SparqlGenerator().stringify(sparson);
 
-                    this.execute(sparql).then((data) => {
+                    return this.execute(sparql).then((data) => {
                         let results = [];
 
                         let isLabelBoolean = db[modelType].schema.getProperty(property).type === 'boolean';
@@ -535,24 +495,18 @@ export default function(config) {
                                 value: parseFloat(item.value.value)
                             });
                         });
-                        return resolve(results);
-                    }).catch((error) => {
-                        reject(error);
+                        return results;
                     });
 
                 });
             },
 
             sync(modelType, pojo) {
-                return new Promise((resolve, reject) => {
+                return Promise.resolve().then(() => {
 
-                    try {
-                        var insertTriples = pojo2triples(db, modelType, pojo);
-                    } catch (pojo2triplesError) {
-                        return reject(pojo2triplesError);
-                    }
+                    let insertTriples = pojo2triples(db, modelType, pojo);
 
-                    var deleteTriples = [{
+                    let deleteTriples = [{
                         subject: insertTriples[0].subject,
                         predicate: '?p',
                         object: '?o'
@@ -592,35 +546,23 @@ export default function(config) {
                         ]
                     };
 
-                    try {
-                        var sparql = new SparqlGenerator().stringify(sparson);
-                    } catch(sparqlGeneratorError) {
-                        return reject(sparqlGeneratorError);
-                    }
+                    let sparql = new SparqlGenerator().stringify(sparson);
 
-
-                    this.execute(sparql).then(() => {
-                        return resolve(pojo);
-                    }).catch((error) => {
-                        return reject(error);
-                    });
+                    return this.execute(sparql);
+                }).then(() => {
+                    return pojo;
                 });
             },
 
 
             batchSync(modelType, pojos) {
+                return Promise.resolve().then(() => {
 
-                return new Promise((resolve, reject) => {
-
-                    var insertTriples = _.flatten(pojos.map((item) => {
-                        try {
-                            return pojo2triples(db, modelType, item);
-                        } catch (pojo2triplesError) {
-                            return reject(pojo2triplesError);
-                        }
+                    let insertTriples = _.flatten(pojos.map((item) => {
+                        return pojo2triples(db, modelType, item);
                     }));
 
-                    var uris = _.uniq(insertTriples.map((triple) => {
+                    let uris = _.uniq(insertTriples.map((triple) => {
                         return triple.subject;
                     }));
 
@@ -691,31 +633,25 @@ export default function(config) {
                         ]
                     };
 
-                    try {
-                        var sparql = new SparqlGenerator().stringify(sparson);
-                    } catch(sparqlGeneratorError) {
-                        return reject(sparqlGeneratorError);
-                    }
+                    let sparql = new SparqlGenerator().stringify(sparson);
 
-                    this.execute(sparql).then(() => {
-                        return resolve(pojos);
-                    }).catch((error) => {
-                        return reject(error);
-                    });
+                    return this.execute(sparql);
+                }).then(() => {
+                    return pojos;
                 });
             },
 
 
             update(modelType, modelIdOrUri, operations) {
-                return new Promise((resolve, reject) => {
+                return Promise.resolve().then(() => {
 
-                    var uri = modelIdOrUri;
+                    let uri = modelIdOrUri;
 
                     if (!_.startsWith(modelIdOrUri, 'http://')) {
                         uri = instanceRdfUri(db[modelType], modelIdOrUri);
                     }
 
-                    var deleteTriples = operations.map((operation) => {
+                    let deleteTriples = operations.map((operation) => {
                         if (_.contains(['unset', 'pull'], operation.operator)) {
                             return operation2triple(db, modelType, uri, operation);
                         }
@@ -724,7 +660,7 @@ export default function(config) {
                     deleteTriples = _.compact(deleteTriples);
 
 
-                    var sparson = {
+                    let sparson = {
                         type: 'update',
                         updates: []
                     };
@@ -752,7 +688,7 @@ export default function(config) {
 
                     // var objectVariableIndex = 0;
                     // var deletewhereTriples = [];
-                    var insertTriples = operations.map((operation) => {
+                    let insertTriples = operations.map((operation) => {
                         if (_.contains(['set', 'push'], operation.operator)) {
                             let triple = operation2triple(db, modelType, uri, operation);
                             // deletewhereTriples.push([{
@@ -803,32 +739,22 @@ export default function(config) {
                     // console.log(' ');
                     // console.log(' ');
 
-                    try {
-                        var sparql = new SparqlGenerator().stringify(sparson);
-                    } catch(sparqlGeneratorError) {
-                        return reject(sparqlGeneratorError);
-                    }
+                    let sparql = new SparqlGenerator().stringify(sparson);
 
                     // console.log(sparql);
                     // console.log(' ');
                     // console.log(' ');
                     // console.log(' ');
 
-                    this.execute(sparql).then(() => {
-                        return resolve();
-                    }).catch((error) => {
-                        return reject(error);
-                    });
-
+                    return this.execute(sparql);
                 });
             },
 
 
             delete(modelType, modelIdOrUri) {
+                return Promise.resolve().then(() => {
 
-                return new Promise((resolve, reject) => {
-
-                    var uri = modelIdOrUri;
+                    let uri = modelIdOrUri;
 
                     if (!_.startsWith(modelIdOrUri, 'http://')) {
                         uri = instanceRdfUri(db[modelType], modelIdOrUri);
@@ -860,11 +786,7 @@ export default function(config) {
                     // console.log('');
                     // console.log('');
 
-                    try {
-                        var sparql = new SparqlGenerator().stringify(sparson);
-                    } catch(sparqlGeneratorError) {
-                        return reject(sparqlGeneratorError);
-                    }
+                    let sparql = new SparqlGenerator().stringify(sparson);
 
                     // console.log('');
                     // console.log('');
@@ -872,41 +794,34 @@ export default function(config) {
                     // console.log('');
                     // console.log('');
 
-                    this.execute(sparql).then(() => {
-                        return resolve();
-                    }).catch((error) => {
-                        return reject(error);
-                    });
-
+                    return this.execute(sparql);
                 });
             },
 
 
             execute(sparql) {
-                return new Promise((resolve, reject) => {
-                    internals.sparqlClient.execute(sparql).then((data) => {
-                        var results;
-                        if (data) {
-                            results = data.results.bindings;
-                        }
+                return Promise.resolve().then(() => {
+                    return internals.sparqlClient.execute(sparql);
+                }).then((data) => {
+                    let results;
+                    if (data) {
+                        results = data.results.bindings;
+                    }
 
-                        /** hack for virtuoso **/
-                        if (results && _.contains(sparql.toLowerCase(), 'construct')) {
-                            results = results.map((item) => {
-                                if (item.subject) {
-                                    return item;
-                                }
-                                return {
-                                    subject: item.s,
-                                    predicate: item.p,
-                                    object: item.o
-                                };
-                            });
-                        }
-                        return resolve(results);
-                    }).catch((error) => {
-                        return reject(error);
-                    });
+                    /** hack for virtuoso **/
+                    if (results && _.contains(sparql.toLowerCase(), 'construct')) {
+                        results = results.map((item) => {
+                            if (item.subject) {
+                                return item;
+                            }
+                            return {
+                                subject: item.s,
+                                predicate: item.p,
+                                object: item.o
+                            };
+                        });
+                    }
+                    return results;
                 });
             }
 

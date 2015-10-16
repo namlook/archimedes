@@ -8,7 +8,7 @@ import {findOptionsValidator} from './options-validator';
 import groupByValidator from './group-by-validator';
 import operationsValidator from './operations-validator';
 
-var validPropertyTypes = [
+const validPropertyTypes = [
     'string',
     'number',
     'boolean',
@@ -24,7 +24,7 @@ export default function(dbAdapter, config) {
         throw new Error('database: no adapter found');
     }
 
-    var inner = {
+    let inner = {
         _archimedesDatabase: true,
         config: config,
         modelSchemas: null,
@@ -104,23 +104,17 @@ export default function(dbAdapter, config) {
          * @params {Object} - {modelType: modelConfig}
          */
         register(models) {
-            return new Promise((resolve, reject) => {
-                return this.beforeRegister(models).then((processedModels) => {
-                    this.modelSchemas = processedModels;
-                    _.forOwn(processedModels, (ModelConfig, name) => {
-                        this[name] = modelFactory(this, name, ModelConfig);
-                        this.registeredModels[name] = this[name];
-                        this._modelsByPlural[this[name].meta.names.plural] = this[name];
-                    });
-                    return this;
-                }).then((db) => {
-                    try {
-                        this._checkInverseRelationships();
-                    } catch(error) {
-                        return reject(error)
-                    }
-                    return resolve(this.afterRegister(db));
+            return this.beforeRegister(models).then((processedModels) => {
+                this.modelSchemas = processedModels;
+                _.forOwn(processedModels, (ModelConfig, name) => {
+                    this[name] = modelFactory(this, name, ModelConfig);
+                    this.registeredModels[name] = this[name];
+                    this._modelsByPlural[this[name].meta.names.plural] = this[name];
                 });
+                return this;
+            }).then((db) => {
+                this._checkInverseRelationships();
+                return this.afterRegister(db);
             });
         },
 
@@ -128,14 +122,14 @@ export default function(dbAdapter, config) {
         _checkInverseRelationships() {
             _.forOwn(this.registeredModels, (model, name) => {
                 let {inverseRelationships} = model.schema;
-                let error = inverseRelationships.reduce((error, relation) => {
-                    let config = relation.config.abstract.fromReverse;
-                    let prop = this[config.type].schema.getProperty(config.property);
+                let error = inverseRelationships.reduce((_error, relation) => {
+                    let abstract = relation.config.abstract.fromReverse;
+                    let prop = this[abstract.type].schema.getProperty(abstract.property);
                     if (!prop) {
-                        error = new StructureError(`unknown property "${config.property}" for model "${config.type}" in the inverse relationship: ${name}.${relation.name}`);
+                        _error = new StructureError(`unknown property "${abstract.property}" for model "${abstract.type}" in the inverse relationship: ${name}.${relation.name}`);
                     }
-                    return error;
-                }, null)
+                    return _error;
+                }, null);
 
                 if (error) {
                     throw error;
@@ -185,7 +179,7 @@ export default function(dbAdapter, config) {
                         `Unknown type ${modelType}`, {pojo: pojo}));
                 }
 
-                var modelSchema = this[modelType].schema;
+                let modelSchema = this[modelType].schema;
                 let {error, value} = modelSchema.validate(pojo);
                 if (error) {
                     pojo = pojo || {};
@@ -223,33 +217,29 @@ export default function(dbAdapter, config) {
         },
 
         _validateOperations(modelType, operations) {
-            return new Promise((resolve, reject) => {
+            return operationsValidator(operations).then(() => {
                 let modelSchema = this[modelType].schema;
-                operationsValidator(operations).then(() => {
-                    operations.forEach((operation) => {
-                        let property = modelSchema.getProperty(operation.property);
-                        if (!property) {
-                            return reject(new ValidationError('Unknown property',
-                                `unknown property "${operation.property}" on model "${modelType}"`));
-                        }
+                for (let operation of operations) {
+                    let property = modelSchema.getProperty(operation.property);
+                    if (!property) {
+                        throw new ValidationError('Unknown property',
+                            `unknown property "${operation.property}" on model "${modelType}"`);
+                    }
 
-                        let validationResults;
-                        if (property.isArray()) {
-                            validationResults = property.validateItem(operation.value);
-                        } else {
-                            validationResults = property.validate(operation.value);
-                        }
+                    let validationResults;
+                    if (property.isArray()) {
+                        validationResults = property.validateItem(operation.value);
+                    } else {
+                        validationResults = property.validate(operation.value);
+                    }
 
-                        let {error, value} = validationResults;
-                        if (error) {
-                            return reject(new ValidationError('Bad value', error));
-                        }
-                        operation.value = value;
-                    });
-                    return resolve(operations);
-                }).catch((error) => {
-                    return reject(new ValidationError('Bad operations', error));
-                });
+                    let {error, value} = validationResults;
+                    if (error) {
+                        throw new ValidationError('Bad value', error);
+                    }
+                    operation.value = value;
+                }
+                return operations;
             });
         },
 
@@ -309,28 +299,28 @@ export default function(dbAdapter, config) {
          * @returns {promise}
          */
         find(modelType, query, options) {
+            return Promise.resolve().then(() => {
 
-            query = Object.assign({}, query);
-            options = options || {};
+                query = Object.assign({}, query);
+                options = options || {};
 
 
-            if (typeof options.fields === 'string') {
-                options.fields = options.fields.split(',');
-            }
+                if (typeof options.fields === 'string') {
+                    options.fields = options.fields.split(',');
+                }
 
-            if (typeof options.sort === 'string') {
-                options.sort = options.sort.split(',');
-            }
+                if (typeof options.sort === 'string') {
+                    options.sort = options.sort.split(',');
+                }
 
-            return new Promise((resolve, reject) => {
                 if (!modelType) {
-                    return reject(new Error('find: modelType is required'));
+                    throw new Error('find: modelType is required');
                 }
 
 
-                var {error: optionError, value: validatedOptions} = findOptionsValidator(options);
+                let {error: optionError, value: validatedOptions} = findOptionsValidator(options);
                 if (optionError) {
-                    return reject(new ValidationError('malformed options', optionError));
+                    throw new ValidationError('malformed options', optionError);
                 }
 
                 if (!query._type) {
@@ -341,14 +331,12 @@ export default function(dbAdapter, config) {
 
 
                 if (queryError) {
-                    return reject(new ValidationError('malformed query', queryError));
+                    throw new ValidationError('malformed query', queryError);
                 }
 
-                this.adapter.find(modelType, validatedQuery, validatedOptions).then((data) => {
-                    return resolve(_.compact(data));
-                }).catch((findError) => {
-                    return reject(findError);
-                });
+                return this.adapter.find(modelType, validatedQuery, validatedOptions);
+            }).then((data) => {
+                return _.compact(data);
             });
         },
 
@@ -362,16 +350,14 @@ export default function(dbAdapter, config) {
          * @returns {promise}
          */
         first(modelType, query, options) {
-            return new Promise((resolve, reject) => {
-                this.find(modelType, query, options).then((results) => {
-                    var result;
-                    if (results.length) {
-                        result = results[0];
-                    }
-                    return resolve(result);
-                }).catch((error) => {
-                    reject(error);
-                });
+            return Promise.resolve().then(() => {
+                return this.find(modelType, query, options);
+            }).then((results) => {
+                let result;
+                if (results.length) {
+                    result = results[0];
+                }
+                return result;
             });
         },
 
@@ -386,39 +372,31 @@ export default function(dbAdapter, config) {
          * @returns a promise
          */
         fetch(modelType, id, options) {
+            return Promise.resolve().then(() => {
 
-            options = options || {};
+                options = options || {};
 
-            if (typeof options.fields === 'string') {
-                options.fields = options.fields.split(',');
-            }
+                if (typeof options.fields === 'string') {
+                    options.fields = options.fields.split(',');
+                }
 
-            return new Promise((resolve, reject) => {
                 if (typeof modelType !== 'string') {
-                    return reject(new Error('fetch: modelType is required and should be a string'));
+                    throw new Error('fetch: modelType is required and should be a string');
                 }
 
                 if (typeof id !== 'string') {
-                    return reject(new Error('fetch: id is required and should be a string'));
+                    throw new Error('fetch: id is required and should be a string');
                 }
 
 
-                this.adapter.fetch(modelType, id, options).then((pojo) => {
-                    if (pojo) {
-
-                        /** cast values **/
-                        this.validate(modelType, pojo).then((validatedPojo) => {
-                            resolve(validatedPojo);
-                        }).catch((error) => {
-                            reject(error);
-                        });
-
-                    } else {
-                        process.nextTick(resolve);
-                    }
-                }).catch((error) => {
-                    reject(error);
-                });
+                return this.adapter.fetch(modelType, id, options);
+            }).then((pojo) => {
+                if (pojo) {
+                    /** cast values **/
+                    return this.validate(modelType, pojo);
+                } else {
+                    return null;
+                }
             });
         },
 
@@ -432,13 +410,13 @@ export default function(dbAdapter, config) {
          * @returns {promise}
          */
         count(modelType, query) {
-            return new Promise((resolve, reject) => {
+            return Promise.resolve().then(() => {
                 if (typeof modelType !== 'string') {
-                    return reject(new Error('count: modelType should be a string'));
+                    throw new Error('count: modelType should be a string');
                 }
 
                 if (query && !_.isObject(query)) {
-                    return reject(new Error('count: query should be an object'));
+                    throw new Error('count: query should be an object');
                 }
 
                 query = query || {};
@@ -447,27 +425,28 @@ export default function(dbAdapter, config) {
                 let {error, value: validatedQuery} = queryValidator(this[modelType].schema, query);
 
                 if (error) {
-                    return reject(new ValidationError('malformed query', error));
+                    throw new ValidationError('malformed query', error);
                 }
 
 
-                return resolve(this.adapter.count(modelType, validatedQuery));
+                return this.adapter.count(modelType, validatedQuery);
             });
         },
 
 
         groupBy(modelType, aggregator, query, options) {
 
-            options = options || {};
+            return Promise.resolve().then(() => {
 
-            return new Promise((resolve, reject) => {
+                options = options || {};
+
 
                 if (typeof modelType !== 'string') {
-                    return reject(new Error('update: modelType should be a string'));
+                    throw new Error('update: modelType should be a string');
                 }
 
                 if (!aggregator) {
-                    return reject(new Error('groupBy: aggregator is required'));
+                    throw new Error('groupBy: aggregator is required');
                 }
 
                 if (typeof aggregator === 'string') {
@@ -491,19 +470,19 @@ export default function(dbAdapter, config) {
                 let {error: aggregatorError, value: validatedAggregator} = groupByValidator(aggregator);
 
                 if (aggregatorError) {
-                    return reject(new ValidationError('malformed aggregator', aggregatorError.details[0].message));
+                    throw new ValidationError('malformed aggregator', aggregatorError.details[0].message);
                 }
 
                 let modelSchema = this[modelType].schema;
                 if (!modelSchema.getProperty(validatedAggregator.property)) {
-                    return reject(new ValidationError('malformed aggregator', `unknown property aggregator "${validatedAggregator.property}" on model "${modelType}"`));
+                    throw new ValidationError('malformed aggregator', `unknown property aggregator "${validatedAggregator.property}" on model "${modelType}"`);
                 }
                 if (!modelSchema.getProperty(validatedAggregator.aggregation.target)) {
-                    return reject(new ValidationError('malformed aggregator', `unknown property target "${validatedAggregator.aggregation.target}" on model "${modelType}"`));
+                    throw new ValidationError('malformed aggregator', `unknown property target "${validatedAggregator.aggregation.target}" on model "${modelType}"`);
                 }
 
                 if (query && !_.isObject(query)) {
-                    return reject(new Error('groupBy: query should be an object'));
+                    throw new Error('groupBy: query should be an object');
                 }
 
                 query = query || {};
@@ -512,12 +491,12 @@ export default function(dbAdapter, config) {
                 let {error: queryError, value: validatedQuery} = queryValidator(this[modelType].schema, query);
 
                 if (queryError) {
-                    return reject(new ValidationError('malformed query', queryError));
+                    throw new ValidationError('malformed query', queryError);
                 }
 
                 // TODO validate options
 
-                return resolve(this.adapter.groupBy(modelType, validatedAggregator, validatedQuery, options));
+                return this.adapter.groupBy(modelType, validatedAggregator, validatedQuery, options);
             });
         },
 
@@ -530,21 +509,19 @@ export default function(dbAdapter, config) {
          * @returns {promise}
          */
         update(modelType, modelId, operations) {
-            return new Promise((resolve, reject) => {
+            return Promise.resolve().then(() => {
 
                 if (typeof modelType !== 'string') {
-                    return reject(new Error('update: modelType should be a string'));
+                    throw new Error('update: modelType should be a string');
                 }
 
                 if (!_.isArray(operations)) {
-                    return reject(new Error('update: operations should be an array'));
+                    throw new Error('update: operations should be an array');
                 }
 
-                this._validateOperations(modelType, operations).then((validatedOperations) => {
-                    return resolve(this.adapter.update(modelType, modelId, validatedOperations));
-                }).catch((error) => {
-                    return reject(error);
-                });
+                return this._validateOperations(modelType, operations);
+            }).then((validatedOperations) => {
+                return this.adapter.update(modelType, modelId, validatedOperations);
             });
         },
 
@@ -558,13 +535,14 @@ export default function(dbAdapter, config) {
          * @returns a promise which resolve the saved object
          */
         sync(modelType, pojo) {
-            return new Promise((resolve, reject) => {
+            return Promise.resolve().then(() => {
+
                 if (typeof modelType !== 'string') {
-                    return reject(new Error('sync: modelType should be a string'));
+                    throw new Error('sync: modelType should be a string');
                 }
 
                 if (!_.isObject(pojo)) {
-                    return reject(new Error('sync: the document should be an object'));
+                    throw new Error('sync: the document should be an object');
                 }
 
                 if (!pojo._id) {
@@ -575,11 +553,9 @@ export default function(dbAdapter, config) {
                     pojo._type = modelType;
                 }
 
-                this.validate(modelType, pojo).then((validatedPojo) => {
-                    resolve(this.adapter.sync(modelType, validatedPojo));
-                }).catch((error) => {
-                    reject(error);
-                });
+                return this.validate(modelType, pojo);
+            }).then((validatedPojo) => {
+                return this.adapter.sync(modelType, validatedPojo);
             });
         },
 
@@ -592,21 +568,22 @@ export default function(dbAdapter, config) {
          * @returns a promise which resolve an array of the saved pojo
          */
         batchSync(modelType, data) {
-            return new Promise((resolve, reject) => {
+            return Promise.resolve().then(() => {
+
                 if (typeof modelType !== 'string') {
-                    return reject(new Error('batchSync: modelType should be a string'));
+                    throw new Error('batchSync: modelType should be a string');
                 }
 
                 if (!_.isArray(data)) {
-                    return reject(new Error('batchSync: data should be an array'));
+                    throw new Error('batchSync: data should be an array');
                 }
 
-                var promises = [];
+                let promises = [];
                 for(let i = 0; i < data.length; i++) {
                     let pojo = data[i];
 
                     if (!_.isObject(pojo)) {
-                        return reject(new Error('sync: the document should be an object'));
+                        throw new Error('sync: the document should be an object');
                     }
 
                     if (!pojo._id) {
@@ -620,16 +597,9 @@ export default function(dbAdapter, config) {
                     promises.push(this.validate(modelType, pojo));
                 }
 
-                // return resolve(this.adapter.batchSync(modelType, data));
-
-
-                return Promise.all(promises).then((pojos) => {
-                    resolve(this.adapter.batchSync(modelType, pojos));
-                }).catch((error) => {
-                    reject(error);
-                });
-
-                // return resolve(this.adapter.batchSync(modelType, pojos));
+                return Promise.all(promises);
+            }).then((pojos) => {
+                return this.adapter.batchSync(modelType, pojos);
             });
         },
 
@@ -642,16 +612,16 @@ export default function(dbAdapter, config) {
          * @returns a promise
          */
         delete(modelType, modelId) {
-            return new Promise((resolve, reject) => {
+            return Promise.resolve().then(() => {
                 if (typeof modelType !== 'string') {
-                    return reject(new Error('delete: modelType should be a string'));
+                    throw new Error('delete: modelType should be a string');
                 }
 
                 if (typeof modelId !== 'string') {
-                    return reject(new Error('delete: id should be a string'));
+                    throw new Error('delete: id should be a string');
                 }
 
-                return resolve(this.adapter.delete(modelType, modelId));
+                return this.adapter.delete(modelType, modelId);
             });
         }
     };

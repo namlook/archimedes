@@ -135,11 +135,9 @@ var modelFactory = function(db, name, modelClassSchema) {
 
     let meta = modelClassSchema.meta;
     let dasherizedName = inflector.dasherize(inflector.underscore(name));
-    let plural = _.get(meta, 'names.plural');
-    modelClassSchema.meta.names = {
-        dasherized: dasherizedName,
-        plural: plural || inflector.pluralize(dasherizedName)
-    };
+    let plural = _.get(meta, 'names.plural') || inflector.pluralize(dasherizedName);
+    _.set(modelClassSchema, 'meta.names.dasherized', dasherizedName);
+    _.set(modelClassSchema, 'meta.names.plural', plural);
 
     /**
      * construct the Model
