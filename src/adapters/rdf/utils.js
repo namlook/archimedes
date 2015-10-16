@@ -4,15 +4,15 @@ import {Util as N3Util} from 'N3';
 import {ValidationError} from '../../errors';
 import moment from 'moment';
 
-export var classRdfUri = function(modelClass) {
+export let classRdfUri = function(modelClass) {
     return modelClass.meta.classRdfUri;
 };
 
-export var instanceRdfUri = function(modelClass, id) {
+export let instanceRdfUri = function(modelClass, id) {
     return `${modelClass.meta.instanceRdfPrefix}/${id}`;
 };
 
-export var propertyRdfUri = function(modelClass, propertyName) {
+export let propertyRdfUri = function(modelClass, propertyName) {
     if (!modelClass) {
         return new Error('propertyRdfUri require a modelClass');
     }
@@ -40,7 +40,7 @@ export var propertyRdfUri = function(modelClass, propertyName) {
 };
 
 
-export var propertyName2Sparson = function(modelClass, propertyNames) {
+export let propertyName2Sparson = function(modelClass, propertyNames) {
     let modelSchema = modelClass.schema;
     let db = modelClass.db;
 
@@ -85,14 +85,14 @@ export var propertyName2Sparson = function(modelClass, propertyNames) {
 };
 
 
-export var buildRdfValue = function(db, modelType, propertyName, value) {
-    var modelClass = db[modelType];
+export let buildRdfValue = function(db, modelType, propertyName, value) {
+    let modelClass = db[modelType];
 
     if (propertyName === '_type') {
         return classRdfUri(modelClass);
     }
 
-    var rdfValue;
+    let rdfValue;
     if (_.has(value, '_id') && _.has(value, '_type')) {
         rdfValue = instanceRdfUri(db[value._type], value._id);
     } else {
@@ -107,19 +107,19 @@ export var buildRdfValue = function(db, modelType, propertyName, value) {
     return rdfValue;
 };
 
-export var uri2id = function(modelClass, uri) {
+export let uri2id = function(modelClass, uri) {
     let id = uri.replace(modelClass.meta.instanceRdfPrefix, '');
     return _.trim(id, '/');
 };
 
-export var uri2property = function(modelClass, uri) {
+export let uri2property = function(modelClass, uri) {
     if (uri === 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type') {
         return '_type';
     }
     return modelClass.meta.propertyUrisMapping[uri];
 };
 
-export var operation2triple = function(db, modelType, uri, operation) {
+export let operation2triple = function(db, modelType, uri, operation) {
     let modelClass = db[modelType];
 
     let {property, value} = operation;
@@ -135,10 +135,10 @@ export var operation2triple = function(db, modelType, uri, operation) {
 };
 
 
-export var rdfDoc2pojo = function(db, modelType, rdfDoc) {
-    var modelClass = db[modelType];
+export let rdfDoc2pojo = function(db, modelType, rdfDoc) {
+    let modelClass = db[modelType];
 
-    var pojo = {};
+    let pojo = {};
     _.forOwn(rdfDoc, (rdfValues, rdfProperty) => {
 
         if (rdfProperty === '_id') {
@@ -161,8 +161,8 @@ export var rdfDoc2pojo = function(db, modelType, rdfDoc) {
             return;
         }
 
-        var values = [];
-        var isRelation = property.isRelation();
+        let values = [];
+        let isRelation = property.isRelation();
         rdfValues.forEach(function(rdfValue) {
             if (isRelation) {
                 let relationType = property.type;
@@ -184,7 +184,7 @@ export var rdfDoc2pojo = function(db, modelType, rdfDoc) {
             });
         }
 
-        var value;
+        let value;
         if (!property.isArray()) {
             value = values[0];
         } else {
@@ -202,10 +202,10 @@ export var rdfDoc2pojo = function(db, modelType, rdfDoc) {
 };
 
 
-export var pojo2triples = function(db, modelType, pojo) {
-    var modelClass = db[modelType];
+export let pojo2triples = function(db, modelType, pojo) {
+    let modelClass = db[modelType];
 
-    var triples = [];
+    let triples = [];
 
     let instanceUri = instanceRdfUri(modelClass, pojo._id);
 
@@ -262,13 +262,13 @@ var operatorsMapping = {
 };
 
 
-export var query2whereClause = function(db, modelType, query, options) {
-    var modelClass = db[modelType];
+export let query2whereClause = function(db, modelType, query, options) {
+    let modelClass = db[modelType];
 
-    var filters = [];
-    var triples = [];
-    var orderBy = [];
-    var sorting = {};
+    let filters = [];
+    let triples = [];
+    let orderBy = [];
+    let sorting = {};
 
     _.get(options, 'sort', []).forEach((propertyName) => {
         if (!propertyName) {
@@ -287,8 +287,8 @@ export var query2whereClause = function(db, modelType, query, options) {
 
     _.forOwn(query, (object, propertyName) => {
 
-        var variableIdx = 0;
-        var variable;
+        let variableIdx = 0;
+        let variable;
 
         if (propertyName === '_type') {
             variable = `?_type${variableIdx++}`;
@@ -462,7 +462,7 @@ export var query2whereClause = function(db, modelType, query, options) {
 };
 
 
-export var constructTriples = function(modelClass, uri, options) {
+export let constructTriples = function(modelClass, uri, options) {
 
     if (options.variableIndex == null) {
         options.variableIndex = '';
@@ -474,7 +474,7 @@ export var constructTriples = function(modelClass, uri, options) {
 
     let triples = [];
     if (options.fields.length) {
-        var variableIdx = 0;
+        let variableIdx = 0;
 
         triples = options.fields.map((propertyName) => {
 
@@ -517,7 +517,7 @@ export var constructTriples = function(modelClass, uri, options) {
 };
 
 
-export var deleteCascade = function(db, _modelType, uri) {
+export let deleteCascade = function(db, _modelType, uri) {
     let deleteProps = db[_modelType].schema.propagateDeletionProperties;
 
     let deleteTriples = [];
@@ -633,8 +633,8 @@ export var deleteCascade = function(db, _modelType, uri) {
 };
 
 
-// export var query2sparql = function(db, modelType, query, options) {
-//     var sparson = query2sparson(db, modelType, query);
-//     var generator = new SparqlGenerator();
+// export let query2sparql = function(db, modelType, query, options) {
+//     let sparson = query2sparson(db, modelType, query);
+//     let generator = new SparqlGenerator();
 //     return generator.stringify(sparson);
 // };
