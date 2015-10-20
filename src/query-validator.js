@@ -64,15 +64,17 @@ class QueryValidator {
      * @params {string} propertyName
      * returns a boolean
      */
-    __isInheritedPropertyName(propertyName) {
-        let models = _.values(this._db.registeredModels);
-        let inheritedProperties = models.map((model) => {
-            if (_.contains(model.mixins, this._modelSchema.name)) {
-                return this._db[model.name].schema.getProperty(propertyName);
-            }
-        });
-        return !!_.compact(inheritedProperties).length;
-    }
+    // __isInheritedPropertyName(propertyName) {
+    //     console.log('=====', this._modelSchema.name, '(', propertyName, ')=====');
+    //     let models = _.values(this._db.registeredModels);
+    //     let inheritedProperties = models.map((model) => {
+    //         if (_.includes(model.mixinsChain, this._modelSchema.name)) {
+    //             return this._db[model.name].schema.getProperty(propertyName);
+    //         }
+    //     });
+    //     console.log('$$$', _.flatten(_.compact(inheritedProperties)).map((o)=> o && o.modelSchema.name));
+    //     return !!_.compact(inheritedProperties).length;
+    // }
 
     _validateValue(value, propertyName, operator) {
         if (operator) {
@@ -87,6 +89,7 @@ class QueryValidator {
         if (propertyName[0] === '_') {
             return value;
         }
+
 
         var property = this._modelSchema.getProperty(propertyName);
 
@@ -134,8 +137,22 @@ class QueryValidator {
 
         _.forOwn(query, (value, propertyName) => {
 
-            if (_.contains(propertyName, '.')) {
+            /**
+             * allow to omit '_id' where querying a relation.
+             *
+             * In the following example, the two queries are the same:
+             *
+             *      db.User.find({'author._id': 'joe'});
+             *      db.User.find({'author': 'joe'});
+             */
+            if (!_.endsWith(propertyName, '_id')) {
+                let property = this._modelSchema.getProperty(propertyName);
+                if (property && property.isRelation() && !_.isObject(value)) {
+                    propertyName = `${propertyName}._id`;
+                }
+            }
 
+            if (_.contains(propertyName, '.')) {
                 let relationName = propertyName.split('.')[0];
                 let propRelation = this._modelSchema.getProperty(relationName);
                 if (!propRelation) {
@@ -144,9 +161,9 @@ class QueryValidator {
                         message: `unknown property "${relationName}" on model "${this._modelSchema.name}"`
                     });
                     return;
-                } else if (_.isArray(propRelation)) {
-                    filter[propertyName] = value;
-                    return;
+                // } else if (_.isArray(propRelation)) {
+                //     filter[propertyName] = value;
+                //     return;
                 }
 
                 if (!propRelation.isRelation()) {
@@ -172,7 +189,6 @@ class QueryValidator {
 
             } else {
                 _.set(filter, propertyName, this._validateValue(value, propertyName));
-
             }
         });
 

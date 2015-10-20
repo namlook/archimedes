@@ -55,23 +55,24 @@ export let propertyName2Sparson = function(modelClass, propertyNames) {
 
         if (property.isInverseRelationship()) {
 
-            property = property.getPropertiesFromInverseRelationship();
+            property = property.getPropertyFromInverseRelationship();
 
-            let propertyUris = _.uniq(property.map((o) => o.meta.rdfUri));
-            if (propertyUris.length > 1) {
-                propertyUris = {
-                    type: 'path',
-                    pathType: '|',
-                    items: propertyUris
-                };
-            }
+            // let propertyUris = _.uniq(property.map((o) => o.meta.rdfUri));
+            // if (propertyUris.length > 1) {
+            //     propertyUris = {
+            //         type: 'path',
+            //         pathType: '|',
+            //         items: propertyUris
+            //     };
+            // }
+
+            let propertyUris = [property.meta.rdfUri];
 
             return {
                 type: 'path',
                 pathType: '^',
                 items: propertyUris
             };
-
         } else {
             return property.meta.rdfUri;
         }
@@ -546,7 +547,7 @@ export let deleteCascade = function(db, _modelType, uri) {
     }
 
 
-    deleteProps.forEach((prop) => {
+    for (let prop of deleteProps) {
 
         let variable;
         let predictate;
@@ -563,8 +564,7 @@ export let deleteCascade = function(db, _modelType, uri) {
         }
 
         if (prop.isInverseRelationship()) {
-            let props = prop.getPropertiesFromInverseRelationship();
-            prop = props[0]; // Check this !
+            prop = prop.getPropertyFromInverseRelationship();
             variable = `?${variablePrefix}${prop.modelSchema.name}_via_${prop.name}`;
             predictate = propertyRdfUri(db[prop.modelSchema.name], prop.name);
             type = classRdfUri(db[prop.modelSchema.name]);
@@ -627,7 +627,7 @@ export let deleteCascade = function(db, _modelType, uri) {
             patterns: patterns
         });
 
-    });
+    }
 
     return {deleteTriples, whereClause};
 };

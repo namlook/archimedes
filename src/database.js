@@ -30,6 +30,8 @@ export default function(dbAdapter, config) {
         modelSchemas: null,
         registeredModels: {},
         _modelsByPlural: {},
+        _modelStructures: {},
+        _propertiesMap: {},
 
         /**
          * Hooks fired before the register() method.
@@ -105,37 +107,58 @@ export default function(dbAdapter, config) {
          */
         register(models) {
             return this.beforeRegister(models).then((processedModels) => {
-                this.modelSchemas = processedModels;
-                _.forOwn(processedModels, (ModelConfig, name) => {
-                    this[name] = modelFactory(this, name, ModelConfig);
+                this.modelSchemas = processedModels; // TODO remove ??
+
+                for (let name of Object.keys(processedModels)) {
+                    let modelConfig = processedModels[name];
+                    this._modelStructures[name] = processedModels[name];
+                    this[name] = modelFactory(this, name, modelConfig);
                     this.registeredModels[name] = this[name];
                     this._modelsByPlural[this[name].meta.names.plural] = this[name];
-                });
+                }
+
+                this.__checkInverseRelationships();
+                this.__buildPropertiesCache();
                 return this;
             }).then((db) => {
-                this._checkInverseRelationships();
                 return this.afterRegister(db);
             });
         },
 
 
-        _checkInverseRelationships() {
-            _.forOwn(this.registeredModels, (model, name) => {
-                let {inverseRelationships} = model.schema;
-                let error = inverseRelationships.reduce((_error, relation) => {
-                    let abstract = relation.config.abstract.fromReverse;
-                    let prop = this[abstract.type].schema.getProperty(abstract.property);
-                    if (!prop) {
-                        _error = new StructureError(`unknown property "${abstract.property}" for model "${abstract.type}" in the inverse relationship: ${name}.${relation.name}`);
-                    }
-                    return _error;
-                }, null);
+        __checkInverseRelationships() {
+            for (let name of Object.keys(this.registeredModels)) {
+                let model = this.registeredModels[name];
 
-                if (error) {
-                    throw error;
+                let inverseRelationships = model.schema._inverseRelationships;
+                for (let relationName of Object.keys(inverseRelationships)) {
+                    let relationConf = inverseRelationships[relationName];
+                    let targetProperty = relationConf.config.abstract.fromReverse.property;
+
+                    if (!this[relationConf.type].schema._properties[targetProperty]) {
+                        throw new StructureError(`unknown property "${targetProperty}" for model "${relationConf.type}" in the inverse relationship: ${name}.${relationName}`);
+                    }
+                }
+            }
+        },
+
+        __buildPropertiesCache() {
+            let models = _.values(this.registeredModels);
+            for (let model of models) {
+                let properties = model._structure.properties || {};
+                for (let propName of Object.keys(properties)) {
+                    let property = model.schema._properties[propName];
+                    this._propertiesMap[property.name] = this._propertiesMap[property.name] || [];
+                    this._propertiesMap[property.name].push(property);
                 }
 
-            });
+                let inverseRelationships = model._structure.inverseRelationships || {};
+                for (let propName of Object.keys(inverseRelationships)) {
+                    let property = model.schema._inverseRelationships[propName];
+                    this._propertiesMap[property.name] = this._propertiesMap[property.name] || [];
+                    this._propertiesMap[property.name].push(property);
+                }
+            }
         },
 
         /**
@@ -251,41 +274,35 @@ export default function(dbAdapter, config) {
          * @params {?string} mixinName - the name of the mixin to restraint the lookup
          * @returns a list of ModelSchemaProperty objects
          */
-        findProperties(propertyName, mixinName) {
-            if (!this._propertiesMap) {
-                this._propertiesMap = {};
-                _.forOwn(this.registeredModels, (model) => {
-                    model.schema.properties.forEach((property) => {
-
-                        this._propertiesMap[property.name] = this._propertiesMap[property.name] || [];
-                        if (property) {
-                            this._propertiesMap[property.name].push(property);
-                        }
-
-                    });
-
-                    model.schema.inverseRelationships.forEach((property) => {
-
-                        this._propertiesMap[property.name] = this._propertiesMap[property.name] || [];
-                        if (property) {
-                            this._propertiesMap[property.name].push(property);
-                        }
-
-                    });
-                });
-            }
-
+        findProperties(propertyName, mixinNames) {
             let properties = this._propertiesMap[propertyName];
 
-            if (mixinName) {
+            if (mixinNames) {
+                if (!_.isArray(mixinNames)) {
+                    mixinNames = [mixinNames];
+                }
+
+                let allMixinNames = _.uniq(
+                    _.flatten(
+                        mixinNames.map((o) => this[o].mixinsChain)
+                    )
+                );
+
                 let filterFn = function(item) {
-                    let modelClass = item.modelSchema.modelClass;
-                    return _.contains(modelClass.mixinsChain, mixinName);
+                    let mixinsChain = item.modelSchema.modelClass.mixinsChain;
+                    return _.intersection(allMixinNames, mixinsChain).length;
                 };
 
                 properties = _.filter(properties, filterFn);
-            }
 
+                if (!properties.length) {
+                    properties = undefined;
+                } else if (properties.length === 1) {
+                    properties = properties[0];
+                } else {
+                    console.log('AAAAAA', propertyName, mixinNames, properties);
+                }
+            }
             return properties;
         },
 
@@ -328,7 +345,6 @@ export default function(dbAdapter, config) {
                 }
 
                 let {error: queryError, value: validatedQuery} = queryValidator(this[modelType].schema, query);
-
 
                 if (queryError) {
                     throw new ValidationError('malformed query', queryError);

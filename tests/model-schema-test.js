@@ -34,6 +34,52 @@ describe('ModelSchema', function() {
         done();
     });
 
+    it('should aggregate properties', (done) => {
+        let blogPostPropertyNames = db.BlogPost.schema.properties.map((o) => o.name);
+
+        expect(blogPostPropertyNames).to.only.include([
+            'ratting',
+            'author',
+            'body',
+            'createdDate',
+            'slug',
+            'title',
+            'tags',
+            'credits',
+            'backlinks',
+            'updatedDate',
+            'publishedDate',
+            'isPublished'
+        ]);
+
+        let bookPropertyNames = db.Book.schema.properties.map((o) => o.name);
+        expect(bookPropertyNames).to.include([
+            'author',
+            'body',
+            'createdDate',
+            'isbn'
+        ]);
+
+        done();
+    });
+
+    it('should aggregate inverse relationships', (done) => {
+        let blogPostPropertyNames = db.BlogPost.schema.inverseRelationships.map((o) => o.name);
+        expect(blogPostPropertyNames).to.only.include([
+            'comments'
+        ]);
+
+        let userPropertyNames = db.User.schema.inverseRelationships.map((o) => o.name);
+        expect(userPropertyNames).to.include([
+            'blogPosts',
+            'comments',
+            'contents',
+            'reviewedBooks'
+        ]);
+
+        done();
+    });
+
 
     describe('#getProperty()', function() {
 
@@ -54,15 +100,12 @@ describe('ModelSchema', function() {
         });
 
 
-        it('should return all potential properties from a mixin', (done) => {
-            let properties = db.Content.schema.getProperty('isPublished');
-            expect(properties.length).to.equal(1);
-            expect(properties[0].modelSchema.name).to.equal('BlogPost');
+        it('should return the child property', (done) => {
+            let property = db.Content.schema.getProperty('isPublished');
+            expect(property.modelSchema.name).to.equal('BlogPost');
 
-            let properties2 = db.Content.schema.getProperty('reviewer');
-            expect(properties2.length).to.equal(2);
-            let modelNames = properties2.map((o) => o.modelSchema.name);
-            expect(modelNames).to.include(['Ebook', 'Book']);
+            let property2 = db.Content.schema.getProperty('reviewer');
+            expect(property2.modelSchema.name).to.equal('Book');
             done();
         });
 
@@ -82,24 +125,48 @@ describe('ModelSchema', function() {
 
 
         it('should return a reversed deep related property', (done) => {
-            let nameProperties = db.User.schema.getProperty('reviewedBooks.author.name');
-            expect(nameProperties).to.be.an.array();
-            expect(nameProperties.length).to.equal(1);
-            expect(nameProperties[0].type).to.equal('string');
-            expect(nameProperties[0].modelSchema.name).to.equal('User');
+            let nameProperty = db.User.schema.getProperty('reviewedBooks.author.name');
+            expect(nameProperty).to.be.an.object();
+            expect(nameProperty.type).to.equal('string');
+            expect(nameProperty.modelSchema.name).to.equal('User');
 
-            let isPublishedProperties = db.User.schema.getProperty('contents.isPublished');
-            expect(isPublishedProperties).to.be.an.array();
-            expect(isPublishedProperties.length).to.equal(1);
-            expect(isPublishedProperties[0].type).to.equal('boolean');
-            expect(isPublishedProperties[0].modelSchema.name).to.equal('BlogPost');
+            let isPublishedProperty = db.User.schema.getProperty('contents.isPublished');
+            expect(isPublishedProperty).to.be.an.object();
+            expect(isPublishedProperty.type).to.equal('boolean');
+            expect(isPublishedProperty.modelSchema.name).to.equal('BlogPost');
 
-            let genderProperties = db.User.schema.getProperty('contents.author.gender');
-            expect(genderProperties).to.be.an.array();
-            expect(genderProperties.length).to.equal(1);
-            expect(genderProperties[0].type).to.equal('string');
-            expect(genderProperties[0].modelSchema.name).to.equal('User');
+            let genderProperty = db.User.schema.getProperty('contents.author.gender');
+            expect(genderProperty).to.be.an.object();
+            expect(genderProperty.type).to.equal('string');
+            expect(genderProperty.modelSchema.name).to.equal('User');
             done();
+        });
+
+        it('should undefined when trying to get an unknown property', (done) => {
+
+            expect(
+                db.BlogPost.schema.getProperty('unknownProperty')
+            ).to.not.exists();
+
+            expect(
+                db.BlogPost.schema.getProperty('author.unknownProperty')
+            ).to.not.exists();
+
+            expect(
+                db.BlogPost.schema.getProperty('author.comments.unknownProperty')
+            ).to.not.exists();
+
+            expect(
+                db.User.schema.getProperty('comments.unknownProperty')
+            ).to.not.exists();
+
+            expect(
+                db.User.schema.getProperty('comments.author.unknownProperty')
+            ).to.not.exists();
+
+
+            done();
+
         });
     });
 

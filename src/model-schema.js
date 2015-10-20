@@ -15,14 +15,33 @@ export default class ModelSchema {
         this.db = modelClass.db;
         this._properties = {};
         this._inverseRelationships = {};
-        _.forOwn(this.modelClass.properties, (_propConfig, _propName) => {
-            this._properties[_propName] = new ModelSchemaProperty(_propName, _propConfig, this);
-        });
-        _.forOwn(this.modelClass.inverseRelationships, (_propConfig, _propName) => {
-            this._inverseRelationships[_propName] = new ModelSchemaProperty(_propName, _propConfig, this, true);
-        });
+        this.__buildProperties();
         // this.fixtures = new ModelFixture(this);
     }
+
+
+    __buildProperties() {
+        for(let mixinName of this.modelClass.mixinsChain) {
+            let mixinStructure = this.db._modelStructures[mixinName];
+
+            let mixinProperties = mixinStructure.properties || {};
+            for (let propName of Object.keys(mixinProperties)) {
+                let property = new ModelSchemaProperty(
+                    propName, mixinProperties[propName], this
+                );
+                this._properties[propName] = property;
+            }
+
+            let mixinRelationships = mixinStructure.inverseRelationships || {};
+            for (let propName of Object.keys(mixinRelationships)) {
+                let property = new ModelSchemaProperty(
+                    propName, mixinRelationships[propName], this, true
+                );
+                this._inverseRelationships[propName] = property;
+            }
+        }
+    }
+
 
     getProperty(propertyName) {
         let property;
@@ -30,27 +49,39 @@ export default class ModelSchema {
         /** if the property name is a relation **/
         if (_.contains(propertyName, '.')) {
 
-            let relation = this.getProperty(propertyName.split('.')[0]);
+            let relationName = propertyName.split('.')[0];
+            let relation = this.getProperty(relationName);
             let relationPropertyName = propertyName.split('.').slice(1).join('.');
 
-            if (relation.isInverseRelationship()) {
-                let reversedProperties = relation.getPropertiesFromInverseRelationship();
-                reversedProperties = _.flatten(reversedProperties.map((prop) => {
-                    return prop.modelSchema.getProperty(relationPropertyName);
-                }));
+            // if (_.isArray(relation) && relation.length) {
+            //     relation = relation[0];
+            // } else {
+            //     return undefined;
+            // }
 
-                reversedProperties = _.compact(_.flatten(reversedProperties));
 
-                return _.uniq(reversedProperties, function(item) {
-                    return `${item.modelSchema.name}.${item.name}`;
-                });
+            // if (relation.isInverseRelationship()) {
+                // relation = relation.getPropertyFromInverseRelationship();
+            // }
+                // let reversedProperties = relation.getPropertiesFromInverseRelationship();
+                // reversedProperties = _.flatten(reversedProperties.map((prop) => {
+                //     return prop.modelSchema.getProperty(relationPropertyName);
+                // }));
 
-            } else {
+                // reversedProperties = _.compact(_.flatten(reversedProperties));
 
+                // return _.uniq(reversedProperties, function(item) {
+                //     return `${item.modelSchema.name}.${item.name}`;
+                // });
+
+            // } else {
+            if (relation) {
                 let relationSchema = this.db[relation.type].schema;
                 property = relationSchema.getProperty(relationPropertyName);
-
             }
+
+
+            // }
 
         } else {
             property = this._properties[propertyName];
@@ -59,37 +90,25 @@ export default class ModelSchema {
                 property = this._inverseRelationships[propertyName];
             }
 
-            /**
+            /*
              * if there is no property, maybe the property asked
-             * is defined on another mixin. Let's create a list of potential
+             * is defined on another mixin. Let's find a list of potential
              * list of model Name where the property might by defined.
              */
             if (!property) {
-                let properties = this.db.findProperties(propertyName, this.name);
-                if (properties.length) {
-                    return properties;
-                }
+                property = this.db.findProperties(propertyName, this.modelClass.mixinsChain);
             }
         }
 
         return property;
     }
 
-
     get properties() {
-        var properties = [];
-        Object.keys(this.modelClass.properties).forEach((propertyName) => {
-            properties.push(this.getProperty(propertyName));
-        });
-        return properties;
+        return _.values(this._properties);
     }
 
     get inverseRelationships() {
-        var inverseRelationships = [];
-        Object.keys(this.modelClass.inverseRelationships).forEach((propertyName) => {
-            inverseRelationships.push(this.getProperty(propertyName));
-        });
-        return inverseRelationships;
+        return _.values(this._inverseRelationships);
     }
 
     hasProperty(propertyName) {

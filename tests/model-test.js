@@ -32,9 +32,11 @@ describe('Model', function() {
             database().register({
                 EmptyModel: {}
             }).then((registeredDb) => {
-                expect(registeredDb.EmptyModel.properties).to.be.empty();
+                expect(registeredDb.EmptyModel.schema._properties).to.be.empty();
+                expect(registeredDb.EmptyModel.schema.properties).to.be.empty();
                 done();
             }).catch((error) => {
+                console.log(error);
                 console.log(error.stack);
             });
         });
@@ -193,47 +195,6 @@ describe('Model', function() {
 
 
     describe('[mixins]', function() {
-
-        it('should aggregate properties', (done) => {
-            expect(db.BlogPost.properties).to.only.include([
-                'ratting',
-                'author',
-                'body',
-                'createdDate',
-                'slug',
-                'title',
-                'tags',
-                'credits',
-                'backlinks',
-                'updatedDate',
-                'publishedDate',
-                'isPublished'
-            ]);
-
-            expect(db.Book.properties).to.include([
-                'author',
-                'body',
-                'createdDate',
-                'isbn'
-            ]);
-
-            done();
-        });
-
-        it('should aggregate inverse relationships', (done) => {
-            expect(db.BlogPost.inverseRelationships).to.only.include([
-                'comments'
-            ]);
-
-            expect(db.User.inverseRelationships).to.include([
-                'blogPosts',
-                'comments',
-                'contents',
-                'reviewedBooks'
-            ]);
-
-            done();
-        });
 
         it('should returns all aggregated mixins for a model', (done) => {
             expect(db.Ebook.mixinsChain).to.include(

@@ -272,6 +272,16 @@ export default [
     /*** relations ***/
     {
         model: 'BlogPost',
+        query: {'author._id': 'user1'},
+        ids: [ 'blogpost1', 'blogpost6' ]
+    },
+    {
+        model: 'BlogPost',
+        query: {'author': 'user1'},
+        ids: [ 'blogpost1', 'blogpost6' ]
+    },
+    {
+        model: 'BlogPost',
         query: {'author.gender': 'female'},
         ids: [ 'blogpost1', 'blogpost3', 'blogpost6', 'blogpost8' ]
     },
@@ -289,11 +299,6 @@ export default [
         model: 'BlogPost',
         query: {'credits.gender': 'female'},
         ids: [ 'blogpost2', 'blogpost3', 'blogpost6', 'blogpost7' ]
-    },
-    {
-        model: 'BlogPost',
-        query: {'author._id': 'user1'},
-        ids: [ 'blogpost1', 'blogpost6' ]
     },
 
     /*** relations inverse ***/

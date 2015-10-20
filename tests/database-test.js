@@ -65,15 +65,10 @@ describe('Database', function() {
             expect(isPublished[0].modelSchema.name).to.equal('BlogPost');
 
             let title = db.findProperties('body');
-            expect(title.length).to.equal(6);
+            expect(title.length).to.equal(1);
             let modelNames = title.map(o => o.modelSchema.name);
             expect(modelNames).to.only.include([
-                'Content',
-                'OnlineContent',
-                'Comment',
-                'BlogPost',
-                'Book',
-                'Ebook'
+                'Content'
             ]);
 
             done();
@@ -81,30 +76,31 @@ describe('Database', function() {
 
         it('should return a list of reverse properties that match the name', (done) => {
             let contents = db.findProperties('contents');
+            expect(contents).to.be.an.array();
             expect(contents.length).to.equal(1);
             expect(contents[0].name).to.equal('contents');
             expect(contents[0].modelSchema.name).to.equal('User');
 
-            let reversedProperties = contents[0].getPropertiesFromInverseRelationship();
-            expect(reversedProperties.length).to.equal(6);
-            let modelNames = reversedProperties.map(o => o.modelSchema.name);
-            expect(modelNames).to.only.include([
-                'Content', 'OnlineContent', 'Ebook', 'Book', 'BlogPost', 'Comment'
-            ]);
-
-            let propNames = reversedProperties.map(o => o.name);
-            expect(propNames.length).to.equal(6);
-            expect(propNames).to.only.include(['author']);
+            let reversedProperty = contents[0].getPropertyFromInverseRelationship();
+            expect(reversedProperty.modelSchema.name).to.equal('Content');
+            expect(reversedProperty.name).to.equal('author');
 
             done();
         });
 
         it('should return only the properties that match a mixin', (done) => {
-            let title = db.findProperties('body', 'Book');
-            expect(title.length).to.equal(2);
-            let modelNames = title.map(o => o.modelSchema.name);
-            expect(modelNames).to.only.include(['Ebook', 'Book']);
+            let body = db.findProperties('body', 'Book');
+            expect(body.modelSchema.name).to.equal('Content');
 
+            done();
+        });
+
+        it('should return all properties that match a child mixin', (done) => {
+            let property = db.findProperties('isPublished', 'Content');
+            expect(property.modelSchema.name).to.equal('BlogPost');
+
+            let property2 = db.findProperties('reviewer', 'Content');
+            expect(property2.modelSchema.name).to.equal('Book');
             done();
         });
 
@@ -854,6 +850,7 @@ describe('Database', function() {
                 expect(total).to.equal(2);
                 done();
             }).catch((error) => {
+                console.log(error);
                 console.log(error.stack);
             });
         });

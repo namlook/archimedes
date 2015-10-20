@@ -75,10 +75,10 @@ export default function(config) {
                     _.forOwn(passedDb.registeredModels, (model) => {
 
                         let propertyUrisMapping = {};
-                        _.forOwn(model.properties, (propConfig, propertyName) => {
-                            let propertyUri = propConfig.meta.rdfUri;
-                            propertyUrisMapping[propertyUri] = propertyName;
-                        });
+                        for (let property of model.schema.properties) {
+                            let propertyUri = property.config.meta.rdfUri;
+                            propertyUrisMapping[propertyUri] = property.name;
+                        }
                         _.set(model, 'meta.propertyUrisMapping', propertyUrisMapping);
                     });
 
@@ -800,6 +800,11 @@ export default function(config) {
 
 
             execute(sparql) {
+                // console.log('');
+                // console.log('');
+                // console.log(sparql);
+                // console.log('');
+                // console.log('');
                 return Promise.resolve().then(() => {
                     return internals.sparqlClient.execute(sparql);
                 }).then((data) => {

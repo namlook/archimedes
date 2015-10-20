@@ -106,61 +106,75 @@ export default class ModelSchemaProperty {
         }
         return _.get(config, 'propagateDeletion');
     }
+
     /**
-     * Return the reversed properties if 'reverse' is specified in
-     * the property config. Returns null otherwise.
-     *
-     *  Example with Comment and User:
-     *
-     *  Comment: {
-     *     properties: {
-     *          author: {
-     *              type: 'User',
-     *        }
-     *     }
-     *  }
-     *
-     *   User: {
-     *       inverseRelationships: {
-     *           comments: {
-     *               type: 'Comment',
-     *               property: 'author'
-     *           }
-     *       }
-     *   }
-     *
-     *
-     *  `Comment.schema.getProperty('author').reversedProperty()`
-     *
-     *     will returns the `User.comments` property
-     *
-     *
-     * @return a reversed (abstract) property if the property
-     */
-    getInverseRelationshipFromProperty() {
+    *   Return the inverse relationships specified in the property config
+    *    Note that it will take the mixins in account.
+    *
+    *    Example with User and Comment which inherits with Content:
+    *
+    *    Content: {
+    *        properties: {
+    *            author: {
+    *                type: 'User'
+    *            }
+    *        }
+    *    }
+    *
+    *    Comment: {
+    *        mixins: ['Content']
+    *    }
+    *
+    *    User: {
+    *        inverseRelationships: {
+    *            contents: {
+    *                type: 'Content',
+    *                property: 'author'
+    *            },
+    *            comments: {
+    *                type: 'Comment',
+    *                property: 'author'
+    *            }
+    *        }
+    *    }
+    *
+    *    let contentAuthor = db.Content.schema.getProperty('author');
+    *    let commentAuthor = db.Comment.schema.getProperty('author');
+    *
+    *    contentAuthor.getInverseRelationshipsFromProperty() =>
+    *        will returns an array with the User.contents property
+    *
+    *    commentAuthor.getInverseRelationshipsFromProperty() =>
+    *        because Comment.author is inherited from Content.author, it will returns
+    *        an array with the User.contents and User.comments properties
+    *
+    *
+    * @return an array with all inverse relationships
+    */
+    getInverseRelationshipsFromProperty() {
         let db = this.modelSchema.db;
-        let targetModelName = this.modelSchema.name;
-        if (this.isRelation()) {
-            let inverseRelationships = db[this.type].schema.inverseRelationships;
-            for (let i = 0; i < inverseRelationships.length; i++) {
-                let invRel = inverseRelationships[i];
-                let invRelProp = invRel.config.abstract.fromReverse.property;
-                if (invRel.type === targetModelName && invRelProp === this.name) {
-                    return db[this.type].schema.getProperty(invRel.name);
+        let modelMixinsChain = this.modelSchema.modelClass.mixinsChain;
+
+        if (this.isRelation() && !this.isInverseRelationship()) {
+            let {inverseRelationships} = db[this.type].schema;
+
+            let results = inverseRelationships.map((invRel) => {
+                if (_.contains(modelMixinsChain, invRel.type)) {
+                    return invRel;
                 }
-            }
+            });
+            return _.compact(results);
         }
     }
 
-
-    /** returns all properties that match the reversed property
+    /** returns the property that match the inverse relationship
      *
      * @returns an array of properties
      */
-    getPropertiesFromInverseRelationship() {
+    getPropertyFromInverseRelationship() {
         let db = this.modelSchema.db;
         let {property, type} = _.get(this.config, 'abstract.fromReverse', {});
-        return db.findProperties(property, type);
+        return db[type].schema._properties[property];
     }
 
 

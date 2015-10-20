@@ -86,29 +86,42 @@ describe('ModelSchemaProperty', function() {
     });
 
     it('should return all inverse relationship', (done) => {
-        let property = db.Comment.schema.getProperty('author');
-        let reversedProperty = property.getInverseRelationshipFromProperty();
-        expect(reversedProperty.name).to.be.equal('comments');
+        let commentAuthor = db.Comment.schema.getProperty('author');
+        let inverseCommentAuthor = commentAuthor.getInverseRelationshipsFromProperty();
+        expect(inverseCommentAuthor).to.be.an.array();
+        expect(inverseCommentAuthor.length).to.equal(2);
+        expect(inverseCommentAuthor.map((o) => o.name)).to.only.include(['comments', 'contents']);
+        expect(inverseCommentAuthor.map((o) => o.modelSchema.name)).to.only.include(['User']);
 
-        let reversedProperty2 = db.User.schema.getProperty('comments');
-        let properties = reversedProperty2.getInverseRelationshipFromProperty();
-        expect(properties).to.not.exist();
+        let contentAuthor = db.Content.schema.getProperty('author');
+        let inverseContentAuthor = contentAuthor.getInverseRelationshipsFromProperty();
+        expect(inverseContentAuthor).to.be.an.array();
+        expect(inverseContentAuthor.length).to.equal(1);
+        expect(inverseContentAuthor.map((o) => o.name)).to.only.include(['contents']);
+        expect(inverseContentAuthor.map((o) => o.modelSchema.name)).to.only.include(['User']);
+        done();
+    });
+
+    it('should return undefined when getting inverseRelationships from an inverse relationship', (done) => {
+        let userComments = db.User.schema.getProperty('comments');
+        expect(userComments.isInverseRelationship()).to.be.true();
+        let inverseUserComments = userComments.getInverseRelationshipsFromProperty();
+        expect(inverseUserComments).to.not.exists();
         done();
     });
 
     it('should return all properties that match the inverse relationship', (done) => {
-        let inverseRelationship = db.User.schema.getProperty('contents');
-        let properties = inverseRelationship.getPropertiesFromInverseRelationship();
-        expect(properties.length).to.equal(6);
-        let modelNames = properties.map(o => o.modelSchema.name);
-        expect(modelNames).to.include([
-            'Content',
-            'OnlineContent',
-            'Comment',
-            'Book',
-            'Ebook',
-            'BlogPost'
-        ]);
+        let userContents = db.User.schema.getProperty('contents');
+        let contentAuthor = userContents.getPropertyFromInverseRelationship();
+        expect(contentAuthor).to.be.an.object();
+        expect(contentAuthor.name).to.equal('author');
+        expect(contentAuthor.modelSchema.name).to.equal('Content');
+
+        let userComments = db.User.schema.getProperty('comments');
+        let commentAuthor = userComments.getPropertyFromInverseRelationship();
+        expect(commentAuthor).to.be.an.object();
+        expect(commentAuthor.name).to.equal('author');
+        expect(commentAuthor.modelSchema.name).to.equal('Comment');
         done();
     });
 

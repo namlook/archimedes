@@ -55,7 +55,7 @@ var modelFactory = function(db, name, modelClassSchema) {
     /**
      * validate the model class schema
      */
-    var {error, value: schema} = joi.validate(modelClassSchema, modelClassSchemaValidator);
+    var {error, value: validatedSchema} = joi.validate(modelClassSchema, modelClassSchemaValidator);
 
     if (error) {
         let errorDetail = error.details[0];
@@ -70,16 +70,16 @@ var modelFactory = function(db, name, modelClassSchema) {
     /**
      * process the mixins
      */
-    schema.mixins = schema.mixins || [];
+    validatedSchema.mixins = validatedSchema.mixins || [];
 
-    let mixins = schema.mixins.map(mixinName => {
+    let mixins = validatedSchema.mixins.map(mixinName => {
         if (!db.modelSchemas[mixinName]) {
             throw new StructureError(`${name}: unknown mixin "${mixinName}"`);
         }
         return modelFactory(db, mixinName, db.modelSchemas[mixinName]);
     });
 
-    mixins.push(_.omit(schema, 'mixins'));
+    mixins.push(_.omit(validatedSchema, 'mixins'));
 
 
 
@@ -96,10 +96,10 @@ var modelFactory = function(db, name, modelClassSchema) {
     /**
      * process the properties and aggregate them from mixins
      */
-    var properties = mixins.map(mixin => {
-        return mixin.properties;
-    });
-    properties = _.assign({}, ..._.compact(properties));
+    // var properties = mixins.map(mixin => {
+        // return mixin.properties;
+    // });
+    // properties = _.assign({}, ..._.compact(properties));
 
 
     /**
@@ -133,11 +133,11 @@ var modelFactory = function(db, name, modelClassSchema) {
      * fill meta stuff
      */
 
-    let meta = modelClassSchema.meta;
+    let meta = validatedSchema.meta;
     let dasherizedName = inflector.dasherize(inflector.underscore(name));
     let plural = _.get(meta, 'names.plural') || inflector.pluralize(dasherizedName);
-    _.set(modelClassSchema, 'meta.names.dasherized', dasherizedName);
-    _.set(modelClassSchema, 'meta.names.plural', plural);
+    _.set(validatedSchema, 'meta.names.dasherized', dasherizedName);
+    _.set(validatedSchema, 'meta.names.plural', plural);
 
     /**
      * construct the Model
@@ -145,17 +145,20 @@ var modelFactory = function(db, name, modelClassSchema) {
     var inner = {
         name: name,
         db: db,
+        _structure: new function() {
+            return validatedSchema;
+        },
         meta: new function() {
-            return modelClassSchema.meta;
+            return validatedSchema.meta;
         },
         mixins: mixins,
         mixinsChain: new function() {
             return _.uniq(_.compact(mixinsChain));
         },
         _archimedesModel: true,
-        properties: new function() {
-            return properties;
-        },
+        // properties: new function() {
+            // return properties;
+        // },
         inverseRelationships: new function() {
             return inverseRelationships;
         },
