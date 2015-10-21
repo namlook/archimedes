@@ -339,7 +339,7 @@ describe('Model Instance', function() {
             });
 
             blogPost.toCsv({fields: ['ratting', 'isPublished']}).then((data) => {
-                expect(data).to.equal('thepost,blog-posts,true,3');
+                expect(data).to.equal('thepost,BlogPost,true,3');
                 done();
             }).catch((error) => {
                 console.log(error);
@@ -386,7 +386,7 @@ describe('Model Instance', function() {
             });
 
             blogPost.toCsv().then((data) => {
-                expect(data).to.equal('thepost,blog-posts,user1,,,,user1|user2,true,"Mon, 14 Sep 2015 00:00:00 GMT",3,,foo|bar,the post,"Wed, 14 Oct 2015 00:00:00 GMT"');
+                expect(data).to.equal('thepost,BlogPost,user1,,,,user1|user2,true,"Mon, 14 Sep 2015 00:00:00 GMT",3,,foo|bar,the post,"Wed, 14 Oct 2015 00:00:00 GMT"');
                 done();
             }).catch((error) => {
                 console.log(error);
@@ -411,7 +411,7 @@ describe('Model Instance', function() {
             });
 
             blogPost.toCsv({delimiter: '\t'}).then((data) => {
-                expect(data).to.equal('thepost\tblog-posts\tuser1\t\t\t\tuser1|user2\ttrue\tMon, 14 Sep 2015 00:00:00 GMT\t3\t\tfoo|bar\tthe post\tWed, 14 Oct 2015 00:00:00 GMT');
+                expect(data).to.equal('thepost\tBlogPost\tuser1\t\t\t\tuser1|user2\ttrue\tMon, 14 Sep 2015 00:00:00 GMT\t3\t\tfoo|bar\tthe post\tWed, 14 Oct 2015 00:00:00 GMT');
                 done();
             }).catch((error) => {
                 console.log(error);
@@ -439,7 +439,7 @@ describe('Model Instance', function() {
 
             let jsonApi = blogPost.toJsonApi();
             expect(jsonApi.data).to.be.an.object();
-            expect(jsonApi.data.type).to.equal('blog-posts');
+            expect(jsonApi.data.type).to.equal('BlogPost');
             expect(jsonApi.data.id).to.equal('thepost');
             expect(jsonApi.data.title).to.not.exist();
             expect(jsonApi.data.attributes).to.be.an.object();
@@ -452,10 +452,10 @@ describe('Model Instance', function() {
             expect(jsonApi.data.relationships).to.only.include(['author', 'credits']);
             expect(jsonApi.data.relationships.author.data).to.be.an.object();
             expect(jsonApi.data.relationships.author.data.id).to.equal('user1');
-            expect(jsonApi.data.relationships.author.data.type).to.equal('users');
+            expect(jsonApi.data.relationships.author.data.type).to.equal('User');
             expect(jsonApi.data.relationships.credits.data).to.be.an.array();
             expect(jsonApi.data.relationships.credits.data[0].id).to.equal('user1');
-            expect(jsonApi.data.relationships.credits.data[0].type).to.equal('users');
+            expect(jsonApi.data.relationships.credits.data[0].type).to.equal('User');
             done();
         });
 
@@ -466,7 +466,7 @@ describe('Model Instance', function() {
 
             let jsonApi = blogPost.toJsonApi();
             expect(jsonApi.data.id).to.not.exist();
-            expect(jsonApi.data.type).to.equal('blog-posts');
+            expect(jsonApi.data.type).to.equal('BlogPost');
             expect(jsonApi.data.attributes.title).to.equal('the post');
             expect(jsonApi.data.relationships).to.not.exist();
             done();
@@ -479,7 +479,7 @@ describe('Model Instance', function() {
 
             let jsonApi = blogPost.toJsonApi();
             expect(jsonApi.data.id).to.not.exist();
-            expect(jsonApi.data.type).to.equal('blog-posts');
+            expect(jsonApi.data.type).to.equal('BlogPost');
             expect(jsonApi.data.attributes).to.not.exist();
             done();
         });
@@ -499,7 +499,7 @@ describe('Model Instance', function() {
 
             let jsonApi = blogPost.toJsonApi(baseUri);
             expect(jsonApi.data.id).to.exist();
-            expect(jsonApi.data.type).to.equal('blog-posts');
+            expect(jsonApi.data.type).to.equal('BlogPost');
             expect(jsonApi.data.links).to.be.an.object();
             expect(jsonApi.data.links.self).to.equal(baseUri);
             expect(jsonApi.data.attributes).to.be.an.object();
@@ -534,15 +534,15 @@ describe('Model Instance', function() {
 
             let jsonApi = blogPost.toJsonApi(baseUri, {properties: true, included: included});
             expect(jsonApi.data.id).to.equal('thepost');
-            expect(jsonApi.data.type).to.equal('blog-posts');
+            expect(jsonApi.data.type).to.equal('BlogPost');
             expect(jsonApi.data.links).to.be.an.object();
             expect(jsonApi.data.links.self).to.equal(baseUri);
             expect(jsonApi.data.attributes).to.be.an.object();
 
             expect(included.length).to.equal(2);
             expect(included).to.deep.equal([
-                {id: 'user1', type: 'users'},
-                {id: 'user3', type: 'users'}
+                {id: 'user1', type: 'User'},
+                {id: 'user3', type: 'User'}
             ]);
             done();
         });
@@ -563,14 +563,14 @@ describe('Model Instance', function() {
 
             let jsonApi = blogPost.toJsonApi(baseUri, {properties: 'author', included: included});
             expect(jsonApi.data.id).to.equal('thepost');
-            expect(jsonApi.data.type).to.equal('blog-posts');
+            expect(jsonApi.data.type).to.equal('BlogPost');
             expect(jsonApi.data.links).to.be.an.object();
             expect(jsonApi.data.links.self).to.equal(baseUri);
             expect(jsonApi.data.attributes).to.be.an.object();
 
             expect(included.length).to.equal(1);
             expect(included).to.deep.equal([
-                {id: 'user1', type: 'users'}
+                {id: 'user1', type: 'User'}
             ]);
             done();
         });
@@ -607,9 +607,9 @@ describe('Model Instance', function() {
             let jsonApi2 = blogPost2.toJsonApi(baseUri, included);
             expect(jsonApi2.data.id).to.equal('thepost2');
             expect(_.sortBy(included, 'id')).to.deep.equal([
-                {id: 'user1', type: 'users'},
-                {id: 'user2', type: 'users'},
-                {id: 'user3', type: 'users'}
+                {id: 'user1', type: 'User'},
+                {id: 'user2', type: 'User'},
+                {id: 'user3', type: 'User'}
             ]);
 
             done();
