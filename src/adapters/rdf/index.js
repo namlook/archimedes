@@ -163,11 +163,13 @@ export default function(config) {
                                 return [pojo];
                             });
                         } else {
-                            let promises = _.chunk(uris, 30).map((chunkUris) => {
+
+                            const CONCURRENCY_LIMIT = 5;
+
+                            return Promise.map(_.chunk(uris, 5), (chunkUris) => {
                                 return this.describe(modelType, chunkUris, options);
-                            });
-                            return Promise.all(promises).then((resultArrays) => {
-                                return _.flatten(resultArrays);
+                            }, {concurrency: CONCURRENCY_LIMIT}).then((results) => {
+                                return _.flatten(results);
                             });
                         }
                     });
