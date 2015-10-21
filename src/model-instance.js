@@ -339,7 +339,10 @@ export default function(db, modelClass, attrs) {
             this.Model.schema.properties.forEach((property) => {
                 let value = this.get(property.name);
 
-                let shouldBeIncluded = (_.isBoolean(includedProperties) && includedProperties) || _.includes(includedProperties, property.name);
+                let shouldBeIncluded = (
+                    _.isBoolean(includedProperties) &&
+                    includedProperties) || _.includes(includedProperties, property.name
+                );
 
                 if (property.isRelation()) {
                     if (property.isArray()) {
