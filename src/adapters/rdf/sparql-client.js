@@ -36,7 +36,9 @@ let sparqlClient = function(endpoint) {
                 };
 
                 wreck.post(endpoint, options, (err, response, payload) => {
-                    payload = payload.toString();
+                    if (payload) {
+                        payload = payload.toString();
+                    }
 
                     if (err) {
                         return reject(err);
