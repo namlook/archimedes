@@ -14,6 +14,26 @@ import archimedes from '../lib/database';
 import _ from 'lodash';
 import uuid from 'uuid';
 
+
+let stream2promise = function(stream) {
+    return new Promise((resolve, reject) => {
+
+        let results = [];
+        stream.on('data', function(doc) {
+            results.push(doc);
+        });
+
+        stream.on('end', function() {
+            resolve(results);
+        });
+
+        stream.on('error', function(error) {
+            reject(error);
+        });
+    });
+}
+
+
 describe('Database', function() {
 
     var db;
@@ -282,7 +302,182 @@ describe('Database', function() {
         });
     });
 
+    describe('#stream()', function() {
+        it('should return a stream', (done) => {
+            let stream = db.stream('BlogPost');
+            expect(stream.pipe).to.be.a.function();
+            done();
+        });
 
+        it('should return all results', (done) => {
+            var data = [];
+            for (let i = 0; i < 10; i++) {
+                data.push({_id: `bp${i}`, _type: 'BlogPost', title: `post ${i}`, ratting: i % 5});
+            }
+            db.batchSync('BlogPost', data).then((savedData) => {
+                expect(savedData.length).to.equal(10);
+                expect(savedData).to.deep.equal(data);
+
+                let stream = db.stream('BlogPost');
+                return stream2promise(stream);
+            }).then((results) => {
+                expect(_.sortBy(results, '_id')).to.deep.equal(data);
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+
+
+        it('should return results that match the query', (done) => {
+            var data = [];
+            for (let i = 0; i < 10; i++) {
+                data.push({
+                    _id: `bp${i}`,
+                    _type: 'BlogPost',
+                    title: `post ${i}`,
+                    ratting: i % 5
+                });
+            }
+            db.batchSync('BlogPost', data).then((savedData) => {
+                expect(savedData.length).to.equal(10);
+                expect(savedData).to.deep.equal(data);
+                let stream = db.stream('BlogPost', {ratting: 4});
+                return stream2promise(stream);
+            }).then((results) => {
+                expect(results.length).to.equal(2);
+                expect(results.map(o => o.ratting)).to.only.include([4]);
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+
+        it('should return an empty array when no results match', (done) => {
+            var data = [];
+            for (let i = 0; i < 10; i++) {
+                data.push({
+                    _id: `bp${i}`,
+                    _type: 'BlogPost',
+                    title: `post ${i}`,
+                    ratting: i % 5
+                });
+            }
+            db.batchSync('BlogPost', data).then((savedData) => {
+                expect(savedData.length).to.equal(10);
+                expect(savedData).to.deep.equal(data);
+                let stream = db.stream('BlogPost', {title: 'bla'});
+                return stream2promise(stream);
+            }).then((results) => {
+                expect(results).to.be.an.array();
+                expect(results.length).to.equal(0);
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+
+        it('should fetch a float with a certain precision', (done) => {
+            let data = [
+                {
+                    _id: 'post1',
+                    ratting: 2.434
+                },
+                {
+                    _id: 'post2',
+                    ratting: 2.436
+                },
+                {
+                    _id: 'post3',
+                    ratting: 2.2
+                }
+            ];
+
+
+            db.batchSync('BlogPost', data).then((savedData) => {
+                expect(savedData).to.deep.equal([
+                    { _id: 'post1', ratting: 2.43, _type: 'BlogPost' },
+                    { _id: 'post2', ratting: 2.44, _type: 'BlogPost' },
+                    { _id: 'post3', ratting: 2.2, _type: 'BlogPost' }
+                ]);
+                let stream = db.stream('BlogPost');
+                return stream2promise(stream);
+            }).then((fetchedData) => {
+                expect(fetchedData).to.deep.equal([
+                    { _id: 'post1', ratting: 2.43, _type: 'BlogPost' },
+                    { _id: 'post2', ratting: 2.44, _type: 'BlogPost' },
+                    { _id: 'post3', ratting: 2.2, _type: 'BlogPost' }
+                ]);
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+
+        it('should fetch dates', (done) => {
+            let date1 = new Date(Date.UTC(2015, 30, 6));
+            let date2 = new Date(Date.UTC(1984, 7, 3));
+            let date3 = new Date(Date.UTC(1987, 5, 1));
+            let data = [
+                {
+                    _id: 'post1',
+                    createdDate: date1
+                },
+                {
+                    _id: 'post2',
+                    createdDate: date2
+                },
+                {
+                    _id: 'post3',
+                    createdDate: date3
+                }
+            ];
+
+
+            db.batchSync('BlogPost', data).then((savedData) => {
+                expect(savedData).to.deep.equal([
+                    { _id: 'post1', createdDate: date1, _type: 'BlogPost' },
+                    { _id: 'post2', createdDate: date2, _type: 'BlogPost' },
+                    { _id: 'post3', createdDate: date3, _type: 'BlogPost' }
+                ]);
+                let stream = db.stream('BlogPost');
+                return stream2promise(stream);
+            }).then((fetchedData) => {
+                expect(fetchedData).to.deep.equal([
+                    { _id: 'post1', createdDate: date1, _type: 'BlogPost' },
+                    { _id: 'post2', createdDate: date2, _type: 'BlogPost' },
+                    { _id: 'post3', createdDate: date3, _type: 'BlogPost' }
+                ]);
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+
+        it('should fetch multiple ids', (done) => {
+            var data = [];
+            for (let i = 0; i < 10; i++) {
+                data.push({_id: `bp${i}`, _type: 'BlogPost', title: `post ${i}`, ratting: i % 5});
+            }
+            db.batchSync('BlogPost', data).then(() => {
+                let stream = db.stream('BlogPost', {_id: {$in: ['bp2', 'bp5', 'bp8', 'bp9']}});
+                return stream2promise(stream);
+            }).then((results) => {
+                expect(results.length).to.equal(4);
+                expect(results.map((o) => o._id)).to.only.include(
+                    ['bp2', 'bp5', 'bp8', 'bp9']);
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            });
+        });
+    });
 
     describe('#first()', function() {
         it('should return a promise', (done) => {

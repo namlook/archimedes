@@ -521,20 +521,13 @@ export default [
         query: {},
         options: {sort: 'unknownProperty'},
         error: 'malformed options',
-        errorExtraMessage: 'unknown property "unknownProperty" on model "BlogPost"'
-    },
-    {
-        model: 'BlogPost',
-        query: {},
-        options: {fields: 'unknownProperty'},
-        error: 'malformed options',
-        errorExtraMessage: 'unknown property "unknownProperty" on model "BlogPost"'
+        errorExtraMessage: 'sort: unknown property "unknownProperty" on model "BlogPost"'
     },
     {
         model: 'BlogPost',
         query: {},
         options: {fields: ['unknownProperty']},
         error: 'malformed options',
-        errorExtraMessage: 'unknown property "unknownProperty" on model "BlogPost"'
+        errorExtraMessage: 'fields: unknown property "unknownProperty" on model "BlogPost"'
     }
 ];

@@ -13,6 +13,9 @@ import {
     propertyName2Sparson} from './utils';
 import {Generator as SparqlGenerator} from 'sparqljs';
 
+import es from 'event-stream';
+import JSONStream from 'JSONStream';
+
 
 const RDF_DATATYPES = {
     'http://www.w3.org/2001/XMLSchema#integer': 'number',
@@ -176,6 +179,72 @@ export default function(config) {
 
                 });
             },
+
+
+            stream(modelType, query, options) {
+                let stream;
+                let pauseStream = es.pause();
+
+                let fetchDocTransform = es.map((uri, callback) => {
+                    this.describe(modelType, uri, options).then((doc) => {
+                        if (doc.length) {
+                            doc = doc[0];
+                        }
+                        pauseStream.resume();
+                        callback(null, doc);
+                    }).catch((err) => {
+                        callback(err);
+                    });
+                    pauseStream.pause();
+                });
+
+                /**
+                 * if _id is present in the query, just use it
+                 */
+                if (query._id) {
+                    let ids = [query._id];
+                    if (_.isObject(query._id)) {
+                        ids = query._id.$in;
+                    }
+                    stream = es.readArray(ids);
+                    return stream.pipe(pauseStream).pipe(fetchDocTransform);
+                }
+
+
+                let {orderBy, whereClause} = query2whereClause(db, modelType, query, options);
+
+                let sparson = {
+                    type: 'query',
+                    queryType: 'SELECT',
+                    variables: ['?s'],
+                    from: {
+                        'default': [config.graphUri]
+                    },
+                    where: whereClause,
+                    order: orderBy,
+                    limit: options.limit,
+                    distinct: options.distinct
+                };
+
+
+                /** options **/
+                if (options.offset) {
+                    sparson.offset = options.offset;
+                }
+
+                sparson.order.push({expression: '?s'});
+
+                /*** generate the sparql from the sparson ***/
+                let sparql = new SparqlGenerator().stringify(sparson);
+
+                stream = internals.sparqlClient.stream(sparql);
+
+                return stream
+                    .pipe(JSONStream.parse('results.bindings.*.s.value'))
+                    .pipe(pauseStream)
+                    .pipe(fetchDocTransform);
+            },
+
 
             describe(modelType, modelIdsOrUris, options) {
                 let uris;

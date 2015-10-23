@@ -3,6 +3,8 @@ import wreck from 'wreck';
 import querystring from 'querystring';
 import _ from 'lodash';
 
+import streamStream from 'stream-stream';
+
 import Promise from 'bluebird';
 
 let sparqlClient = function(endpoint) {
@@ -58,7 +60,47 @@ let sparqlClient = function(endpoint) {
                     resolve(data);
                 });
             });
+        },
+
+        stream(sparql) {
+            let queryOperators = ['select', 'construct', 'describe', 'ask'];
+            let isQuery = _.compact(queryOperators.map((op) => {
+                return _.startsWith(_.trim(sparql.toLowerCase()), op);
+            })).length;
+
+            let body;
+            if (isQuery) {
+                body = {query: sparql};
+            } else {
+                body = {update: sparql};
+            }
+
+            // console.log('sparql>>>>>>>');
+            // console.log(sparql);
+            // console.log('<<<<<<<<<<sparql');
+
+            let options = {
+                headers: {
+                    'content-type': 'application/x-www-form-urlencoded',
+                    'accept': 'application/sparql-results+json'
+                },
+                payload: querystring.stringify(body)
+            };
+
+            let stream = streamStream();
+
+            wreck.request('post', endpoint, options, (err, response) => {
+                if (err) {
+                    stream.end();
+                    throw err;
+                }
+                stream.write(response);
+                stream.end();
+            });
+
+            return stream;
         }
+
     };
 };
 

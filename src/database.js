@@ -330,12 +330,14 @@ export default function(dbAdapter, config) {
                     options.sort = options.sort.split(',');
                 }
 
+                options.limit = options.limit || 20;
+
                 if (!modelType) {
                     throw new Error('find: modelType is required');
                 }
 
 
-                let {error: optionError, value: validatedOptions} = findOptionsValidator(options);
+                let {error: optionError, value: validatedOptions} = findOptionsValidator(options, this, modelType);
                 if (optionError) {
                     throw new ValidationError('malformed options', optionError);
                 }
@@ -355,6 +357,49 @@ export default function(dbAdapter, config) {
                 return _.compact(data);
             });
         },
+
+        /**
+         * Returns a stream of document as pojo
+         *
+         * @params {string} modelType - the model type
+         * @params {?object} query - the query
+         * @params {?object} options
+         * @returns {stream}
+         */
+        stream(modelType, query, options) {
+            query = Object.assign({}, query);
+            options = options || {};
+
+            if (!modelType) {
+                throw new Error('find: modelType is required');
+            }
+
+            if (typeof options.fields === 'string') {
+                options.fields = options.fields.split(',');
+            }
+
+            if (typeof options.sort === 'string') {
+                options.sort = options.sort.split(',');
+            }
+
+            let {error: optionError, value: validatedOptions} = findOptionsValidator(options, this, modelType);
+            if (optionError) {
+                throw new ValidationError('malformed options', optionError);
+            }
+
+            if (!query._type) {
+                query._type = modelType;
+            }
+
+            let {error: queryError, value: validatedQuery} = queryValidator(this[modelType].schema, query);
+
+            if (queryError) {
+                throw new ValidationError('malformed query', queryError);
+            }
+
+            return this.adapter.stream(modelType, validatedQuery, validatedOptions);
+        },
+
 
         /**
          * Returns a promise which resolve the first
