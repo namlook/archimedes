@@ -63,13 +63,19 @@ for (let i = 0; i < 10; i++) {
 
 /** users **/
 var users = _.range(0, 5).map((i) => {
-    return {
+    let user = {
         _id: `user${i}`,
         _type: 'User',
         name: `user ${i}`,
         gender: i % 2 ? 'female' : 'male',
         birthday: new Date(Date.UTC(1980 + i, i, 10 + i))
     };
+
+    if (i % 2) {
+        user.subscribedMailingList = true;
+    }
+
+    return user;
 });
 
 var verbose = false;

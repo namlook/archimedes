@@ -478,6 +478,40 @@ export default [
         ]
     },
     {
+        model: 'User',
+        query: {},
+        options: {fields: ['name', 'subscribedMailingList']},
+        results: [
+            {
+                _id: 'user0',
+                name: 'user 0',
+                _type: 'User'
+            },
+            {
+                _id: 'user1',
+                subscribedMailingList: true,
+                name: 'user 1',
+                _type: 'User'
+            },
+            {
+                _id: 'user2',
+                name: 'user 2',
+                _type: 'User'
+            },
+            {
+                _id: 'user3',
+                _type: 'User',
+                name: 'user 3',
+                subscribedMailingList: true
+            },
+            {
+                _id: 'user4',
+                name: 'user 4',
+                _type: 'User'
+            }
+        ]
+    },
+    {
         model: 'BlogPost',
         query: {'comments.body': 'this thing sucks !'},
         options: {distinct: true},

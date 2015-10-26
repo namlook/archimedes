@@ -123,6 +123,9 @@ export default {
             birthday: {
                 type: 'date'
             },
+            subscribedMailingList: {
+                type: 'boolean'
+            },
             genericStaff: {
                 type: 'GenericType',
                 propagateDeletion: true

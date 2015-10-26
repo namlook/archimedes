@@ -469,9 +469,7 @@ export let query2whereClause = function(db, modelType, query, options) {
     };
 };
 
-
-export let constructTriples = function(modelClass, uri, options) {
-
+let _constructTriple = function(modelClass, uri, options, useOptional) {
     if (options.variableIndex == null) {
         options.variableIndex = '';
     }
@@ -495,34 +493,75 @@ export let constructTriples = function(modelClass, uri, options) {
                 throw new ValidationError('malformed options', err);
             }
 
-            return {
+            let _triple = {
                 subject: uri,
                 predicate: propertyUri,
                 object: variable
             };
+
+            if (useOptional) {
+                return {
+                    type: 'optional',
+                    patterns: [{
+                        type: 'bgp',
+                        triples: [_triple]
+                    }]
+                };
+            } else {
+                return _triple;
+            }
         });
 
-        triples.push({
+
+        let _typeTriple = {
             subject: uri,
             predicate: propertyRdfUri(modelClass, '_type'),
             object: '?_type'
-        });
+        };
+
+        if (useOptional) {
+            triples.push({
+                type: 'bgp',
+                triples: [_typeTriple]
+            });
+        } else {
+            triples.push(_typeTriple);
+        }
 
 
     } else {
-        triples.push({
+        let _triple = {
             subject: uri,
             predicate: `?p${options.variableIndex}`,
             object: `?o${options.variableIndex}`
-        });
+        };
+
+        if (useOptional) {
+            triples.push({
+                type: 'bgp',
+                triples: [_triple]
+            });
+        } else {
+            triples.push(_triple);
+        }
+
     }
 
-    if (options.variableIndex !== '') {
-        options.variableIndex++;
-    }
+    // if (options.variableIndex !== '') {
+    //     options.variableIndex++;
+    // }
 
     return triples;
 };
+
+export let constructTriples = function(modelClass, uri, options) {
+    return _constructTriple(modelClass, uri, options, false);
+};
+
+export let constructWhereTriples = function(modelClass, uri, options) {
+    return _constructTriple(modelClass, uri, options, true);
+};
+
 
 
 export let deleteCascade = function(db, _modelType, uri) {

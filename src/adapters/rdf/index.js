@@ -9,6 +9,7 @@ import {
     rdfDoc2pojo,
     operation2triple,
     constructTriples,
+    constructWhereTriples,
     propertyRdfUri,
     propertyName2Sparson} from './utils';
 import {Generator as SparqlGenerator} from 'sparqljs';
@@ -186,12 +187,14 @@ export default function(config) {
                 let pauseStream = es.pause();
 
                 let fetchDocTransform = es.map((uri, callback) => {
-                    this.describe(modelType, uri, options).then((doc) => {
-                        if (doc.length) {
-                            doc = doc[0];
+                    this.fetch(modelType, uri, options).then((doc) => {
+                        if (doc) {
+                            callback(null, doc);
+                        } else {
+                            console.log(options);
+                            callback(new Error(`${modelType}: ${uri} not found`));
                         }
                         pauseStream.resume();
-                        callback(null, doc);
                     }).catch((err) => {
                         callback(err);
                     });
@@ -265,27 +268,19 @@ export default function(config) {
                         return uri;
                     });
 
-                    let template = [];
-                    let index = 0;
+                    let templates = [];
                     let reduceError = false;
                     let patterns = uris.reduce((_patterns, uri) => {
                         if (reduceError) {
                             return null;
                         }
 
-                        let triples;
-                        try {
-                            triples = constructTriples(modelClass, uri, options);
-                        } catch(e) {
-                            reduceError = e;
-                            return null;
-                        }
-                        _patterns.push({
-                            type: 'bgp',
-                            triples: triples
-                        });
-                        template.push(triples);
-                        index++;
+                        let template = constructTriples(modelClass, uri, options);
+                        let whereTriples = constructWhereTriples(modelClass, uri, options);
+                        options.variableIndex++;
+
+                        templates.push(template);
+                        _patterns.push(whereTriples);
                         return _patterns;
                     }, []);
 
@@ -307,17 +302,21 @@ export default function(config) {
                         from: {
                             'default': [config.graphUri]
                         },
-                        template: template,
+                        template: templates,
                         where: whereClause
                     };
 
                     /*** generate the sparql from the sparson ***/
                     let sparql = new SparqlGenerator().stringify(sparson);
-
+                    // console.log('')
+                    // console.log('')
+                    // console.log(sparql);
+                    // console.log('')
+                    // console.log('')
                     return this.execute(sparql);
                 }).then((data) => {
                     if (!data.length) {
-                        return null;
+                        return [];
                     }
 
                     const rdfDocs = data.reduce((_rdfDocs, item) => {
@@ -375,7 +374,9 @@ export default function(config) {
                         uri = instanceRdfUri(modelClass, modelIdOrUri);
                     }
 
-                    let triples = constructTriples(modelClass, uri, options);
+                    let template = constructTriples(modelClass, uri, options);
+
+                    let whereTriples = constructWhereTriples(modelClass, uri, options);
 
                     let sparson = {
                         type: 'query',
@@ -383,18 +384,17 @@ export default function(config) {
                         from: {
                             'default': [config.graphUri]
                         },
-                        template: triples,
-                        where: [
-                            {
-                              type: 'bgp',
-                              triples: triples
-                            }
-                        ]
+                        template: template,
+                        where: whereTriples
                     };
 
                     /*** generate the sparql from the sparson ***/
                     let sparql = new SparqlGenerator().stringify(sparson);
-
+                    // console.log('')
+                    // console.log('')
+                    // console.log(sparql);
+                    // console.log('')
+                    // console.log('')
                     return this.execute(sparql);
                 }).then((data) => {
                     if (!data.length) {
