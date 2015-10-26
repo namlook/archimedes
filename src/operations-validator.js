@@ -6,7 +6,7 @@ import Promise from 'bluebird';
 let operationSchema = joi.array().items(joi.object().keys({
     operator: joi.string().required(),
     property: joi.string().required(),
-    value: joi.any().required()
+    value: joi.any()
 }));
 
 export default function(operations) {

@@ -125,6 +125,13 @@ export let operation2triple = function(db, modelType, uri, operation) {
 
     let {property, value} = operation;
 
+    /*** if the value is undefined, this means that there is no previous
+     * value set so we do nothing
+     */
+    if (value === undefined) {
+        return;
+    }
+
     let propertyUri = propertyRdfUri(modelClass, property);
     let rdfValue = buildRdfValue(db, modelType, property, value);
 

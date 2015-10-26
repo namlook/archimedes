@@ -720,6 +720,22 @@ describe('Database', function() {
             });
         });
 
+        it('should handle the case if there is no previous values setted', (done) => {
+            db.sync('BlogPost', {_id: 'thepost', title: 'the post'}).then(() => {
+                return db.update('BlogPost', 'thepost', [
+                    {operator: 'set', property: 'isPublished', value: undefined}
+                ]);
+            }).then(() => {
+                return db.fetch('BlogPost', 'thepost');
+            }).then((doc) => {
+                expect(doc.isPublished).to.not.exist();
+                done();
+            }).catch((error) => {
+                console.log(error);
+                console.log(error.stack);
+            })
+        });
+
         describe('should validate the operations before syncing', function() {
 
             it('and throw an error when the property is unknown', (done) => {
@@ -749,7 +765,6 @@ describe('Database', function() {
                     done();
                 });
             });
-
         });
 
         it('should reject if the operations are not an array', (done) => {
