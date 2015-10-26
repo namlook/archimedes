@@ -31,7 +31,7 @@ let stream2promise = function(stream) {
             reject(error);
         });
     });
-}
+};
 
 
 describe('Database', function() {
@@ -720,20 +720,22 @@ describe('Database', function() {
             });
         });
 
-        it('should handle the case if there is no previous values setted', (done) => {
+        it('should unset values', (done) => {
             db.sync('BlogPost', {_id: 'thepost', title: 'the post'}).then(() => {
                 return db.update('BlogPost', 'thepost', [
-                    {operator: 'set', property: 'isPublished', value: undefined}
+                    {operator: 'unset', property: 'isPublished'},
+                    {operator: 'unset', property: 'title', value: 'the post'}
                 ]);
             }).then(() => {
                 return db.fetch('BlogPost', 'thepost');
             }).then((doc) => {
                 expect(doc.isPublished).to.not.exist();
+                expect(doc.title).to.not.exist();
                 done();
             }).catch((error) => {
                 console.log(error);
                 console.log(error.stack);
-            })
+            });
         });
 
         describe('should validate the operations before syncing', function() {

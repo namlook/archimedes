@@ -129,7 +129,7 @@ export let operation2triple = function(db, modelType, uri, operation) {
      * value set so we do nothing
      */
     if (value === undefined) {
-        return;
+        return undefined;
     }
 
     let propertyUri = propertyRdfUri(modelClass, property);

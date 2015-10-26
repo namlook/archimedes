@@ -112,7 +112,10 @@ export default function(db, modelClass, attrs) {
                 if (oldValue != null) {
                     internals.pendingOperations.push({operator: 'unset', property: name, value: oldValue});
                 }
-                internals.pendingOperations.push({operator: 'set', property: name, value: value});
+
+                if (value != null) {
+                    internals.pendingOperations.push({operator: 'set', property: name, value: value});
+                }
                 _.set(internals.attrs, name, value);
 
             }

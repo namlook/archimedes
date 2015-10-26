@@ -28,7 +28,7 @@ describe('Model Instance', function() {
     describe('#get()', function() {
         it('should get the property value', (done) => {
             let blogPost = db.BlogPost.create();
-            expect(blogPost.get('title')).to.be.undefined();
+            expect(blogPost.get('title')).to.not.exist();
             blogPost.set('title', 'the title');
             expect(blogPost.get('title')).to.equal('the title');
             done();
@@ -79,22 +79,22 @@ describe('Model Instance', function() {
     describe('#unset()', function() {
         it('should unset an property', (done) => {
             let blogPost = db.BlogPost.create();
-            expect(blogPost.attrs().title).to.be.undefined();
+            expect(blogPost.attrs().title).to.not.exist();
             blogPost.set('title', 'the title');
             expect(blogPost.attrs().title).to.equal('the title');
             blogPost.unset('title');
-            expect(blogPost.attrs().title).to.be.undefined();
+            expect(blogPost.attrs().title).to.not.exist();
             done();
         });
 
 
         it('should be able to unset an undefined property value', (done) => {
             let blogPost = db.BlogPost.create();
-            expect(blogPost.attrs().title).to.be.undefined();
+            expect(blogPost.attrs().title).to.not.exist();
             blogPost.unset('title');
-            expect(blogPost.attrs().title).to.be.undefined();
+            expect(blogPost.attrs().title).to.not.exist();
             blogPost.unset('title');
-            expect(blogPost.attrs().title).to.be.undefined();
+            expect(blogPost.attrs().title).to.not.exist();
             done();
         });
 
@@ -102,9 +102,9 @@ describe('Model Instance', function() {
             let blogPost = db.BlogPost.create();
             blogPost.set('title', 'the title');
             let modelInstance = blogPost.unset('title');
-            expect(blogPost.attrs().title).to.be.undefined();
+            expect(blogPost.attrs().title).to.not.exist();
             expect(modelInstance._archimedesModelInstance).to.be.true();
-            expect(modelInstance.attrs().title).to.be.undefined();
+            expect(modelInstance.attrs().title).to.not.exist();
             done();
         });
 
@@ -115,7 +115,7 @@ describe('Model Instance', function() {
     describe('#push()', function() {
         it('should push a value to a property array', (done) => {
             let blogPost = db.BlogPost.create();
-            expect(blogPost.attrs().tags).to.be.undefined();
+            expect(blogPost.attrs().tags).to.not.exist();
             blogPost.push('tags', 'foo');
             expect(blogPost.attrs().tags).to.be.an.array();
             expect(blogPost.attrs().tags).to.only.include(['foo']);
@@ -127,7 +127,7 @@ describe('Model Instance', function() {
 
         it('should push multiple values to a property array', (done) => {
             let blogPost = db.BlogPost.create();
-            expect(blogPost.attrs().tags).to.be.undefined();
+            expect(blogPost.attrs().tags).to.not.exist();
             blogPost.push('tags', ['foo', 'bar']);
             expect(blogPost.attrs().tags).to.be.an.array();
             expect(blogPost.attrs().tags).to.only.include(['foo', 'bar']);
@@ -139,15 +139,15 @@ describe('Model Instance', function() {
 
         it('should not create an array if the value is null', (done) => {
             let blogPost = db.BlogPost.create();
-            expect(blogPost.attrs().tags).to.be.undefined();
+            expect(blogPost.attrs().tags).to.not.exist();
             blogPost.push('tags', '');
-            expect(blogPost.attrs().tags).to.be.undefined();
+            expect(blogPost.attrs().tags).to.not.exist();
             blogPost.push('tags', null);
-            expect(blogPost.attrs().tags).to.be.undefined();
+            expect(blogPost.attrs().tags).to.not.exist();
             blogPost.push('tags', undefined);
-            expect(blogPost.attrs().tags).to.be.undefined();
+            expect(blogPost.attrs().tags).to.not.exist();
             blogPost.push('tags');
-            expect(blogPost.attrs().tags).to.be.undefined();
+            expect(blogPost.attrs().tags).to.not.exist();
             done();
         });
 
@@ -168,7 +168,7 @@ describe('Model Instance', function() {
     describe('#pull()', function() {
         it('should remove a value to a property array', (done) => {
             let blogPost = db.BlogPost.create();
-            expect(blogPost.attrs().tags).to.be.undefined();
+            expect(blogPost.attrs().tags).to.not.exist();
             blogPost.push('tags', ['foo', 'bar', 'baz']);
             blogPost.pull('tags', 'foo');
             expect(blogPost.attrs().tags).to.be.an.array();
@@ -179,7 +179,7 @@ describe('Model Instance', function() {
 
         it('should remove multiple values to a property array', (done) => {
             let blogPost = db.BlogPost.create();
-            expect(blogPost.attrs().tags).to.be.undefined();
+            expect(blogPost.attrs().tags).to.not.exist();
             blogPost.push('tags', ['foo', 'bar', 'baz']);
             blogPost.pull('tags', ['foo', 'baz']);
             expect(blogPost.attrs().tags).to.only.include(['bar']);
@@ -189,17 +189,17 @@ describe('Model Instance', function() {
 
         it('should unset the property value if the array is empty', (done) => {
             let blogPost = db.BlogPost.create();
-            expect(blogPost.attrs().tags).to.be.undefined();
+            expect(blogPost.attrs().tags).to.not.exist();
             blogPost.push('tags', ['foo', 'bar', 'baz']);
             blogPost.pull('tags', ['foo', 'bar', 'baz']);
-            expect(blogPost.attrs().tags).to.be.undefined();
+            expect(blogPost.attrs().tags).to.not.exist();
             done();
         });
 
 
         it('should returns the model instance', (done) => {
             let blogPost = db.BlogPost.create();
-            expect(blogPost.attrs().tags).to.be.undefined();
+            expect(blogPost.attrs().tags).to.not.exist();
             blogPost.push('tags', ['foo', 'bar', 'baz']);
             let modelInstance = blogPost.pull('tags', 'foo').pull('tags', 'baz');
             expect(blogPost.attrs().tags).to.only.include(['bar']);
@@ -208,6 +208,186 @@ describe('Model Instance', function() {
             done();
         });
     });
+
+
+    describe('#pending()', () => {
+        it('should set a value', (done) => {
+            let blogPost = db.BlogPost.create();
+            blogPost.set('title', 'hello');
+            expect(blogPost.pending()).to.deep.equal(
+                [ { operator: 'set', property: 'title', value: 'hello' } ]
+            );
+            done();
+        });
+
+        it('should unset a value', (done) => {
+            let blogPost = db.BlogPost.create({title: 'hello'});
+            blogPost.unset('title');
+            expect(blogPost.pending()).to.deep.equal(
+                [ { operator: 'unset', property: 'title', value: 'hello' } ]
+            );
+            done();
+        });
+
+        it('should setting a null value should unset it', (done) => {
+            let blogPost = db.BlogPost.create({title: 'hello'});
+            blogPost.set('title', null);
+            expect(blogPost.pending()).to.deep.equal(
+                [ { operator: 'unset', property: 'title', value: 'hello' } ]
+            );
+            done();
+        });
+
+        it('should set push value', (done) => {
+            let blogPost = db.BlogPost.create();
+            blogPost.push('tags', 'foo');
+            expect(blogPost.pending()).to.deep.equal(
+                [ { operator: 'push', property: 'tags', value: 'foo' } ]
+            );
+
+            blogPost.push('tags', 'bar');
+            expect(blogPost.pending()).to.deep.equal(
+                [ { operator: 'push', property: 'tags', value: 'foo' },
+                  { operator: 'push', property: 'tags', value: 'bar' } ]
+            );
+
+            blogPost.push('tags', ['toto', 'titi']);
+            expect(blogPost.pending()).to.deep.equal(
+                [ { operator: 'push', property: 'tags', value: 'foo' },
+                  { operator: 'push', property: 'tags', value: 'bar' },
+                  { operator: 'push', property: 'tags', value: 'toto' },
+                  { operator: 'push', property: 'tags', value: 'titi' } ]
+            );
+
+            done();
+        });
+
+       it('should set pull value', (done) => {
+            let blogPost = db.BlogPost.create({tags: ['foo', 'bar', 'toto', 'titi']});
+            blogPost.pull('tags', 'foo');
+            expect(blogPost.pending()).to.deep.equal(
+                [ { operator: 'pull', property: 'tags', value: 'foo' } ]
+            );
+
+            blogPost.pull('tags', ['toto', 'titi']);
+            expect(blogPost.pending()).to.deep.equal(
+                [ { operator: 'pull', property: 'tags', value: 'foo' },
+                  { operator: 'pull', property: 'tags', value: 'toto' },
+                  { operator: 'pull', property: 'tags', value: 'titi' } ]
+            );
+
+            done();
+        });
+
+
+
+        it('should return all pending operations', (done) => {
+            let blogPost = db.BlogPost.create();
+            blogPost.set('title', 'the title');
+            blogPost.set('tags', ['foo', 'bar']);
+
+            let pending = blogPost.pending();
+            expect(pending.length).to.equal(3);
+
+            expect(pending[0].operator).to.equal('set');
+            expect(pending[0].property).to.equal('title');
+            expect(pending[0].value).to.equal('the title');
+
+            expect(pending[1].operator).to.equal('push');
+            expect(pending[1].property).to.equal('tags');
+            expect(pending[1].value).to.equal('foo');
+
+            expect(pending[2].operator).to.equal('push');
+            expect(pending[2].property).to.equal('tags');
+            expect(pending[2].value).to.equal('bar');
+
+
+            blogPost.set('title', 'new title');
+            blogPost.set('tags', ['toto', 'titi']);
+
+            pending = blogPost.pending();
+
+            expect(pending[3].operator).to.equal('unset');
+            expect(pending[3].property).to.equal('title');
+            expect(pending[3].value).to.equal('the title');
+
+            expect(pending[4].operator).to.equal('set');
+            expect(pending[4].property).to.equal('title');
+            expect(pending[4].value).to.equal('new title');
+
+            expect(pending[5].operator).to.equal('pull');
+            expect(pending[5].property).to.equal('tags');
+            expect(pending[5].value).to.equal('bar');
+
+            expect(pending[6].operator).to.equal('pull');
+            expect(pending[6].property).to.equal('tags');
+            expect(pending[6].value).to.equal('foo');
+
+            expect(pending[7].operator).to.equal('push');
+            expect(pending[7].property).to.equal('tags');
+            expect(pending[7].value).to.equal('toto');
+
+            expect(pending[8].operator).to.equal('push');
+            expect(pending[8].property).to.equal('tags');
+            expect(pending[8].value).to.equal('titi');
+
+            blogPost.unset('title');
+            blogPost.unset('tags');
+
+            pending = blogPost.pending();
+
+            expect(pending[9].operator).to.equal('unset');
+            expect(pending[9].property).to.equal('title');
+            expect(pending[9].value).to.equal('new title');
+
+            expect(pending[10].operator).to.equal('pull');
+            expect(pending[10].property).to.equal('tags');
+            expect(pending[10].value).to.equal('titi');
+
+            expect(pending[11].operator).to.equal('pull');
+            expect(pending[11].property).to.equal('tags');
+            expect(pending[11].value).to.equal('toto');
+
+            done();
+        });
+
+        it('should not add operation if the value is the same', (done) => {
+            let blogPost = db.BlogPost.create({title: 'the post'});
+            blogPost.set('title', 'the post');
+            expect(blogPost.pending()).to.be.empty();
+
+            blogPost.set('isPublished', false);
+            expect(blogPost.pending()).to.deep.equal(
+                [ { operator: 'set', property: 'isPublished', value: false } ]
+            );
+
+            blogPost.set('isPublished', false);
+            expect(blogPost.pending().length).to.equal(1);
+
+            blogPost.set('publishedDate', new Date(Date.UTC(1984, 7, 3)));
+            expect(blogPost.pending().length).to.equal(2);
+
+            blogPost.set('publishedDate', '1984-08-03');
+            expect(blogPost.pending().length).to.equal(2);
+            done();
+        });
+
+        it('should not push operation if the value is already present', (done) => {
+            let dates = [
+                new Date(1984, 7, 3),
+                new Date(1987, 5, 1),
+                new Date(2015, 6, 30)];
+            let blogPost = db.GenericType.create({dates: dates});
+            expect(blogPost.pending()).to.be.empty();
+            blogPost.push('dates', new Date(1984, 7, 3));
+            expect(blogPost.pending()).to.be.empty();
+            blogPost.push('dates', new Date(2011, 2, 25));
+            expect(blogPost.pending().length).to.equal(1);
+            done();
+        });
+
+    });
+
 
     describe('inverse relationships', function() {
         it('should be a promise', (done) => {
