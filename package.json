@@ -5,20 +5,23 @@
   "main": "lib",
   "repository": "https://github.com/namlook/archimedes",
   "scripts": {
-    "postinstall": "babel src --optional runtime --out-dir lib",
+    "prepublish": "npm run build",
     "lint": "eslint src tests",
-    "build": "eslint src tests && babel src --optional runtime --out-dir lib --source-maps",
+    "build": "eslint src tests && babel src --optional runtime --out-dir lib",
     "watch": "babel src --watch --optional runtime --out-dir lib --source-maps",
     "test": "eslint src tests && lab -T tests/transform.js tests -vSl",
     "coverage": "lab -T tests/transform.js -r html -o coverage.html tests"
   },
   "files": [
-    "src"
+    "lib"
   ],
   "keywords": [],
   "author": "Namlook",
   "license": "MIT",
   "devDependencies": {
+    "babel": "^5.8.25",
+    "babel-core": "^5.8.25",
+    "babel-runtime": "^5.8.25",
     "chalk": "^1.1.0",
     "code": "^1.5.0",
     "eslint": "^0.24.1",
@@ -26,9 +29,6 @@
     "source-map-support": "^0.3.2"
   },
   "dependencies": {
-    "babel": "^5.8.25",
-    "babel-core": "^5.8.25",
-    "babel-runtime": "^5.8.25",
     "bluebird": "^2.10.2",
     "csv": "^0.4.6",
     "inflected": "^1.1.6",
