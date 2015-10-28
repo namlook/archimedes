@@ -191,7 +191,6 @@ export default function(config) {
                         if (doc) {
                             callback(null, doc);
                         } else {
-                            console.log(options);
                             callback(new Error(`${modelType}: ${uri} not found`));
                         }
                         pauseStream.resume();
@@ -830,9 +829,7 @@ export default function(config) {
                     if (!_.startsWith(modelIdOrUri, 'http://')) {
                         uri = instanceRdfUri(db[modelType], modelIdOrUri);
                     }
-
                     let {deleteTriples, whereClause} = deleteCascade(db, modelType, uri);
-
                     let sparson = {
                         type: 'update',
                         updates: [
