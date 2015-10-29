@@ -320,6 +320,14 @@ export default function(dbAdapter, config) {
         find(modelType, query, options) {
             return Promise.resolve().then(() => {
 
+                if (!modelType) {
+                    throw new Error('find: modelType is required');
+                }
+
+                if (!this[modelType]) {
+                    throw new Error(`find: Unknown modelType: "${modelType}"`);
+                }
+
                 query = Object.assign({}, query);
                 options = options || {};
 
@@ -333,11 +341,6 @@ export default function(dbAdapter, config) {
                 }
 
                 options.limit = options.limit || 20;
-
-                if (!modelType) {
-                    throw new Error('find: modelType is required');
-                }
-
 
                 let {error: optionError, value: validatedOptions} = findOptionsValidator(options, this, modelType);
                 if (optionError) {
@@ -373,7 +376,11 @@ export default function(dbAdapter, config) {
             options = options || {};
 
             if (!modelType) {
-                throw new Error('find: modelType is required');
+                throw new Error('stream: modelType is required');
+            }
+
+            if (!this[modelType]) {
+                throw new Error(`stream: Unknown modelType: "${modelType}"`);
             }
 
             if (typeof options.fields === 'string') {
@@ -447,6 +454,10 @@ export default function(dbAdapter, config) {
                     throw new Error('fetch: modelType is required and should be a string');
                 }
 
+                if (!this[modelType]) {
+                    throw new Error(`fetch: Unknown modelType: "${modelType}"`);
+                }
+
                 if (typeof id !== 'string') {
                     throw new Error('fetch: id is required and should be a string');
                 }
@@ -478,6 +489,10 @@ export default function(dbAdapter, config) {
                     throw new Error('count: modelType should be a string');
                 }
 
+                if (!this[modelType]) {
+                    throw new Error(`count: Unknown modelType: "${modelType}"`);
+                }
+
                 if (query && !_.isObject(query)) {
                     throw new Error('count: query should be an object');
                 }
@@ -505,7 +520,11 @@ export default function(dbAdapter, config) {
 
 
                 if (typeof modelType !== 'string') {
-                    throw new Error('update: modelType should be a string');
+                    throw new Error('groupBy: modelType should be a string');
+                }
+
+                if (!this[modelType]) {
+                    throw new Error(`groupBy: Unknown modelType: "${modelType}"`);
                 }
 
                 if (!aggregator) {
@@ -578,6 +597,10 @@ export default function(dbAdapter, config) {
                     throw new Error('update: modelType should be a string');
                 }
 
+                if (!this[modelType]) {
+                    throw new Error(`update: Unknown modelType: "${modelType}"`);
+                }
+
                 if (!_.isArray(operations)) {
                     throw new Error('update: operations should be an array');
                 }
@@ -602,6 +625,10 @@ export default function(dbAdapter, config) {
 
                 if (typeof modelType !== 'string') {
                     throw new Error('sync: modelType should be a string');
+                }
+
+                if (!this[modelType]) {
+                    throw new Error(`sync: Unknown modelType: "${modelType}"`);
                 }
 
                 if (!_.isObject(pojo)) {
@@ -635,6 +662,10 @@ export default function(dbAdapter, config) {
 
                 if (typeof modelType !== 'string') {
                     throw new Error('batchSync: modelType should be a string');
+                }
+
+                if (!this[modelType]) {
+                    throw new Error(`batchSync: Unknown modelType: "${modelType}"`);
                 }
 
                 if (!_.isArray(data)) {
@@ -680,6 +711,11 @@ export default function(dbAdapter, config) {
                     throw new Error('delete: modelType should be a string');
                 }
 
+
+                if (!this[modelType]) {
+                    throw new Error(`delete: Unknown modelType: "${modelType}"`);
+                }
+
                 if (typeof modelId !== 'string') {
                     throw new Error('delete: id should be a string');
                 }
@@ -689,6 +725,14 @@ export default function(dbAdapter, config) {
         },
 
 
+        /**
+         * import all data from a csv-like stream
+         *
+         * @params {modelType} - the model name
+         * @params {stream} - a stream that flow a csv-like string
+         * @params {options}
+         * @returns the stream
+         */
         importCsv(modelType, stream, options) {
 
             if (!this[modelType]) {
