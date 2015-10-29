@@ -1104,7 +1104,7 @@ describe('Database', function() {
         it('should talk directly to the store');
     });
 
-    describe('#importCsv()', function() {
+    describe('#csvStreamParse()', function() {
 
         it('should import a csv file', (done) => {
             let data = _.range(3).map((i) => {
@@ -1139,7 +1139,10 @@ describe('Database', function() {
                         fs.writeFileSync(FILENAME, csvLines.join('\n'));
 
                         let stream = fs.createReadStream(FILENAME, { flags: 'r' });
-                        let writerStream = db.importCsv('BlogPost', stream);
+                        let syncStream = db.writableStream('BlogPost');
+                        let csvStream = db.csvStreamParse('BlogPost', stream);
+                        let writerStream = csvStream.pipe(syncStream);
+
                         writerStream.on('end', function() {
                             db.find('BlogPost').then((savedResults) => {
                                 expect(savedResults).to.deep.equal(
@@ -1194,7 +1197,9 @@ describe('Database', function() {
             const FILENAME = './tests/csv/good_blogposts.csv';
 
             let stream = fs.createReadStream(FILENAME, { flags: 'r' });
-            let writerStream = db.importCsv('BlogPost', stream);
+            let csvStream = db.csvStreamParse('BlogPost', stream);
+            let syncStream = db.writableStream('BlogPost');
+            let writerStream = csvStream.pipe(syncStream);
             writerStream.on('end', function() {
                 db.find('BlogPost').then((savedResults) => {
                     expect(savedResults).to.deep.equal(
@@ -1242,7 +1247,8 @@ describe('Database', function() {
             const FILENAME = './tests/csv/bad_blogposts.csv';
 
             let stream = fs.createReadStream(FILENAME, { flags: 'r' });
-            let writerStream = db.importCsv('BlogPost', stream);
+            let syncStream = db.writableStream('BlogPost');
+            let writerStream = db.csvStreamParse('BlogPost', stream).pipe(syncStream);
 
             writerStream.on('error', function(error) {
                 expect(error.name).to.equal('ValidationError');
@@ -1255,7 +1261,7 @@ describe('Database', function() {
 
         it('should throw an error when passing an unknown model type', (done) => {
             let throws = function() {
-                db.importCsv('Unknown');
+                db.csvStreamParse('Unknown');
             };
 
             expect(throws).to.throws('importCsv: Unknown modelType: "Unknown"');

@@ -657,7 +657,7 @@ export default function(dbAdapter, config) {
          * @params {array} data - an array of pojo
          * @returns a promise which resolve an array of the saved pojo
          */
-        batchSync(modelType, data) {
+        _batchSync(modelType, data) {
             return Promise.resolve().then(() => {
 
                 if (typeof modelType !== 'string') {
@@ -699,6 +699,64 @@ export default function(dbAdapter, config) {
 
 
         /**
+         * Sync an array of object. Act the same as #sync()
+         *
+         * @params {string} modelType
+         * @params {array} data - an array of pojo
+         * @returns a promise which resolve an array of the saved pojo
+         */
+        batchSync(modelType, data) {
+            return Promise.resolve().then(() => {
+
+                if (typeof modelType !== 'string') {
+                    throw new Error('batchSync: modelType should be a string');
+                }
+
+                if (!this[modelType]) {
+                    throw new Error(`batchSync: Unknown modelType: "${modelType}"`);
+                }
+
+                if (!_.isArray(data)) {
+                    throw new Error('batchSync: data should be an array');
+                }
+
+                let promises = [];
+                for(let i = 0; i < data.length; i++) {
+                    let pojo = data[i];
+
+                    if (!_.isObject(pojo)) {
+                        throw new Error('sync: the document should be an object');
+                    }
+
+                    if (!pojo._id) {
+                        pojo._id = this.buildModelId();
+                    }
+
+                    if (!pojo._type) {
+                        pojo._type = modelType;
+                    }
+
+                    promises.push(this.validate(modelType, pojo));
+                }
+
+                return Promise.all(promises);
+            }).then((pojos) => {
+                return new Promise((resolve, reject) => {
+
+                    let writeStream = this.writableStream(modelType);
+                    let stream = es.readArray(pojos).pipe(writeStream);
+                    stream.on('error', function(error) {
+                        reject(error);
+                    });
+
+                    stream.on('end', function() {
+                        resolve(pojos);
+                    });
+                });
+            });
+        },
+
+        /**
          * Remove a record from the database
          *
          * @params {string} modelType - the model type
@@ -724,6 +782,31 @@ export default function(dbAdapter, config) {
             });
         },
 
+        /**
+         * returns a writable stream that store the documents in the db
+         *
+         * @params {modelType} - the model name
+         * @params {options}
+         * @return a writable stream
+         */
+        writableStream(modelType) {
+            let db = this;
+            return es.map((pojo, callback) => {
+                if (_.isEmpty(pojo)) {
+                    return callback(null, null);
+                }
+
+                if (pojo._archimedesModelInstance) {
+                    pojo = pojo.attrs();
+                }
+
+                db.sync(modelType, pojo).then((savedDoc) => {
+                    callback(null, savedDoc);
+                }).catch((error) => {
+                    callback(error);
+                });
+            });
+        },
 
         /**
          * import all data from a csv-like stream
@@ -733,7 +816,7 @@ export default function(dbAdapter, config) {
          * @params {options}
          * @returns the stream
          */
-        importCsv(modelType, stream, options) {
+        csvStreamParse(modelType, stream, options) {
 
             if (!this[modelType]) {
                 throw new Error(`importCsv: Unknown modelType: "${modelType}"`);
@@ -801,16 +884,7 @@ export default function(dbAdapter, config) {
                 callback(null, record);
             });
 
-            return stream.pipe(csvStreamTransform).pipe(csv2pojoTransform).pipe(es.map((pojo, callback) => {
-                if (_.isEmpty(pojo)) {
-                    return callback(null, null);
-                }
-                db.sync(Model.name, pojo).then((savedDoc) => {
-                    callback(null, savedDoc);
-                }).catch((error) => {
-                    callback(error);
-                });
-            }));
+            return stream.pipe(csvStreamTransform).pipe(csv2pojoTransform);
         }
     };
 
