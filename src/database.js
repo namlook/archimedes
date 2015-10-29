@@ -17,6 +17,8 @@ const validPropertyTypes = [
 ];
 
 import Promise from 'bluebird';
+import csvStream from 'csv-stream';
+import es from 'event-stream';
 
 export default function(dbAdapter, config) {
 
@@ -300,7 +302,7 @@ export default function(dbAdapter, config) {
                 } else if (properties.length === 1) {
                     properties = properties[0];
                 } else {
-                    console.log('AAAAAA', propertyName, mixinNames, properties);
+                    console.error('AAAAAA', propertyName, mixinNames, properties);
                 }
             }
             return properties;
@@ -684,10 +686,89 @@ export default function(dbAdapter, config) {
 
                 return this.adapter.delete(modelType, modelId);
             });
+        },
+
+
+        importCsv(modelType, stream, options) {
+
+            if (!this[modelType]) {
+                throw new Error(`importCsv: Unknown modelType: "${modelType}"`);
+            }
+
+            let db = this;
+            let Model = db[modelType];
+
+            options = options || {};
+
+            if (options.escapeChar == null) {
+                options.escapeChar = '"';
+            }
+
+            if (options.enclosedChar == null) {
+                options.enclosedChar = '"';
+            }
+
+            let propertyNames = Object.keys(db[modelType].schema._properties);
+            let header = _.sortBy(propertyNames);
+            header.unshift('_type');
+            header.unshift('_id');
+
+            options = {
+                delimiter: options.delimiter || ',',
+                columns: options.header || header,
+                escapeChar: options.escapeChar,
+                enclosedChar: options.enclosedChar
+            };
+
+            let csvStreamTransform = csvStream.createStream(options);
+
+            let csv2pojoTransform = es.map((pojo, callback) => {
+
+                let record = {};
+
+                for (let propertyName of Object.keys(pojo)) {
+
+                    if (pojo[propertyName] !== '') {
+
+                        let value = pojo[propertyName];
+
+                        if (!_.contains(['_id', '_type'], propertyName)) {
+
+                            let property = Model.schema.getProperty(propertyName);
+                            if (property.isRelation()) {
+                                if (property.isArray()) {
+                                    let values = [];
+                                    for (let item of value.split('|')) {
+                                        values.push({_id: item, _type: property.type});
+                                    }
+                                    value = values;
+                                } else {
+                                    value = {_id: value, _type: property.type};
+                                }
+                            } else {
+                                if (property.isArray()) {
+                                    value = value.split('|');
+                                }
+                            }
+                        }
+                        record[propertyName] = value;
+                    }
+                }
+                callback(null, record);
+            });
+
+            return stream.pipe(csvStreamTransform).pipe(csv2pojoTransform).pipe(es.map((pojo, callback) => {
+                if (_.isEmpty(pojo)) {
+                    return callback(null, null);
+                }
+                db.sync(Model.name, pojo).then((savedDoc) => {
+                    callback(null, savedDoc);
+                }).catch((error) => {
+                    callback(error);
+                });
+            }));
         }
     };
-
-
 
     inner.adapter = dbAdapter(inner);
     return inner;

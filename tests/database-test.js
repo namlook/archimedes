@@ -14,6 +14,7 @@ import archimedes from '../lib/database';
 import _ from 'lodash';
 import uuid from 'uuid';
 
+import fs from 'fs';
 
 let stream2promise = function(stream) {
     return new Promise((resolve, reject) => {
@@ -1101,5 +1102,165 @@ describe('Database', function() {
     describe('#execute()', function() {
         it('should return a promise');
         it('should talk directly to the store');
+    });
+
+    describe('#importCsv()', function() {
+
+        it('should import a csv file', (done) => {
+            let data = _.range(3).map((i) => {
+
+                return {
+                    _id: `bp${i}`,
+                    _type: 'BlogPost',
+                    body: `hello from "${i}"`,
+                    title: `post ${i}`,
+                    ratting: i % 5,
+                    isPublished: i % 2,
+                    createdDate: new Date(2015, 7, i + 1),
+                    author: {_id: 'namlook', _type: 'User'},
+                    credits: _.range(i).map((o) => {
+                        return {_id: `user${o}`, _type: 'User'};
+                    }),
+                    tags: _.range(i).map((o) => `tag${o}`)
+                };
+
+            });
+            db.batchSync('BlogPost', data).then(() => {
+                db.BlogPost.find().then((results) => {
+                    let promises = [];
+                    for (let instance of results) {
+                        promises.push(instance.toCsv());
+                    }
+
+                    Promise.all(promises).then((csvLines) => {
+
+                        const FILENAME = './tests/data_import.csv';
+
+                        fs.writeFileSync(FILENAME, csvLines.join('\n'));
+
+                        let stream = fs.createReadStream(FILENAME, { flags: 'r' });
+                        let writerStream = db.importCsv('BlogPost', stream);
+                        writerStream.on('end', function() {
+                            db.find('BlogPost').then((savedResults) => {
+                                expect(savedResults).to.deep.equal(
+                                    [ { _id: 'bp0',
+                                        title: 'post 0',
+                                        ratting: 0,
+                                        createdDate: new Date(2015, 7, 1),
+                                        isPublished: false,
+                                        author: { _id: 'namlook', _type: 'User' },
+                                        body: 'hello from "0"',
+                                        _type: 'BlogPost' },
+                                      { _id: 'bp1',
+                                        title: 'post 1',
+                                        ratting: 1,
+                                        createdDate: new Date(2015, 7, 2),
+                                        isPublished: true,
+                                        author: { _id: 'namlook', _type: 'User' },
+                                        body: 'hello from "1"',
+                                        credits: [ { _id: 'user0', _type: 'User' } ],
+                                        tags: [ 'tag0' ],
+                                        _type: 'BlogPost' },
+                                      { _id: 'bp2',
+                                        title: 'post 2',
+                                        ratting: 2,
+                                        createdDate: new Date(2015, 7, 3),
+                                        isPublished: false,
+                                        author: { _id: 'namlook', _type: 'User' },
+                                        body: 'hello from "2"',
+                                        credits:
+                                         [ { _id: 'user0', _type: 'User' },
+                                           { _id: 'user1', _type: 'User' } ],
+                                        tags: [ 'tag0', 'tag1' ],
+                                        _type: 'BlogPost' } ]
+                                );
+                                fs.unlinkSync(FILENAME);
+                                done();
+                            });
+                        });
+
+                        writerStream.on('error', function(error) {
+                            console.error('xxx', error);
+                        });
+                    });
+                });
+            }).catch((error) => {
+                console.error(error);
+                console.error(error.details);
+            });
+        });
+
+        it('should handle empty lines', (done) => {
+            const FILENAME = './tests/csv/good_blogposts.csv';
+
+            let stream = fs.createReadStream(FILENAME, { flags: 'r' });
+            let writerStream = db.importCsv('BlogPost', stream);
+            writerStream.on('end', function() {
+                db.find('BlogPost').then((savedResults) => {
+                    expect(savedResults).to.deep.equal(
+                        [ { _id: 'bp0',
+                            title: 'post 0',
+                            ratting: 0,
+                            createdDate: new Date(2015, 7, 1),
+                            isPublished: false,
+                            author: { _id: 'namlook', _type: 'User' },
+                            body: 'hello from "0"',
+                            _type: 'BlogPost' },
+                          { _id: 'bp1',
+                            title: 'post 1',
+                            ratting: 1,
+                            createdDate: new Date(2015, 7, 2),
+                            isPublished: true,
+                            author: { _id: 'namlook', _type: 'User' },
+                            body: 'hello from "1"',
+                            credits: [ { _id: 'user0', _type: 'User' } ],
+                            tags: [ 'tag0' ],
+                            _type: 'BlogPost' },
+                          { _id: 'bp2',
+                            title: 'post 2',
+                            ratting: 2,
+                            createdDate: new Date(2015, 7, 3),
+                            isPublished: false,
+                            author: { _id: 'namlook', _type: 'User' },
+                            body: 'hello from "2"',
+                            credits:
+                             [ { _id: 'user0', _type: 'User' },
+                               { _id: 'user1', _type: 'User' } ],
+                            tags: [ 'tag0', 'tag1' ],
+                            _type: 'BlogPost' } ]
+                    );
+                    done();
+                });
+            });
+
+            writerStream.on('error', function(error) {
+                console.error('xxx', error);
+            });
+        });
+
+        it('should handle bad values', (done) => {
+            const FILENAME = './tests/csv/bad_blogposts.csv';
+
+            let stream = fs.createReadStream(FILENAME, { flags: 'r' });
+            let writerStream = db.importCsv('BlogPost', stream);
+
+            writerStream.on('error', function(error) {
+                expect(error.name).to.equal('ValidationError');
+                expect(error.message).to.equal('Bad value');
+                expect(error.extra).to.equal('"ratting" must be a number');
+                done();
+            });
+        });
+
+
+        it('should throw an error when passing an unknown model type', (done) => {
+            let throws = function() {
+                db.importCsv('Unknown');
+            };
+
+            expect(throws).to.throws('importCsv: Unknown modelType: "Unknown"');
+            done();
+        });
+
     });
 });
