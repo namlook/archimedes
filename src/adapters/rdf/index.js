@@ -17,7 +17,6 @@ import {Generator as SparqlGenerator} from 'sparqljs';
 import es from 'event-stream';
 import JSONStream from 'JSONStream';
 
-
 const RDF_DATATYPES = {
     'http://www.w3.org/2001/XMLSchema#integer': 'number',
     'http://www.w3.org/2001/XMLSchema#decimal': 'number',
@@ -61,6 +60,10 @@ export default function(config) {
 
                     if (!_.get(modelConfig, 'meta.instanceRdfPrefix')) {
                         _.set(modelConfig, 'meta.instanceRdfPrefix', defaultInstanceRdfPrefix);
+                    }
+
+                    if (!_.get(modelConfig, 'meta.propertyRdfPrefix')) {
+                        _.set(modelConfig, 'meta.propertyRdfPrefix', defaultPropertyRdfPrefix);
                     }
 
                     _.forOwn(modelConfig.properties, (propConfig, propertyName) => {

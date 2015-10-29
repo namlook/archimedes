@@ -17,7 +17,10 @@ import {
     uri2id,
     uri2property,
     rdfDoc2pojo,
-    operation2triple} from '../lib/adapters/rdf/utils';
+    operation2triple,
+    instance2triples} from '../lib/adapters/rdf/utils';
+
+import {Writer as n3Writer} from 'n3';
 
 
 describe('Rdf utils', function() {
@@ -189,6 +192,29 @@ describe('Rdf utils', function() {
                 author: { _id: 'namlook', _type: 'User' }
             });
             done();
+        });
+    });
+
+    describe('instance2nq()', function() {
+        it('should stream the instance as n-quad', (done) => {
+            let instance = db.BlogPost.wrap({
+                _id: 'blogpost1',
+                title: 'blog post 1',
+                createdDate: new Date(2015, 6, 30)
+            });
+            let instance2 = db.BlogPost.wrap({
+                _id: 'blogpost2',
+                title: 'blog post 2',
+                createdDate: new Date(1984, 7, 3)
+            });
+
+            let nqWriter = n3Writer({format: 'N-Triples'});
+            nqWriter.addTriples(instance2triples(instance));
+            nqWriter.addTriples(instance2triples(instance2));
+            nqWriter.end((error, results) => {
+                expect(results).to.equal('<http://tests.archimedes.org/instances/blogpost1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://tests.archimedes.org/classes/BlogPost>.\n<http://tests.archimedes.org/instances/blogpost1> <http://tests.archimedes.org/properties/createdDate> "2015-07-29T22:00:00.000Z"^^<http://www.w3.org/2001/XMLSchema#dateTime>.\n<http://tests.archimedes.org/instances/blogpost1> <http://tests.archimedes.org/properties/title> "blog post 1".\n<http://tests.archimedes.org/instances/blogpost2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://tests.archimedes.org/classes/BlogPost>.\n<http://tests.archimedes.org/instances/blogpost2> <http://tests.archimedes.org/properties/createdDate> "1984-08-02T22:00:00.000Z"^^<http://www.w3.org/2001/XMLSchema#dateTime>.\n<http://tests.archimedes.org/instances/blogpost2> <http://tests.archimedes.org/properties/title> "blog post 2".\n');
+                done();
+            });
         });
     });
 });

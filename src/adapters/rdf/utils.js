@@ -678,6 +678,36 @@ export let deleteCascade = function(db, _modelType, uri) {
     return {deleteTriples, whereClause};
 };
 
+export let instance2triples = function(instance){
+    let {Model} = instance;
+    let triples = [];
+
+    let subject = instanceRdfUri(Model, instance._id);
+
+    triples.push({
+        subject: subject,
+        predicate: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type',
+        object: Model.meta.classRdfUri
+    });
+
+
+    for (let propertyName of Object.keys(instance.Model.schema._properties)) {
+
+        let value = instance.get(propertyName);
+
+        if (value != null) {
+            let predicate = propertyRdfUri(Model, propertyName);
+            let object = buildRdfValue(Model.db, Model.name, propertyName, value);
+
+            triples.push({
+                subject: subject,
+                predicate: predicate,
+                object: object
+            });
+        }
+    }
+    return triples;
+};
 
 // export let query2sparql = function(db, modelType, query, options) {
 //     let sparson = query2sparson(db, modelType, query);
