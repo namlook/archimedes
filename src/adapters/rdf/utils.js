@@ -184,11 +184,11 @@ export let rdfDoc2pojo = function(db, modelType, rdfDoc) {
 
         // Virtuoso hack: convert integer as boolean
         if (property.type === 'boolean' && values.length) {
-            values = values.map((value) => {
-                if (_.isNumber(value)) {
-                    return Boolean(value);
+            values = values.map((val) => {
+                if (_.isNumber(val)) {
+                    return Boolean(val);
                 }
-                return value;
+                return val;
             });
         }
 
