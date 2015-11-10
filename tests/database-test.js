@@ -1104,9 +1104,111 @@ describe('Database', function() {
         it('should talk directly to the store');
     });
 
+    describe('#clearResource()', function() {
+
+        it('should return a promise', (done) => {
+            expect(db.clearResource('BlogPost').then).to.be.a.function();
+            done();
+        });
+
+
+        it('should reject an error if no modelType is passed', (done) => {
+            db.clearResource().catch((err) => {
+                expect(err).to.exist();
+                expect(err.message).to.equal('clearResource: modelType should be a string');
+                done();
+            });
+        });
+
+        it('should reject an error if the modelType is unknown', (done) => {
+            db.clearResource('UnknownModel').catch((err) => {
+                expect(err).to.exist();
+                expect(err.message).to.equal('clearResource: Unknown modelType: "UnknownModel"');
+                done();
+            });
+        });
+
+
+        it('should remove all selected resource', (done) => {
+            var blogPosts = _.range(10).map((i) => {
+                return {_id: `bp${i}`, _type: 'BlogPost', title: `post ${i}`};
+            });
+
+            var users = _.range(10).map((i) => {
+                return {_id: `user${i}`, _type: 'User', name: `user ${i}`};
+            });
+
+            var comments = _.range(10).map((i) => {
+                return {_id: `comment${i}`, _type: 'Comment', body: `comment ${i}`};
+            });
+
+
+            Promise.all([
+                db.batchSync('BlogPost', blogPosts),
+                db.batchSync('User', users),
+                db.batchSync('Comment', comments)
+            ]).then(() => {
+                return Promise.all([
+                    db.count('BlogPost'),
+                    db.count('User'),
+                    db.count('Comment')
+                ]);
+            }).then((counts) => {
+                expect(counts[0]).to.equal(10);
+                expect(counts[1]).to.equal(10);
+                expect(counts[2]).to.equal(10);
+
+                return db.clearResource('User');
+            }).then(() => {
+
+                return Promise.all([
+                    db.count('BlogPost'),
+                    db.count('User'),
+                    db.count('Comment')
+                ]);
+            }).then((counts) => {
+                expect(counts[0]).to.equal(10);
+                expect(counts[1]).to.equal(0);
+                expect(counts[2]).to.equal(10);
+
+                return db.clearResource('Comment');
+            }).then(() => {
+
+                return Promise.all([
+                    db.count('BlogPost'),
+                    db.count('User'),
+                    db.count('Comment')
+                ]);
+            }).then((counts) => {
+                expect(counts[0]).to.equal(10);
+                expect(counts[1]).to.equal(0);
+                expect(counts[2]).to.equal(0);
+
+                return db.clearResource('BlogPost');
+            }).then(() => {
+
+                return Promise.all([
+                    db.count('BlogPost'),
+                    db.count('User'),
+                    db.count('Comment')
+                ]);
+            }).then((counts) => {
+                expect(counts[0]).to.equal(0);
+                expect(counts[1]).to.equal(0);
+                expect(counts[2]).to.equal(0);
+
+                done();
+            }).catch((err) => {
+                console.log(err);
+                console.log(err.stack);
+            });
+        });
+    });
+
     describe('#csvStreamParse()', function() {
 
         it('should import a csv file', (done) => {
+
             let data = _.range(3).map((i) => {
 
                 return {
@@ -1135,6 +1237,7 @@ describe('Database', function() {
                     Promise.all(promises).then((csvLines) => {
 
                         const FILENAME = './tests/data_import.csv';
+                        csvLines.unshift(db.BlogPost.csvHeader());
 
                         fs.writeFileSync(FILENAME, csvLines.join('\n'));
 
@@ -1180,10 +1283,6 @@ describe('Database', function() {
                                 fs.unlinkSync(FILENAME);
                                 done();
                             });
-                        });
-
-                        writerStream.on('error', function(error) {
-                            console.error('xxx', error);
                         });
                     });
                 });

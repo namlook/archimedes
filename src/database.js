@@ -782,15 +782,34 @@ export default function(dbAdapter, config) {
             });
         },
 
+        clearResource(modelType) {
+            return Promise.resolve().then(() => {
+                if (typeof modelType !== 'string') {
+                    throw new Error('clearResource: modelType should be a string');
+                }
+
+
+                if (!this[modelType]) {
+                    throw new Error(`clearResource: Unknown modelType: "${modelType}"`);
+                }
+
+                return this.adapter.clearResource(modelType);
+            });
+        },
+
         /**
          * returns a writable stream that store the documents in the db
          *
          * @params {modelType} - the model name
          * @params {options}
+         *      dryRun: if true, don't touch the db (validation only)
          * @return a writable stream
          */
-        writableStream(modelType) {
+        writableStream(modelType, options) {
+            options = options || {};
+
             let db = this;
+            let count = 1;
             return es.map((pojo, callback) => {
                 if (_.isEmpty(pojo)) {
                     return callback(null, null);
@@ -800,11 +819,23 @@ export default function(dbAdapter, config) {
                     pojo = pojo.attrs();
                 }
 
-                db.sync(modelType, pojo).then((savedDoc) => {
-                    callback(null, savedDoc);
-                }).catch((error) => {
-                    callback(error);
-                });
+                var line = {pojo: pojo, count: count++};
+
+                if (options.dryRun) {
+                    db.validate(modelType, pojo).then(() => {
+                        callback(null);
+                    }).catch((error) => {
+                        error.line = line;
+                        callback(error);
+                    });
+                } else {
+                    db.sync(modelType, pojo).then((savedDoc) => {
+                        callback(null, savedDoc);
+                    }).catch((error) => {
+                        error.line = line;
+                        callback(error);
+                    });
+                }
             });
         },
 
@@ -842,16 +873,23 @@ export default function(dbAdapter, config) {
 
             options = {
                 delimiter: options.delimiter || ',',
-                columns: options.header || header,
                 escapeChar: options.escapeChar,
                 enclosedChar: options.enclosedChar
             };
 
             let csvStreamTransform = csvStream.createStream(options);
 
+            let count = 1;
             let csv2pojoTransform = es.map((pojo, callback) => {
 
                 let record = {};
+
+                // is it the header ?
+                if (pojo._id === '_id' && pojo._type === '_type') {
+                    callback(null);
+                }
+
+                var line = {pojo: pojo, count: count++};
 
                 for (let propertyName of Object.keys(pojo)) {
 
@@ -860,8 +898,12 @@ export default function(dbAdapter, config) {
                         let value = pojo[propertyName];
 
                         if (!_.contains(['_id', '_type'], propertyName)) {
-
                             let property = Model.schema.getProperty(propertyName);
+                            if (!property) {
+                                let error = new ValidationError('Bad value', `unknown property "${propertyName}" for model "${Model.name}"`);
+                                error.line = line;
+                                return callback(error);
+                            }
                             if (property.isRelation()) {
                                 if (property.isArray()) {
                                     let values = [];

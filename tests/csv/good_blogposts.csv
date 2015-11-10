@@ -1,3 +1,4 @@
+_id,_type,author,backlinks,body,createdDate,credits,isPublished,publishedDate,ratting,slug,tags,title,updatedDate
 bp0,BlogPost,namlook,,"hello from ""0""","Fri, 31 Jul 2015 22:00:00 GMT",,false,,0,,,post 0,
 bp1,BlogPost,namlook,,"hello from ""1""","Sat, 01 Aug 2015 22:00:00 GMT",user0,true,,1,,tag0,post 1,
 bp2,BlogPost,namlook,,"hello from ""2""","Sun, 02 Aug 2015 22:00:00 GMT",user0|user1,false,,2,,tag0|tag1,post 2,

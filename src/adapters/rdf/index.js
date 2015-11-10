@@ -10,6 +10,7 @@ import {
     operation2triple,
     constructTriples,
     constructWhereTriples,
+    classRdfUri,
     propertyRdfUri,
     propertyName2Sparson} from './utils';
 import {Generator as SparqlGenerator} from 'sparqljs';
@@ -101,6 +102,51 @@ export default function(config) {
              */
             clear() {
                 return this.execute(`CLEAR GRAPH <${config.graphUri}>`);
+            },
+
+            clearResource(modelType) {
+                return Promise.resolve().then(() => {
+
+                    let modelClassUri = classRdfUri(db[modelType]);
+
+                    let sparson = {
+                        type: 'update',
+                        updates: [{
+                            updateType: 'insertdelete',
+                            graph: config.graphUri,
+                            delete: [{
+                                type: 'bgp',
+                                triples: [{
+                                    subject: '?s',
+                                    predicate: '?p',
+                                    object: '?o'
+                                }]
+                            }],
+                            insert: [],
+                            where: [{
+                                type: 'bgp',
+                                triples: [
+                                    {
+                                        subject: '?s',
+                                        predicate: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type',
+                                        object: modelClassUri
+                                    },
+                                    {
+                                        subject: '?s',
+                                        predicate: '?p',
+                                        object: '?o'
+                                    }
+                                ]
+                            }]
+                        }]
+                    };
+
+
+                    /*** generate the sparql from the sparson ***/
+                    let sparql = new SparqlGenerator().stringify(sparson);
+
+                    return this.execute(sparql);
+                });
             },
 
 
