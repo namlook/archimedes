@@ -1,6 +1,6 @@
 
 import _ from 'lodash';
-import {Util as N3Util} from 'N3';
+import {Util as N3Util} from 'n3';
 import {ValidationError} from '../../errors';
 import moment from 'moment';
 
