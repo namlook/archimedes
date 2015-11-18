@@ -529,13 +529,13 @@ export default function(config) {
 
                     let {whereClause} = query2whereClause(db, modelType, query, options);
 
-                    let {property, aggregation} = aggregator;
+                    let {property: propertyName, aggregation} = aggregator;
 
                     /** construct the property value to perform the group by **/
-                    let propertyUri = propertyRdfUri(db[modelType], property);
+                    let propertyUri = propertyRdfUri(db[modelType], propertyName);
                     let predicate;
-                    if (_.contains(property, '.')) {
-                        predicate = propertyName2Sparson(db[modelType], property);
+                    if (_.contains(propertyName, '.')) {
+                        predicate = propertyName2Sparson(db[modelType], propertyName);
                     } else {
                         predicate = propertyUri;
                     }
@@ -547,11 +547,11 @@ export default function(config) {
 
 
                     /** construct the aggregation value **/
-                    let {target} = aggregation;
-                    let targetPropertyUri = propertyRdfUri(db[modelType], target);
+                    let {target: targetName} = aggregation;
+                    let targetPropertyUri = propertyRdfUri(db[modelType], targetName);
                     let aggregationPredicate;
-                    if (_.contains(target, '.')) {
-                        aggregationPredicate = propertyName2Sparson(db[modelType], target);
+                    if (_.contains(targetName, '.')) {
+                        aggregationPredicate = propertyName2Sparson(db[modelType], targetName);
                     } else {
                         aggregationPredicate = targetPropertyUri;
                     }
@@ -598,22 +598,33 @@ export default function(config) {
                     return this.execute(sparql).then((data) => {
                         let results = [];
 
-                        let isLabelBoolean = db[modelType].schema.getProperty(property).type === 'boolean';
+                        let target = db[modelType].schema.getProperty(targetName);
 
-                        data.forEach((item) => {
+                        for (let item of data) {
                             /** Virtuoso hack: convert integer as boolean **/
                             let label = item.aggregatedPropertyName.value;
-                            if (isLabelBoolean) {
+                            let _property = db[modelType].schema.getProperty(propertyName);
+                            if (_property.type === 'boolean') {
                                 if (!isNaN(parseFloat(label))) {
                                     label = Boolean(parseFloat(label));
                                 }
                             }
                             /*****/
+                            let value = parseFloat(item.value.value);
+                            if (aggregation.operator !== 'count') {
+                                let {error, value: validatedValue} = target.validate(value);
+                                if (error) {
+                                    throw error;
+                                } else {
+                                    value = validatedValue;
+                                }
+                            }
+
                             results.push({
                                 label: `${label}`,
-                                value: parseFloat(item.value.value)
+                                value: value
                             });
-                        });
+                        }
                         return results;
                     });
 
