@@ -79,6 +79,23 @@ export default [
             'comment67'
         ]
     },
+    {
+        model: 'BlogPost',
+        query: {'author.subscribedMailingList': {$exists: false}},
+        ids: [
+            'blogpost0',
+            'blogpost2',
+            'blogpost4',
+            'blogpost5',
+            'blogpost7',
+            'blogpost9'
+        ]
+    },
+    {
+        model: 'BlogPost',
+        query: {'author.subscribedMailingList': {$exists: true}},
+        ids: ['blogpost1', 'blogpost3', 'blogpost6', 'blogpost8' ]
+    },
 
     /*** strings ***/
 

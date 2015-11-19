@@ -391,19 +391,23 @@ export let query2whereClause = function(db, modelType, query, options) {
 
 
             if (operator === '$exists') {
-                skipTriple = true;
                 if (value === false) {
+                    skipTriple = true;
                     filter.operator = 'notexists';
+                    filter.args = [{
+                        type: 'bgp',
+                        triples: [{
+                            subject: '?s',
+                            predicate: predicate,
+                            object: variable
+                        }]
+                    }];
+                } else {
+                    /** if the value is true, we don't need to populate
+                     * a filter as the triple will be added
+                     */
+                    return;
                 }
-
-                filter.args = [{
-                    type: 'bgp',
-                    triples: [{
-                        subject: '?s',
-                        predicate: propertyUri,
-                        object: variable
-                    }]
-                }];
 
             } else if (isDate && operator === '$eq') {
 
