@@ -332,6 +332,22 @@ describe('Model', function() {
             expect(blogPost.get('title')).to.equal('the title');
             done();
         });
+
+        it('should strip undefined values', (done) => {
+            let blogPost = db.BlogPost.create({
+                _id: 'thepost',
+                title: 'the title',
+                ratting: undefined,
+                author: null
+            });
+            expect(blogPost.attrs()).to.deep.equal({
+                _id: 'thepost',
+                _type: 'BlogPost',
+                title: 'the title',
+                author: null
+            });
+            done();
+        });
     });
 
     describe('#csvHeader()', function() {

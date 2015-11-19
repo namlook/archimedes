@@ -204,6 +204,9 @@ export default function(dbAdapter, config) {
                         `Unknown type ${modelType}`, {pojo: pojo}));
                 }
 
+
+                pojo = _.omit(pojo, _.isUndefined);
+
                 let modelSchema = this[modelType].schema;
                 let {error, value} = modelSchema.validate(pojo);
                 if (error) {
