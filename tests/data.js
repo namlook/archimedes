@@ -48,6 +48,10 @@ for (let i = 0; i < 10; i++) {
     for (let k = 0; k < i % 8; k++) {
         let sensation = (k + 10 + i) % 3 ? 'rocks' : 'sucks';
         let thing = (k + i) % 5 ? 'thing' : 'stuff';
+        let ratting;
+        if (i % 3 === 0) {
+            ratting = i % 5;
+        }
         comments.push({
             _id: `comment${k}${i}`,
             _type: 'Comment',
@@ -56,10 +60,12 @@ for (let i = 0; i < 10; i++) {
             author: {
                 _id: `user${k}`,
                 _type: 'User'
-            }
+            },
+            ratting: ratting
         });
     }
 }
+
 
 /** users **/
 var users = _.range(0, 5).map((i) => {
@@ -113,7 +119,10 @@ export default function loadDb() {
 }
 
 if (require.main === module) {
-    loadDb();
+    loadDb().catch((error) => {
+        console.log(error);
+        console.log(error.stack);
+    });
 }
 
 

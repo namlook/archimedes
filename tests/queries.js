@@ -39,25 +39,45 @@ export default [
         ids: []
     },
     {
-        model: 'BlogPost',
+        model: 'Comment',
         query: {ratting: {$exists: true}},
         ids: [
-            'blogpost0',
-            'blogpost1',
-            'blogpost2',
-            'blogpost3',
-            'blogpost4',
-            'blogpost5',
-            'blogpost6',
-            'blogpost7',
-            'blogpost8',
-            'blogpost9'
+            'comment03',
+            'comment06',
+            'comment09',
+            'comment13',
+            'comment16',
+            'comment23',
+            'comment26',
+            'comment36',
+            'comment46',
+            'comment56'
         ]
     },
     {
-        model: 'BlogPost',
+        model: 'Comment',
         query: {ratting: {$exists: false}},
-        ids: []
+        ids: [
+            'comment01',
+            'comment02',
+            'comment04',
+            'comment05',
+            'comment07',
+            'comment12',
+            'comment14',
+            'comment15',
+            'comment17',
+            'comment24',
+            'comment25',
+            'comment27',
+            'comment34',
+            'comment35',
+            'comment37',
+            'comment45',
+            'comment47',
+            'comment57',
+            'comment67'
+        ]
     },
 
     /*** strings ***/

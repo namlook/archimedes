@@ -334,7 +334,6 @@ export let query2whereClause = function(db, modelType, query, options) {
             object: variable
         };
 
-        triples.push(triple);
 
         /**
          * if object is... well, an object, then there is operators
@@ -342,6 +341,9 @@ export let query2whereClause = function(db, modelType, query, options) {
         if (!_.isObject(object) || _.isDate(object)) {
             object = {$eq: object};
         }
+
+
+        let skipTriple = false;
 
         /**
          * build values filter
@@ -389,6 +391,7 @@ export let query2whereClause = function(db, modelType, query, options) {
 
 
             if (operator === '$exists') {
+                skipTriple = true;
                 if (value === false) {
                     filter.operator = 'notexists';
                 }
@@ -429,6 +432,10 @@ export let query2whereClause = function(db, modelType, query, options) {
 
             filters.push(filter);
         });
+
+        if (!skipTriple) {
+            triples.push(triple);
+        }
 
     });
 
