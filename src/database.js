@@ -538,15 +538,31 @@ export default function(dbAdapter, config) {
                     };
                 }
 
-                if (!aggregator.aggregation) {
-                    aggregator.aggregation = {operator: 'count', target: aggregator.property};
-                }
-
                 if (typeof aggregator.aggregation === 'string') {
                     aggregator.aggregation = {
-                        operator: aggregator.aggregation,
-                        target: aggregator.property
+                        operator: aggregator.aggregation
                     };
+                }
+
+                if (!aggregator.aggregation) {
+                    aggregator.aggregation = {};
+                }
+
+                if (!aggregator.aggregation.operator) {
+                    aggregator.aggregation.operator = 'count';
+                }
+
+                if (!_.isArray(aggregator.property)) {
+                    if (!aggregator.aggregation.target) {
+                        aggregator.aggregation.target = aggregator.property;
+                    }
+                    aggregator.property = [aggregator.property];
+                } else if (!aggregator.aggregation.target) {
+                    if (aggregator.aggregation.operator === 'count') {
+                        aggregator.aggregation.target = aggregator.property[0];
+                    } else {
+                        throw new Error('groupBy: with multiple properties and a custom operator, target is required');
+                    }
                 }
 
                 let {error: aggregatorError, value: validatedAggregator} = groupByValidator(aggregator);
@@ -556,9 +572,12 @@ export default function(dbAdapter, config) {
                 }
 
                 let modelSchema = this[modelType].schema;
-                if (!modelSchema.getProperty(validatedAggregator.property)) {
-                    throw new ValidationError('malformed aggregator', `unknown property aggregator "${validatedAggregator.property}" on model "${modelType}"`);
+                for (let propertyName of validatedAggregator.property) {
+                    if (!modelSchema.getProperty(propertyName)) {
+                        throw new ValidationError('malformed aggregator', `unknown property aggregator "${validatedAggregator.property}" on model "${modelType}"`);
+                    }
                 }
+
                 if (!modelSchema.getProperty(validatedAggregator.aggregation.target)) {
                     throw new ValidationError('malformed aggregator', `unknown property target "${validatedAggregator.aggregation.target}" on model "${modelType}"`);
                 }
@@ -573,10 +592,22 @@ export default function(dbAdapter, config) {
                 let {error: queryError, value: validatedQuery} = queryValidator(this[modelType].schema, query);
 
                 if (queryError) {
-                    throw new ValidationError('malformed query', queryError);
+                    throw new ValidationError('groupBy: malformed query', queryError);
                 }
 
                 // TODO validate options
+                if (!_.get(options, 'sort', []).length) {
+                    if (aggregator.property.length > 1) {
+                        options.sort = [].concat(aggregator.property);
+                    }
+                }
+
+                for (let propertyName of _.get(options, 'sort', [])) {
+                    let property = this[modelType].schema.getProperty(propertyName);
+                    if (!property) {
+                        throw new ValidationError(`sort: unknown property "${propertyName}" on model "${modelType}"`);
+                    }
+                }
 
                 return this.adapter.groupBy(modelType, validatedAggregator, validatedQuery, options);
             });

@@ -39,7 +39,8 @@ var processTest = function(db, testQuery) {
                     console.log('------------------');
                     console.log('>>>', chalk.blue(inspect(testQuery, {depth: 10, colors: true})));
                     console.log('------------------');
-                    console.log(error);
+                    console.log('>>>', chalk.red(inspect(e, {depth: 10, colors: true})));
+                    console.log('------------------');
                     console.log(error.stack);
                     return reject(e);
                 }
@@ -55,7 +56,9 @@ var processTest = function(db, testQuery) {
                     }
                 } catch(e) {
                     console.log('------------------');
-                    console.log('>>>', chalk.blue(inspect(testQuery, {depth: 10, colors: true})));
+                    console.log('expected>', chalk.blue(inspect(testQuery, {depth: 10, colors: true})));
+                    console.log('------------------');
+                    console.log('actual>', chalk.red(inspect(results, {depth: 10, colors: true})));
                     console.log('------------------');
                     return reject(e);
                 }

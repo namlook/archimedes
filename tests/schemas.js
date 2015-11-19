@@ -1,6 +1,9 @@
 
 export default {
     Rateable: {
+        // meta: {
+        //     abtract: true // the type will not be store in database
+        // },
         properties: {
             ratting: {
                 type: 'number',

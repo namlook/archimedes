@@ -2,7 +2,7 @@
 import joi from 'joi';
 
 var groupByValidator = {
-    property: joi.string(),
+    property: joi.array().items(joi.string()),
     aggregation: joi.object().keys({
         operator: joi.string().only('count', 'sum', 'avg', 'min', 'max'),
         target: joi.string()

@@ -527,23 +527,32 @@ export default function(config) {
             groupBy(modelType, aggregator, query, options) {
                 return Promise.resolve().then(() => {
 
-                    let {whereClause} = query2whereClause(db, modelType, query, options);
+                    let {whereClause} = query2whereClause(db, modelType, query);
 
-                    let {property: propertyName, aggregation} = aggregator;
+                    let {property: propertyNames, aggregation} = aggregator;
 
+                    let variablesMap = {};
+                    let variableNames = [];
                     /** construct the property value to perform the group by **/
-                    let propertyUri = propertyRdfUri(db[modelType], propertyName);
-                    let predicate;
-                    if (_.contains(propertyName, '.')) {
-                        predicate = propertyName2Sparson(db[modelType], propertyName);
-                    } else {
-                        predicate = propertyUri;
+                    let variableIdx = 0;
+                    for (let propertyName of propertyNames) {
+                        let propertyUri = propertyRdfUri(db[modelType], propertyName);
+                        let predicate;
+                        if (_.contains(propertyName, '.')) {
+                            predicate = propertyName2Sparson(db[modelType], propertyName);
+                        } else {
+                            predicate = propertyUri;
+                        }
+                        let variable = `?aggregatedPropertyName${variableIdx}`;
+                        whereClause.push({
+                            subject: '?s',
+                            predicate: predicate,
+                            object: variable
+                        });
+                        variableNames.push(variable);
+                        variablesMap[variable] = propertyName;
+                        variableIdx++;
                     }
-                    whereClause.push({
-                        subject: '?s',
-                        predicate: predicate,
-                        object: '?aggregatedPropertyName'
-                    });
 
 
                     /** construct the aggregation value **/
@@ -561,34 +570,64 @@ export default function(config) {
                         object: '?aggregatedTargetName'
                     });
 
+                    let orderBy = [];
+                    let $valueUsed = false;
+                    for (let propertyName of _.get(options, 'sort', [])) {
+                        if (!propertyName) {
+                            continue;
+                        }
+
+                        let descending = false;
+                        if (propertyName[0] === '-') {
+                            propertyName = _.trimLeft(propertyName, '-');
+                            descending = true;
+                        }
+
+                        let variable;
+                        if (propertyName === '$value') {
+                            $valueUsed = true;
+                            variable = '?value';
+                        } else {
+                            variable = _.invert(variablesMap)[propertyName];
+                            if (!variable) {
+                                throw new Error(`cannot sort by the unknown property: "${propertyName}"`);
+                            }
+                        }
+
+                        orderBy.push({
+                            expression: variable,
+                            descending: descending
+                        });
+                    }
+
+                    if (!$valueUsed) {
+                        orderBy.push({expression: '?value', descending: true});
+                    }
 
                     /** build the sparson **/
                     let sparson = {
                         type: 'query',
                         queryType: 'SELECT',
-                        variables: [
-                            `?aggregatedPropertyName`,
+                        variables: variableNames.concat([
                             {
-                            expression: {
-                                expression: `?aggregatedTargetName`,
-                                type: 'aggregate',
-                                aggregation: aggregation.operator,
-                                distinct: false
-                            },
-                            variable: '?value'
-                        }],
+                                expression: {
+                                    expression: `?aggregatedTargetName`,
+                                    type: 'aggregate',
+                                    aggregation: aggregation.operator,
+                                    distinct: false
+                                },
+                                variable: '?value'
+                            }
+                        ]),
                         from: {
                             'default': [config.graphUri]
                         },
                         where: whereClause,
-                        group: [
-                            {expression: `?aggregatedPropertyName`}
-                        ],
-                        order: [
-                            {expression: '?value', descending: true},
-                            {expression: '?aggregatedPropertyName'}
-                        ],
-                        limit: 50
+                        group: variableNames.map((variable) => {
+                            return {expression: variable};
+                        }),
+                        order: orderBy,
+                        limit: 1000
                     };
 
 
@@ -596,36 +635,70 @@ export default function(config) {
                     let sparql = new SparqlGenerator().stringify(sparson);
 
                     return this.execute(sparql).then((data) => {
-                        let results = [];
+
+                        /** WARNING AWEFUL HACK !
+                         * it works only with 1 or 2 properties.
+                         * the following should be rewrited and use reccursion
+                         */
 
                         let target = db[modelType].schema.getProperty(targetName);
 
-                        for (let item of data) {
-                            /** Virtuoso hack: convert integer as boolean **/
-                            let label = item.aggregatedPropertyName.value;
-                            let _property = db[modelType].schema.getProperty(propertyName);
-                            if (_property.type === 'boolean') {
-                                if (!isNaN(parseFloat(label))) {
-                                    label = Boolean(parseFloat(label));
+                        let _compute = function(item, nameIdx, names) {
+                            let variable = names[nameIdx];
+                            let name = _.trimLeft(variable, '?');
+                            let label = item[name].value;
+
+                            if (nameIdx + 2 >= names.length) {
+                                let nextName = _.trimLeft(names[nameIdx + 1], '?');
+
+                                let value = parseFloat(item[nextName].value);
+                                if (aggregation.operator !== 'count') {
+                                    let {error, value: validatedValue} = target.validate(value);
+                                    if (error) {
+                                        throw error;
+                                    } else {
+                                        value = validatedValue;
+                                    }
                                 }
+
+                                return {label: label, value: value};
                             }
-                            /*****/
-                            let value = parseFloat(item.value.value);
-                            if (aggregation.operator !== 'count') {
-                                let {error, value: validatedValue} = target.validate(value);
-                                if (error) {
-                                    throw error;
+                            return {label: label, values: _compute(item, nameIdx + 1, names)};
+                        };
+
+                        let computeResult = function(_data, variables) {
+
+                            let _results = {};
+                            for (let item of _data) {
+                                let res = _compute(item, 0, variables);
+                                _results[res.label] = _results[res.label] || [];
+                                if (res.values) {
+                                    _results[res.label].push(res.values);
                                 } else {
-                                    value = validatedValue;
+                                    _results[res.label].push(res.value);
                                 }
                             }
 
-                            results.push({
-                                label: `${label}`,
-                                value: value
-                            });
-                        }
-                        return results;
+                            let results = [];
+                            for (let key of Object.keys(_results)) {
+                                /** Virtuoso hack: convert integer as boolean **/
+                                let label = key;
+                                if (['0', '1'].indexOf(label) > -1 && !isNaN(parseFloat(label))) {
+                                    label = Boolean(parseFloat(label));
+                                }
+                                /***/
+
+                                if (variables.length > 2) {
+                                    results.push({label: `${label}`, values: _results[key]});
+                                } else {
+                                    results.push({label: `${label}`, value: _results[key][0]});
+                                }
+                            }
+
+                            return results;
+                        };
+
+                        return computeResult(data, variableNames.concat(['value']));
                     });
 
                 });
