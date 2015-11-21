@@ -524,6 +524,188 @@ export default function(config) {
             },
 
 
+            /**
+             * Aggregate the properties values that match the query
+             *
+             * @params {string} modelType
+             * @params {?object} query
+             * @params {?options} options
+             * @returns a promise which resolve into the number total
+             *      of document that matches the query
+             */
+            aggregate(modelType, aggregator, query, options) {
+                return Promise.resolve().then(() => {
+
+                    let {whereClause} = query2whereClause(db, modelType, query);
+
+                    let orderBy = _.get(options, 'sort', []).map((variable) => {
+                        let descending = false;
+                        if (variable[0] === '-') {
+                            descending = true;
+                            variable = variable.slice(1);
+                        }
+                        return {
+                            expression: `?${variable}`,
+                            descending: descending
+                        };
+                    });
+
+                    let variables = [];
+                    let groupByExpressions = [];
+                    let useGroupBy = false;
+
+                    let aggregatorItems = [];
+                    for (let variable of Object.keys(aggregator)) {
+                        let propertyName = aggregator[variable];
+
+                        if (_.isObject(propertyName)) {
+                            useGroupBy = true;
+                            for (let operator of Object.keys(propertyName)) {
+                                propertyName = propertyName[operator];
+                                operator = _.trimLeft(operator, '$');
+                                aggregatorItems.push({
+                                    propertyName,
+                                    operator,
+                                    variable
+                                });
+                            }
+                        } else {
+                            aggregatorItems.push({
+                                propertyName,
+                                variable
+                            });
+                        }
+                    }
+
+                    for (let item of aggregatorItems) {
+                        let {propertyName, operator, variable} = item;
+
+                        let modelClass = db[modelType];
+                        let predicate;
+                        if (_.contains(propertyName, '.')) {
+                            predicate = propertyName2Sparson(modelClass, propertyName);
+                        } else if (propertyName !== true) {
+                            predicate = propertyRdfUri(modelClass, propertyName);
+                        }
+
+                        if (operator) {
+
+                            let propertyVariable;
+
+                            if (operator === 'count' && propertyName === true) {
+                                propertyVariable = '?s';
+                            } else {
+                                let triple;
+                                if (_.isObject(predicate)) {
+                                    triple = _.find(whereClause[0].triples, 'predicate.items', predicate.items);
+                                } else {
+                                    triple = _.find(whereClause[0].triples, 'predicate', predicate);
+                                }
+
+                                if (triple) {
+                                    propertyVariable = triple.object;
+                                } else {
+                                    propertyVariable = `?${_.camelCase(propertyName)}`;
+                                    whereClause[0].triples.push({
+                                        subject: '?s',
+                                        predicate: predicate,
+                                        object: propertyVariable
+                                    });
+                                }
+                            }
+
+                            variables.push({
+                                expression: {
+                                    expression: propertyVariable,
+                                    type: 'aggregate',
+                                    aggregation: operator
+                                },
+                                variable: `?${variable}`
+                            });
+                        } else {
+                            let triple;
+                            if (_.isObject(predicate)) {
+                                triple = _.find(whereClause[0].triples, 'predicate.items', predicate.items);
+                            } else {
+                                triple = _.find(whereClause[0].triples, 'predicate', predicate);
+                            }
+
+                            if (triple) {
+                                variables.push({
+                                    expression: triple.object,
+                                    variable: `?${variable}`
+                                });
+                                variable = triple.object;
+                            } else {
+                                variable = `?${variable}`;
+                                whereClause[0].triples.push({
+                                    subject: '?s',
+                                    predicate: predicate,
+                                    object: variable
+                                });
+                                variables.push(variable);
+                            }
+                            if (useGroupBy) {
+                                groupByExpressions.push({expression: variable});
+                            }
+                        }
+                    }
+
+
+                    let sparson = {
+                        type: 'query',
+                        queryType: 'SELECT',
+                        variables: variables,
+                        from: {
+                            'default': [config.graphUri]
+                        },
+                        where: whereClause,
+                        limit: options.limit
+                    };
+
+                    if (groupByExpressions.length) {
+                        sparson.group = groupByExpressions;
+                    }
+
+                    if (orderBy.length) {
+                        sparson.order = orderBy;
+                    }
+                    // console.dir(sparson, {depth: 10});
+
+                    // /*** generate the sparql from the sparson ***/
+                    let sparql = new SparqlGenerator().stringify(sparson);
+
+                    // console.log(sparql);
+
+                    return this.execute(sparql);
+                }).then((data) => {
+                    let results = [];
+                    for (let item of data) {
+                        let resultItem = {};
+                        for (let variable of Object.keys(item)) {
+                            let {value, datatype} = item[variable];
+                            if (datatype) {
+                                datatype = RDF_DATATYPES[datatype];
+
+                                if (datatype === 'number') {
+                                    value = parseFloat(value);
+                                } else if (datatype === 'boolean') {
+                                    if (['true', '1', 'yes'].indexOf(value) > -1) {
+                                        value = 'true';
+                                    } else {
+                                        value = 'false';
+                                    }
+                                }
+                            }
+                            resultItem[variable] = value;
+                        }
+                        results.push(resultItem);
+                    }
+                    return results;
+                });
+            },
+
+
             groupBy(modelType, aggregator, query, options) {
                 return Promise.resolve().then(() => {
 

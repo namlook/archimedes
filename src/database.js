@@ -16,6 +16,14 @@ const validPropertyTypes = [
     'array'
 ];
 
+const validAggregationOperators = [
+    '$count',
+    '$max',
+    '$min',
+    '$avg',
+    '$sum'
+];
+
 import Promise from 'bluebird';
 import csvStream from 'csv-stream';
 import es from 'event-stream';
@@ -514,6 +522,88 @@ export default function(dbAdapter, config) {
             });
         },
 
+        /**
+         * Returns a promise which resolve the aggregate the
+         * properties values that match the query
+         *
+         * @params {string} modelType - the model type
+         * @params {?object} aggregator - object that contains property and the operator
+         * @params {?object} query
+         * @returns {promise}
+         */
+        aggregate(modelType, aggregator, query, options) {
+            return Promise.resolve().then(() => {
+                if (typeof modelType !== 'string') {
+                    throw new Error('aggregate: modelType should be a string');
+                }
+
+                if (!this[modelType]) {
+                    throw new Error(`aggregate: Unknown modelType: "${modelType}"`);
+                }
+
+                if (!_.isObject(aggregator)) {
+                    throw new Error('aggregate: aggregator is required and should be an object');
+                }
+
+                let modelClass = this[modelType];
+                for (let key of Object.keys(aggregator)) {
+                    let value = aggregator[key];
+                    if (_.isObject(value)) {
+                        for (let operator of Object.keys(value)) {
+
+                            if (validAggregationOperators.indexOf(operator.toLowerCase()) === -1) {
+                                throw new ValidationError(`aggregate: unknown operator "${operator}"`);
+                            }
+
+                            let propertyName = value[operator];
+                            if (!(operator === '$count' && propertyName === true)) {
+                                if (!modelClass.schema.getProperty(propertyName)) {
+                                    throw new ValidationError(`aggregate: unknown property "${propertyName}" for model "${modelType}"`);
+                                }
+                            }
+                        }
+                    } else {
+                        if (!modelClass.schema.getProperty(value)) {
+                            throw new ValidationError(`aggregate: unknown property "${value}" for model "${modelType}"`);
+                        }
+                    }
+                }
+
+                if (query && !_.isObject(query)) {
+                    throw new Error('aggregate: query should be an object');
+                }
+
+                query = query || {};
+                query._type = modelType;
+
+                let {error, value: validatedQuery} = queryValidator(this[modelType].schema, query);
+
+                if (error) {
+                    throw new ValidationError('malformed query', error);
+                }
+
+                options = options || {};
+
+                if (typeof options.sort === 'string') {
+                    options.sort = options.sort.split(',');
+                }
+
+                if (_.get(options, 'sort', []).length) {
+                    for (let variable of options.sort) {
+                        if (variable[0] === '-') {
+                                variable = variable.slice(1);
+                        }
+                        if (Object.keys(aggregator).indexOf(variable) === -1) {
+                            throw new ValidationError(`aggregate: unknown sorting constraint "${variable}"`);
+                        }
+                    }
+                }
+
+                options.limit = options.limit || 100;
+
+                return this.adapter.aggregate(modelType, aggregator, validatedQuery, options);
+            });
+        },
 
         groupBy(modelType, aggregator, query, options) {
 
