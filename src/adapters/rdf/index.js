@@ -534,10 +534,11 @@ export default function(config) {
              *      of document that matches the query
              */
             aggregate(modelType, aggregator, query, options) {
+                let variablePropertyMap = {};
                 return Promise.resolve().then(() => {
+                    let modelClass = db[modelType];
 
                     let {whereClause} = query2whereClause(db, modelType, query);
-
                     let orderBy = _.get(options, 'sort', []).map((variable) => {
                         let descending = false;
                         if (variable[0] === '-') {
@@ -579,21 +580,59 @@ export default function(config) {
 
                     for (let item of aggregatorItems) {
                         let {propertyName, operator, variable} = item;
-
-                        let modelClass = db[modelType];
-                        let predicate;
-                        if (_.contains(propertyName, '.')) {
-                            predicate = propertyName2Sparson(modelClass, propertyName);
-                        } else if (propertyName !== true) {
-                            predicate = propertyRdfUri(modelClass, propertyName);
+                        if (!operator) {
+                            variablePropertyMap[variable] = modelClass.schema.getProperty(propertyName);
                         }
+                        if (propertyName === '_id') {
 
-                        if (operator) {
+                            variables.push({
+                                expression: '?s',
+                                variable: `?${variable}`
+                            });
 
-                            let propertyVariable;
+                        } else {
 
-                            if (operator === 'count' && propertyName === true) {
-                                propertyVariable = '?s';
+                            let predicate;
+                            if (_.contains(propertyName, '.')) {
+                                predicate = propertyName2Sparson(modelClass, propertyName);
+                            } else if (propertyName !== true) {
+                                predicate = propertyRdfUri(modelClass, propertyName);
+                            }
+
+                            if (operator) {
+
+                                let propertyVariable;
+
+                                if (operator === 'count' && propertyName === true) {
+                                    propertyVariable = '?s';
+                                } else {
+                                    let triple;
+                                    if (_.isObject(predicate)) {
+                                        triple = _.find(whereClause[0].triples, 'predicate.items', predicate.items);
+                                    } else {
+                                        triple = _.find(whereClause[0].triples, 'predicate', predicate);
+                                    }
+
+                                    if (triple) {
+                                        propertyVariable = triple.object;
+                                    } else {
+                                        propertyVariable = `?${_.camelCase(propertyName)}`;
+                                        whereClause[0].triples.push({
+                                            subject: '?s',
+                                            predicate: predicate,
+                                            object: propertyVariable
+                                        });
+                                    }
+                                }
+
+                                variables.push({
+                                    expression: {
+                                        expression: propertyVariable,
+                                        type: 'aggregate',
+                                        aggregation: operator
+                                    },
+                                    variable: `?${variable}`
+                                });
                             } else {
                                 let triple;
                                 if (_.isObject(predicate)) {
@@ -603,50 +642,23 @@ export default function(config) {
                                 }
 
                                 if (triple) {
-                                    propertyVariable = triple.object;
+                                    variables.push({
+                                        expression: triple.object,
+                                        variable: `?${variable}`
+                                    });
+                                    variable = triple.object;
                                 } else {
-                                    propertyVariable = `?${_.camelCase(propertyName)}`;
+                                    variable = `?${variable}`;
                                     whereClause[0].triples.push({
                                         subject: '?s',
                                         predicate: predicate,
-                                        object: propertyVariable
+                                        object: variable
                                     });
+                                    variables.push(variable);
                                 }
-                            }
-
-                            variables.push({
-                                expression: {
-                                    expression: propertyVariable,
-                                    type: 'aggregate',
-                                    aggregation: operator
-                                },
-                                variable: `?${variable}`
-                            });
-                        } else {
-                            let triple;
-                            if (_.isObject(predicate)) {
-                                triple = _.find(whereClause[0].triples, 'predicate.items', predicate.items);
-                            } else {
-                                triple = _.find(whereClause[0].triples, 'predicate', predicate);
-                            }
-
-                            if (triple) {
-                                variables.push({
-                                    expression: triple.object,
-                                    variable: `?${variable}`
-                                });
-                                variable = triple.object;
-                            } else {
-                                variable = `?${variable}`;
-                                whereClause[0].triples.push({
-                                    subject: '?s',
-                                    predicate: predicate,
-                                    object: variable
-                                });
-                                variables.push(variable);
-                            }
-                            if (useGroupBy) {
-                                groupByExpressions.push({expression: variable});
+                                if (useGroupBy) {
+                                    groupByExpressions.push({expression: variable});
+                                }
                             }
                         }
                     }
@@ -684,18 +696,17 @@ export default function(config) {
                         let resultItem = {};
                         for (let variable of Object.keys(item)) {
                             let {value, datatype} = item[variable];
-                            if (datatype) {
-                                datatype = RDF_DATATYPES[datatype];
-
-                                if (datatype === 'number') {
-                                    value = parseFloat(value);
-                                } else if (datatype === 'boolean') {
-                                    if (['true', '1', 'yes'].indexOf(value) > -1) {
-                                        value = 'true';
-                                    } else {
-                                        value = 'false';
-                                    }
+                            let property = variablePropertyMap[variable];
+                            let propertyType = property && property.type;
+                            datatype = RDF_DATATYPES[datatype];
+                            if (datatype === 'boolean' || propertyType === 'boolean') {
+                                if (['true', '1', 'yes', 1].indexOf(value) > -1) {
+                                    value = true;
+                                } else {
+                                    value = false;
                                 }
+                            } else if (propertyType === 'number' || datatype === 'number') {
+                                value = parseFloat(value);
                             }
                             resultItem[variable] = value;
                         }

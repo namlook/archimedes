@@ -10,6 +10,27 @@ export default [
             { label: 'male', total: 3 }
         ]
     },
+
+    {
+        should: 'aggregate the _id',
+        model: 'User',
+        aggregation: {id: '_id'},
+        results: [
+            { id: 'http://tests.archimedes.org/instances/user0' },
+            { id: 'http://tests.archimedes.org/instances/user1' },
+            { id: 'http://tests.archimedes.org/instances/user3' },
+            { id: 'http://tests.archimedes.org/instances/user2' },
+            { id: 'http://tests.archimedes.org/instances/user4' }
+        ]
+    },
+    {
+        should: 'aggregate the _type',
+        model: 'User',
+        aggregation: {type: '_type', 'occ': {$count: '_type'}},
+        results: [
+            { type: 'http://tests.archimedes.org/classes/User', occ: 5 }
+        ]
+    },
     {
         should: 'make simple aggregation with query',
         model: 'User',
@@ -105,10 +126,10 @@ export default [
         },
         options: {sort: ['isPublished', 'gender']},
         results: [
-            { isPublished: 'false', gender: 'female', total: 2},
-            { isPublished: 'false', gender: 'male', total: 2},
-            { isPublished: 'true', gender: 'female', total: 2},
-            { isPublished: 'true', gender: 'male', total: 4}
+            { isPublished: false, gender: 'female', total: 2},
+            { isPublished: false, gender: 'male', total: 2},
+            { isPublished: true, gender: 'female', total: 2},
+            { isPublished: true, gender: 'male', total: 4}
         ]
     },
     {
@@ -121,10 +142,10 @@ export default [
         },
         options: {sort: ['-total', 'isPublished', 'gender']},
         results: [
-            { isPublished: 'true', gender: 'male', total: 4},
-            { isPublished: 'false', gender: 'female', total: 2},
-            { isPublished: 'false', gender: 'male', total: 2},
-            { isPublished: 'true', gender: 'female', total: 2}
+            { isPublished: true, gender: 'male', total: 4},
+            { isPublished: false, gender: 'female', total: 2},
+            { isPublished: false, gender: 'male', total: 2},
+            { isPublished: true, gender: 'female', total: 2}
         ]
     },
     {
@@ -137,10 +158,10 @@ export default [
         },
         options: {sort: ['isPublished', 'gender']},
         results: [
-            { isPublished: 'false', gender: 'female', total: 1.5},
-            { isPublished: 'false', gender: 'male', total: 1.5},
-            { isPublished: 'true', gender: 'female', total: 1.5},
-            { isPublished: 'true', gender: 'male', total: 3}
+            { isPublished: false, gender: 'female', total: 1.5},
+            { isPublished: false, gender: 'male', total: 1.5},
+            { isPublished: true, gender: 'female', total: 1.5},
+            { isPublished: true, gender: 'male', total: 3}
         ]
     },
     {
@@ -154,10 +175,10 @@ export default [
         query: {isPublished: {$exists: true}},
         options: {sort: ['isPublished', 'gender']},
         results: [
-            { isPublished: 'false', gender: 'female', total: 1.5},
-            { isPublished: 'false', gender: 'male', total: 1.5},
-            { isPublished: 'true', gender: 'female', total: 1.5},
-            { isPublished: 'true', gender: 'male', total: 3}
+            { isPublished: false, gender: 'female', total: 1.5},
+            { isPublished: false, gender: 'male', total: 1.5},
+            { isPublished: true, gender: 'female', total: 1.5},
+            { isPublished: true, gender: 'male', total: 3}
         ]
     },
 
@@ -172,8 +193,8 @@ export default [
         },
         options: {limit: 2, sort: ['isPublished', 'gender']},
         results: [
-            { isPublished: 'false', gender: 'female', total: 2},
-            { isPublished: 'false', gender: 'male', total: 2}
+            { isPublished: false, gender: 'female', total: 2},
+            { isPublished: false, gender: 'male', total: 2}
         ]
     },
 

@@ -557,13 +557,13 @@ export default function(dbAdapter, config) {
 
                             let propertyName = value[operator];
                             if (!(operator === '$count' && propertyName === true)) {
-                                if (!modelClass.schema.getProperty(propertyName)) {
+                                if (!modelClass.schema.getProperty(propertyName) && !_.contains(['_id', '_type'], propertyName)) {
                                     throw new ValidationError(`aggregate: unknown property "${propertyName}" for model "${modelType}"`);
                                 }
                             }
                         }
                     } else {
-                        if (!modelClass.schema.getProperty(value)) {
+                        if (!modelClass.schema.getProperty(value) && !_.contains(['_id', '_type'], value)) {
                             throw new ValidationError(`aggregate: unknown property "${value}" for model "${modelType}"`);
                         }
                     }
