@@ -6,12 +6,12 @@ virtuoso:
         - "8890:8890"
         - "1111:1111"
     environment:
-        DBA_PASSWORD: dba
-        SPARQL_UPDATE: true
+        DBA_PASSWORD: "dba"
+        SPARQL_UPDATE: "true"
     restart: always
     privileged: true
     volumes:
-        - ~/virtuosodb:/var/lib/virtuoso/db
+        - ~/virtuozodb:/var/lib/virtuoso/db
 
 blazegraph:
     image: lyrasis/blazegraph:1.5.3
