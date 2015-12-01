@@ -10,8 +10,8 @@ var databases = {
             /* WARNING for tests when using Virtuoso
             *  type DEFINE sql:log-enable 2 in conductor
             */
-            endpoint: `http://192.168.99.100:8890/sparql` // virtuoso
-            // endpoint: `http://192.168.99.100:9999/bigdata/sparql` // blazegraph's bigdata
+            // endpoint: `http://192.168.99.100:8890/sparql` // virtuoso
+            endpoint: `http://192.168.99.100:9999/bigdata/sparql` // blazegraph's bigdata
         });
     },
     memory: function() {
