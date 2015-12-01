@@ -14,14 +14,14 @@ export default [
     {
         should: 'aggregate the _id',
         model: 'User',
-        aggregation: {id: '_id'},
-        options: {sort: ['id']},
+        aggregation: {id: '_id', title: 'name'},
+        options: {sort: ['title']},
         results: [
-            { id: 'http://tests.archimedes.org/instances/user0' },
-            { id: 'http://tests.archimedes.org/instances/user1' },
-            { id: 'http://tests.archimedes.org/instances/user3' },
-            { id: 'http://tests.archimedes.org/instances/user2' },
-            { id: 'http://tests.archimedes.org/instances/user4' }
+            { title: 'user 0', id: 'http://tests.archimedes.org/instances/user0' },
+            { title: 'user 1', id: 'http://tests.archimedes.org/instances/user1' },
+            { title: 'user 2', id: 'http://tests.archimedes.org/instances/user2' },
+            { title: 'user 3', id: 'http://tests.archimedes.org/instances/user3' },
+            { title: 'user 4', id: 'http://tests.archimedes.org/instances/user4' }
         ]
     },
     {
