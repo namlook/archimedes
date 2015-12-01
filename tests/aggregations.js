@@ -45,9 +45,10 @@ export default [
         should: 'accept true for the $count operator',
         model: 'User',
         aggregation: {x: 'gender', y: {$count: true}},
+        options: {sort: ['x']},
         results: [
-            { x: 'male', y: 3},
-            { x: 'female', y: 2 }
+            { x: 'female', y: 2 },
+            { x: 'male', y: 3}
         ]
     },
 
@@ -65,6 +66,7 @@ export default [
         should: 'aggregate on deep relations',
         model: 'BlogPost',
         aggregation: {gender: 'author.gender', total: {$count: 'author'}},
+        options: {sort: '-total'},
         results: [
             { gender: 'male', total: 6},
             { gender: 'female', total: 4 }
@@ -110,6 +112,7 @@ export default [
             gender: 'author.gender',
             rattingMax: {$max: 'ratting'}
         },
+        options: {sort: ['-rattingMax']},
         results: [
             { gender: 'male', rattingMax: 5},
             { gender: 'female', rattingMax: 3 }
