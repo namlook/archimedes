@@ -278,6 +278,16 @@ export let query2whereClause = function(db, modelType, query, options) {
     let orderBy = [];
     let sorting = {};
 
+    if (query._id) {
+        let instanceUri = instanceRdfUri(modelClass, query._id);
+        filters.push({
+            type: 'operation',
+            operator: '=',
+            args: ['?s', instanceUri]
+        });
+        delete query._id;
+    }
+
     _.get(options, 'sort', []).forEach((propertyName) => {
         if (!propertyName) {
             return;

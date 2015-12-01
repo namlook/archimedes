@@ -15,6 +15,7 @@ export default [
         should: 'aggregate the _id',
         model: 'User',
         aggregation: {id: '_id'},
+        options: {sort: ['id']},
         results: [
             { id: 'http://tests.archimedes.org/instances/user0' },
             { id: 'http://tests.archimedes.org/instances/user1' },
@@ -151,7 +152,7 @@ export default [
     {
         should: 'sort the results by multiple labels',
         model: 'BlogPost',
-         aggregation: {
+        aggregation: {
             isPublished: 'isPublished',
             gender: 'author.gender',
             total: {$avg: 'ratting'}
@@ -167,7 +168,7 @@ export default [
     {
         should: 'sort the results by multiple labels with query',
         model: 'BlogPost',
-         aggregation: {
+        aggregation: {
             isPublished: 'isPublished',
             gender: 'author.gender',
             total: {$avg: 'ratting'}
@@ -180,6 +181,18 @@ export default [
             { isPublished: true, gender: 'female', total: 1.5},
             { isPublished: true, gender: 'male', total: 3}
         ]
+    },
+
+    /*** query ***/
+    {
+        should: 'query by id',
+        model: 'BlogPost',
+        aggregation: {title: 'title', id: '_id'},
+        query: {_id: 'blogpost0'},
+        results: [{
+            title: 'post 0',
+            id: 'http://tests.archimedes.org/instances/blogpost0'
+        }]
     },
 
     /*** limit ***/
