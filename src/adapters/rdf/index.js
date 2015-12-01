@@ -706,7 +706,11 @@ export default function(config) {
                                     value = false;
                                 }
                             } else if (propertyType === 'number' || datatype === 'number') {
-                                value = parseFloat(value);
+                                if (String(parseInt(value, 10)) === value) {
+                                    value = parseInt(value, 10);
+                                } else {
+                                    value = parseFloat(parseFloat(value).toFixed(2));
+                                }
                             }
                             resultItem[variable] = value;
                         }
