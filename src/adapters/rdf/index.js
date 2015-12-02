@@ -12,6 +12,7 @@ import {
     constructWhereTriples,
     classRdfUri,
     propertyRdfUri,
+    uri2id,
     propertyName2Sparson} from './utils';
 import {Generator as SparqlGenerator} from 'sparqljs';
 
@@ -534,9 +535,10 @@ export default function(config) {
              *      of document that matches the query
              */
             aggregate(modelType, aggregator, query, options) {
+                let modelClass = db[modelType];
+
                 let variablePropertyMap = {};
                 return Promise.resolve().then(() => {
-                    let modelClass = db[modelType];
 
                     let {whereClause} = query2whereClause(db, modelType, query);
                     let orderBy = _.get(options, 'sort', []).map((variable) => {
@@ -545,6 +547,7 @@ export default function(config) {
                             descending = true;
                             variable = variable.slice(1);
                         }
+                        variable = variable.split('.').join('___');
                         return {
                             expression: `?${variable}`,
                             descending: descending
@@ -556,8 +559,9 @@ export default function(config) {
                     let useGroupBy = false;
 
                     let aggregatorItems = [];
-                    for (let variable of Object.keys(aggregator)) {
-                        let propertyName = aggregator[variable];
+                    for (let field of Object.keys(aggregator)) {
+                        let propertyName = aggregator[field];
+                        let variable = field.split('.').join('___');
 
                         if (_.isObject(propertyName)) {
                             useGroupBy = true;
@@ -567,22 +571,39 @@ export default function(config) {
                                 aggregatorItems.push({
                                     propertyName,
                                     operator,
-                                    variable
+                                    variable,
+                                    field
                                 });
                             }
                         } else {
-                            aggregatorItems.push({
+                            if (_.endsWith(propertyName, '._id')) {
+
+                                propertyName = propertyName.replace(/\._id$/, '');
+
+                            }
+
+                            let aggregatorItem = {
                                 propertyName,
-                                variable
-                            });
+                                variable,
+                                field
+                            };
+
+                            aggregatorItems.push(aggregatorItem);
                         }
                     }
 
                     for (let item of aggregatorItems) {
+
                         let {propertyName, operator, variable} = item;
-                        if (!operator) {
-                            variablePropertyMap[variable] = modelClass.schema.getProperty(propertyName);
-                        }
+
+                        // if (!operator) {
+                            variablePropertyMap[variable] = {
+                                propertyName: propertyName,
+                                operator: operator,
+                                property: modelClass.schema.getProperty(propertyName)
+                            };
+                        // }
+
                         if (propertyName === '_id') {
 
                             variables.push({
@@ -593,7 +614,9 @@ export default function(config) {
                         } else {
 
                             let predicate;
-                            if (_.contains(propertyName, '.')) {
+                            if (_.endsWith(propertyName, '._type')) {
+                                predicate = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
+                            } else if (_.contains(propertyName, '.')) {
                                 predicate = propertyName2Sparson(modelClass, propertyName);
                             } else if (propertyName !== true) {
                                 predicate = propertyRdfUri(modelClass, propertyName);
@@ -672,6 +695,7 @@ export default function(config) {
                             'default': [config.graphUri]
                         },
                         where: whereClause,
+                        distinct: options.distinct,
                         limit: options.limit
                     };
 
@@ -687,32 +711,59 @@ export default function(config) {
                     // /*** generate the sparql from the sparson ***/
                     let sparql = new SparqlGenerator().stringify(sparson);
 
-                    // console.log(sparql);
+                    console.log(sparql);
 
                     return this.execute(sparql);
                 }).then((data) => {
                     let results = [];
                     for (let item of data) {
                         let resultItem = {};
+
                         for (let variable of Object.keys(item)) {
-                            let {value, datatype} = item[variable];
-                            let property = variablePropertyMap[variable];
+
+                            let {value, datatype, type} = item[variable];
+                            let {propertyName, property, operator} = variablePropertyMap[variable];
                             let propertyType = property && property.type;
                             datatype = RDF_DATATYPES[datatype];
-                            if (datatype === 'boolean' || propertyType === 'boolean') {
+                            if (type === 'uri') {
+
+                                if (propertyName === '_id') {
+                                    value = uri2id(modelClass, value);
+                                } else if (propertyName === '_type') {
+                                    value = modelClass.name;
+                                } else if (_.endsWith(propertyName, '._type')) {
+                                    propertyName = propertyName.replace(/\._type$/, '');
+                                    property = modelClass.schema.getProperty(propertyName);
+                                    value = property.type;
+                                } else {
+                                    value = uri2id(db[propertyType], value);
+                                }
+
+                            } else if (operator) {
+
+                                if (String(parseInt(value, 10)) === value) {
+                                    value = parseInt(value, 10);
+                                } else {
+                                    value = parseFloat(parseFloat(value).toFixed(2));
+                                }
+
+                            } else if (datatype === 'boolean' || propertyType === 'boolean') {
+
                                 if (['true', '1', 'yes', 1].indexOf(value) > -1) {
                                     value = true;
                                 } else {
                                     value = false;
                                 }
+
                             } else if (propertyType === 'number' || datatype === 'number') {
+
                                 if (String(parseInt(value, 10)) === value) {
                                     value = parseInt(value, 10);
                                 } else {
                                     value = parseFloat(parseFloat(value).toFixed(2));
                                 }
                             }
-                            resultItem[variable] = value;
+                            _.set(resultItem, variable.split('___').join('.'), value);
                         }
                         results.push(resultItem);
                     }

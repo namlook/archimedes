@@ -17,11 +17,47 @@ export default [
         aggregation: {id: '_id', title: 'name'},
         options: {sort: ['title']},
         results: [
-            { title: 'user 0', id: 'http://tests.archimedes.org/instances/user0' },
-            { title: 'user 1', id: 'http://tests.archimedes.org/instances/user1' },
-            { title: 'user 2', id: 'http://tests.archimedes.org/instances/user2' },
-            { title: 'user 3', id: 'http://tests.archimedes.org/instances/user3' },
-            { title: 'user 4', id: 'http://tests.archimedes.org/instances/user4' }
+            { title: 'user 0', id: 'user0' },
+            { title: 'user 1', id: 'user1' },
+            { title: 'user 2', id: 'user2' },
+            { title: 'user 3', id: 'user3' },
+            { title: 'user 4', id: 'user4' }
+        ]
+    },
+    {
+        should: 'aggregate the relation _id',
+        model: 'BlogPost',
+        aggregation: {title: 'title', 'userId': 'author._id'},
+        options: {sort: ['title']},
+        results: [
+            { title: 'post 0', userId: 'user0' },
+            { title: 'post 1', userId: 'user1' },
+            { title: 'post 2', userId: 'user2' },
+            { title: 'post 3', userId: 'user3' },
+            { title: 'post 4', userId: 'user4' },
+            { title: 'post 5', userId: 'user0' },
+            { title: 'post 6', userId: 'user1' },
+            { title: 'post 7', userId: 'user2' },
+            { title: 'post 8', userId: 'user3' },
+            { title: 'post 9', userId: 'user4' }
+        ]
+    },
+    {
+        should: 'forge deep objects',
+        model: 'BlogPost',
+        aggregation: {'yo.title': 'title', 'yo.user': 'author.name'},
+        options: {sort: ['yo.title']},
+        results: [
+            { yo: { user: 'user 0', title: 'post 0' } },
+            { yo: { user: 'user 1', title: 'post 1' } },
+            { yo: { user: 'user 2', title: 'post 2' } },
+            { yo: { user: 'user 3', title: 'post 3' } },
+            { yo: { user: 'user 4', title: 'post 4' } },
+            { yo: { user: 'user 0', title: 'post 5' } },
+            { yo: { user: 'user 1', title: 'post 6' } },
+            { yo: { user: 'user 2', title: 'post 7' } },
+            { yo: { user: 'user 3', title: 'post 8' } },
+            { yo: { user: 'user 4', title: 'post 9' } }
         ]
     },
     {
@@ -29,7 +65,15 @@ export default [
         model: 'User',
         aggregation: {type: '_type', 'occ': {$count: '_type'}},
         results: [
-            { type: 'http://tests.archimedes.org/classes/User', occ: 5 }
+            { type: 'User', occ: 5 }
+        ]
+    },
+    {
+        should: 'aggregate the relation _type',
+        model: 'BlogPost',
+        aggregation: {authorType: 'author._type', 'occ': {$count: true}},
+        results: [
+            { authorType: 'User', occ: 10 }
         ]
     },
     {
@@ -188,13 +232,13 @@ export default [
 
     /*** query ***/
     {
-        should: 'query by id',
+        should: 'query by _id',
         model: 'BlogPost',
         aggregation: {title: 'title', id: '_id'},
         query: {_id: 'blogpost0'},
         results: [{
             title: 'post 0',
-            id: 'http://tests.archimedes.org/instances/blogpost0'
+            id: 'blogpost0'
         }]
     },
 
