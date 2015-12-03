@@ -536,23 +536,13 @@ export default function(config) {
              */
             aggregate(modelType, aggregator, query, options) {
                 let modelClass = db[modelType];
+                options.sort = _.get(options, 'sort', []);
 
                 let variablePropertyMap = {};
                 return Promise.resolve().then(() => {
 
                     let {whereClause} = query2whereClause(db, modelType, query);
-                    let orderBy = _.get(options, 'sort', []).map((variable) => {
-                        let descending = false;
-                        if (variable[0] === '-') {
-                            descending = true;
-                            variable = variable.slice(1);
-                        }
-                        variable = variable.split('.').join('___');
-                        return {
-                            expression: `?${variable}`,
-                            descending: descending
-                        };
-                    });
+
 
                     let variables = [];
                     let groupByExpressions = [];
@@ -567,40 +557,90 @@ export default function(config) {
                             useGroupBy = true;
                             for (let operator of Object.keys(propertyName)) {
                                 propertyName = propertyName[operator];
+
+                                let isID = false;
+                                if (_.endsWith(propertyName, '._id')) {
+                                    propertyName = propertyName.replace(/\._id$/, '');
+                                    isID = true;
+                                }
+
                                 operator = _.trimLeft(operator, '$');
+                                let postSorting = 0;
+                                if (operator === 'concat') {
+                                    operator = 'group_concat';
+
+                                    // remove sorted variables that are group_concat
+                                    let _sort = [];
+                                    for (let _variable of options.sort) {
+                                        let sortingVariable = _variable;
+                                        let inversed = false;
+                                        if (sortingVariable[0] === '-') {
+                                            sortingVariable = sortingVariable.slice(1);
+                                            inversed = true;
+                                        }
+                                        if (sortingVariable === variable) {
+                                            if (inversed) {
+                                                postSorting = -1;
+                                            } else {
+                                                postSorting = 1;
+                                            }
+                                        } else {
+                                            _sort.push(_variable);
+                                        }
+                                    }
+                                    options.sort = _sort;
+                                }
                                 aggregatorItems.push({
                                     propertyName,
                                     operator,
                                     variable,
-                                    field
+                                    field,
+                                    isID,
+                                    postSorting
                                 });
                             }
                         } else {
+                            let isID = false;
                             if (_.endsWith(propertyName, '._id')) {
-
                                 propertyName = propertyName.replace(/\._id$/, '');
-
+                                isID = true;
                             }
 
                             let aggregatorItem = {
                                 propertyName,
                                 variable,
-                                field
+                                field,
+                                isID
                             };
 
                             aggregatorItems.push(aggregatorItem);
                         }
                     }
 
+                    let orderBy = options.sort.map((variable) => {
+                        let descending = false;
+                        if (variable[0] === '-') {
+                            descending = true;
+                            variable = variable.slice(1);
+                        }
+                        variable = variable.split('.').join('___');
+                        return {
+                            expression: `?${variable}`,
+                            descending: descending
+                        };
+                    });
+
                     for (let item of aggregatorItems) {
 
-                        let {propertyName, operator, variable} = item;
+                        let {propertyName, operator, variable, isID, postSorting} = item;
 
                         // if (!operator) {
                             variablePropertyMap[variable] = {
                                 propertyName: propertyName,
                                 operator: operator,
-                                property: modelClass.schema.getProperty(propertyName)
+                                property: modelClass.schema.getProperty(propertyName),
+                                isID: isID,
+                                postSorting: postSorting
                             };
                         // }
 
@@ -648,12 +688,19 @@ export default function(config) {
                                     }
                                 }
 
+                                let expression = {
+                                    expression: propertyVariable,
+                                    type: 'aggregate',
+                                    aggregation: operator
+                                };
+
+                                if (operator === 'group_concat') {
+                                    expression.separator = '|||****|||';
+                                    expression.distinct = options.distinct;
+                                }
+
                                 variables.push({
-                                    expression: {
-                                        expression: propertyVariable,
-                                        type: 'aggregate',
-                                        aggregation: operator
-                                    },
+                                    expression: expression,
                                     variable: `?${variable}`
                                 });
                             } else {
@@ -711,7 +758,7 @@ export default function(config) {
                     // /*** generate the sparql from the sparson ***/
                     let sparql = new SparqlGenerator().stringify(sparson);
 
-                    console.log(sparql);
+                    // console.log(sparql);
 
                     return this.execute(sparql);
                 }).then((data) => {
@@ -722,7 +769,7 @@ export default function(config) {
                         for (let variable of Object.keys(item)) {
 
                             let {value, datatype, type} = item[variable];
-                            let {propertyName, property, operator} = variablePropertyMap[variable];
+                            let {propertyName, property, operator, isID, postSorting} = variablePropertyMap[variable];
                             let propertyType = property && property.type;
                             datatype = RDF_DATATYPES[datatype];
                             if (type === 'uri') {
@@ -740,12 +787,29 @@ export default function(config) {
                                 }
 
                             } else if (operator) {
-
-                                if (String(parseInt(value, 10)) === value) {
-                                    value = parseInt(value, 10);
+                                if (operator === 'group_concat') {
+                                    value = value.split('|||****|||');
+                                    if (isID) {
+                                        let _values = [];
+                                        for (let val of value) {
+                                            _values.push(uri2id(db[propertyType], val));
+                                        }
+                                        value = _values;
+                                    }
+                                    if (postSorting) {
+                                        value = _.sortBy(value);
+                                        if (postSorting === -1) {
+                                            value.reverse();
+                                        }
+                                    }
                                 } else {
-                                    value = parseFloat(parseFloat(value).toFixed(2));
+                                    if (String(parseInt(value, 10)) === value) {
+                                        value = parseInt(value, 10);
+                                    } else {
+                                        value = parseFloat(parseFloat(value).toFixed(2));
+                                    }
                                 }
+
 
                             } else if (datatype === 'boolean' || propertyType === 'boolean') {
 

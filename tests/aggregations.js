@@ -258,6 +258,51 @@ export default [
         ]
     },
 
+    /*** distinct ***/
+    {
+        should: 'distinct the results',
+        model: 'BlogPost',
+        aggregation: {authorId: 'author._id'},
+        options: {distinct: true, sort: 'authorId'},
+        results: [
+            {authorId: 'user0'},
+            {authorId: 'user1'},
+            {authorId: 'user2'},
+            {authorId: 'user3'},
+            {authorId: 'user4'}
+        ]
+    },
+
+    /*** concat ***/
+    {
+        should: 'concat properties values',
+        model: 'BlogPost',
+        aggregation: {authorId: {$concat: 'author._id'}},
+        options: {sort: 'authorId'},
+        results: [{
+            authorId: [
+                'user0',
+                'user0',
+                'user1',
+                'user1',
+                'user2',
+                'user2',
+                'user3',
+                'user3',
+                'user4',
+                'user4'
+            ]
+        }]
+    },
+    {
+        should: 'concat properties values with distinct',
+        model: 'BlogPost',
+        aggregation: {authorId: {$concat: 'author._id'}},
+        options: {sort: 'authorId', distinct: true},
+        results: [{authorId: ['user0', 'user1', 'user2', 'user3', 'user4']}]
+    },
+
+
     /*** errors ***/
     {
         should: 'throw an error if the operator is unknown',

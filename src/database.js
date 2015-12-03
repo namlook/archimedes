@@ -21,7 +21,8 @@ const validAggregationOperators = [
     '$max',
     '$min',
     '$avg',
-    '$sum'
+    '$sum',
+    '$concat'
 ];
 
 import Promise from 'bluebird';
