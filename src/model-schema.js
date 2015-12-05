@@ -132,6 +132,13 @@ export default class ModelSchema {
         return _.compact(results);
     }
 
+    /**
+     * Validate a pojo against the schema
+     *
+     * @param {object} pojo
+     * @params {object} options - the hapijs/joi options
+     * @param {function} callback
+     */
     validate(pojo, options, callback) {
         if (typeof options === 'function' && !callback) {
             callback = options;

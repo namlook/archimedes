@@ -205,7 +205,16 @@ export default function(dbAdapter, config) {
         },
 
 
-        validate(modelType, pojo) {
+        /**
+         * validate the pojo against the model schema
+         *
+         * @params {string} modelType - the type of the model
+         * @param {object} pojo
+         * @param {object} options - the hapijs/joi options
+         *
+         * @returns a promise which resolve into a validated pojo
+         */
+        validate(modelType, pojo, options) {
             return new Promise((resolve, reject) => {
 
                 if (!this[modelType]) {
@@ -214,10 +223,11 @@ export default function(dbAdapter, config) {
                 }
 
 
+
                 pojo = _.omit(pojo, _.isUndefined);
 
                 let modelSchema = this[modelType].schema;
-                let {error, value} = modelSchema.validate(pojo);
+                let {error, value} = modelSchema.validate(pojo, options);
                 if (error) {
                     pojo = pojo || {};
 
@@ -235,7 +245,7 @@ export default function(dbAdapter, config) {
 
                     if (virtuosoFix) {
                         process.nextTick(() => {
-                            this.validate(modelType, pojo).then((validatedPojo) => {
+                            this.validate(modelType, pojo, options).then((validatedPojo) => {
                                 resolve(validatedPojo);
                             }).catch((validationError) => {
                                 reject(new ValidationError('Bad value', validationError));
@@ -751,7 +761,7 @@ export default function(dbAdapter, config) {
          * @params {object} pojo - the record to save
          * @returns a promise which resolve the saved object
          */
-        sync(modelType, pojo) {
+        sync(modelType, pojo, options) {
             return Promise.resolve().then(() => {
 
                 if (typeof modelType !== 'string') {
@@ -774,7 +784,7 @@ export default function(dbAdapter, config) {
                     pojo._type = modelType;
                 }
 
-                return this.validate(modelType, pojo);
+                return this.validate(modelType, pojo, options);
             }).then((validatedPojo) => {
                 return this.adapter.sync(modelType, validatedPojo);
             });
@@ -934,6 +944,7 @@ export default function(dbAdapter, config) {
          * @params {modelType} - the model name
          * @params {options}
          *      dryRun: if true, don't touch the db (validation only)
+         *      all hapijs/options
          * @return a writable stream
          */
         writableStream(modelType, options) {
@@ -941,6 +952,12 @@ export default function(dbAdapter, config) {
 
             let db = this;
             let count = 1;
+            let dryRun = false;
+            if (options.dryRun != null) {
+                dryRun = options.dryRun;
+                delete options.dryRun;
+            }
+
             return es.map((pojo, callback) => {
                 if (_.isEmpty(pojo)) {
                     return callback(null, null);
@@ -950,17 +967,16 @@ export default function(dbAdapter, config) {
                     pojo = pojo.attrs();
                 }
 
-                var line = {pojo: pojo, count: count++};
-
-                if (options.dryRun) {
-                    db.validate(modelType, pojo).then(() => {
+                let line = {pojo: pojo, count: count++};
+                if (dryRun) {
+                    db.validate(modelType, pojo, options).then(() => {
                         callback(null);
                     }).catch((error) => {
                         error.line = line;
                         callback(error);
                     });
                 } else {
-                    db.sync(modelType, pojo).then((savedDoc) => {
+                    db.sync(modelType, pojo, options).then((savedDoc) => {
                         callback(null, savedDoc);
                     }).catch((error) => {
                         error.line = line;
@@ -1002,6 +1018,7 @@ export default function(dbAdapter, config) {
             header.unshift('_type');
             header.unshift('_id');
 
+            let stripUnknown = options.stripUnknown;
             options = {
                 delimiter: options.delimiter || ',',
                 escapeChar: options.escapeChar,
@@ -1031,6 +1048,9 @@ export default function(dbAdapter, config) {
                         if (!_.contains(['_id', '_type'], propertyName)) {
                             let property = Model.schema.getProperty(propertyName);
                             if (!property) {
+                                if (stripUnknown) {
+                                    continue;
+                                }
                                 let error = new ValidationError('Bad value', `unknown property "${propertyName}" for model "${Model.name}"`);
                                 error.line = line;
                                 return callback(error);
