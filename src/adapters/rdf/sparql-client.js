@@ -1,5 +1,6 @@
 
 import wreck from 'wreck';
+import got from 'got';
 import querystring from 'querystring';
 import _ from 'lodash';
 
@@ -34,15 +35,17 @@ let sparqlClient = function(endpoint) {
                         'content-type': 'application/x-www-form-urlencoded',
                         'accept': 'application/sparql-results+json'
                     },
-                    payload: querystring.stringify(body)
+                    body: querystring.stringify(body)
+                    // payload: querystring.stringify(body)
                 };
 
-                wreck.post(endpoint, options, (err, response, payload) => {
+                got.post(endpoint, options, (err, payload, response/*, payload*/) => {
                     if (payload) {
                         payload = payload.toString();
                     }
 
                     if (err) {
+                        // console.log('*****', sparql, err);
                         return reject(err);
                     }
 
