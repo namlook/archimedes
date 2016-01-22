@@ -1,6 +1,6 @@
 {
   "name": "archimedes",
-  "version": "0.0.23",
+  "version": "0.0.24",
   "description": "A simple ORDFM",
   "main": "lib",
   "repository": "https://github.com/namlook/archimedes",
