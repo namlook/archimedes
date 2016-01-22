@@ -302,4 +302,3 @@ var modelFactory = function(db, name, modelClassSchema) {
 };
 
 export default modelFactory;
-

@@ -208,6 +208,9 @@ export default function(config) {
 
                     /*** generate the sparql from the sparson ***/
                     let sparql = new SparqlGenerator().stringify(sparson);
+                    // console.log('.........', sparson);
+                    // console.log(sparql);
+                    // console.log('......');
 
                     return this.execute(sparql).then((data) => {
                         let uris = data.map(o => o.s.value);
