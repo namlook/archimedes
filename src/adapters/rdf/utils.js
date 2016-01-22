@@ -1,8 +1,9 @@
 
 import _ from 'lodash';
-import {Util as N3Util} from 'n3';
+import {Util as N3Util, Writer as n3writer} from 'n3';
 import {ValidationError} from '../../errors';
 import moment from 'moment';
+import es from 'event-stream';
 
 export let classRdfUri = function(modelClass) {
     return modelClass.meta.classRdfUri;
@@ -699,7 +700,7 @@ export let deleteCascade = function(db, _modelType, uri) {
     return {deleteTriples, whereClause};
 };
 
-export let instance2triples = function(instance){
+export let instance2triples = function(instance, graphUri){
     let {Model} = instance;
     let triples = [];
 
@@ -708,26 +709,118 @@ export let instance2triples = function(instance){
     triples.push({
         subject: subject,
         predicate: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type',
-        object: Model.meta.classRdfUri
+        object: Model.meta.classRdfUri,
+        graph: graphUri
     });
 
-
-    for (let propertyName of Object.keys(instance.Model.schema._properties)) {
-
+    let properties = instance.Model.schema._properties;
+    for (let propertyName of Object.keys(properties)) {
+        let property = properties[propertyName];
         let value = instance.get(propertyName);
 
         if (value != null) {
             let predicate = propertyRdfUri(Model, propertyName);
-            let object = buildRdfValue(Model.db, Model.name, propertyName, value);
-
-            triples.push({
-                subject: subject,
-                predicate: predicate,
-                object: object
-            });
+            if (_.isArray(value)) {
+                if (property.isArray()) {
+                    for (let val of value) {
+                        let object = buildRdfValue(Model.db, Model.name, propertyName, val);
+                        triples.push({
+                            subject: subject,
+                            predicate: predicate,
+                            object: object,
+                            graph: graphUri
+                        });
+                    }
+                } else {
+                    throw new Error(`${Model.name}.${propertyName} is not an array but got: ${value}`);
+                }
+            } else {
+                let object = buildRdfValue(Model.db, Model.name, propertyName, value);
+                triples.push({
+                    subject: subject,
+                    predicate: predicate,
+                    object: object,
+                    graph: graphUri
+                });
+            }
         }
     }
     return triples;
+};
+
+/** convert an Archimedes instance into a pojo **/
+export let rdfStreamWriter = function(graphUri) {
+    return es.map((instance, callback) => {
+        let writer = n3writer({format: 'application/trig' });
+        // let triples = instance2triples(instance, graphUri);
+        for (let triple of instance2triples(instance, graphUri)) {
+            writer.addTriple(triple);
+        }
+        writer.end((error, results) => {
+            if (error) {
+                return callback(error);
+            }
+            callback(null, results);
+        });
+        // callback(null, triples);
+    });//.pipe(writer);
+};
+
+/** convert a pojo into an Archimedes instance **/
+export let instanceStreamWriter = function(db, resourceName) {
+    let Model = db[resourceName];
+
+    if (!Model) {
+        throw new Error(`unknown model: ${resourceName}"`);
+    }
+
+    return es.map((data, callback) => {
+        let obj = {};
+        for (let propertyName of Object.keys(data)) {
+            if (data[propertyName] !== '' && data[propertyName] != null) {
+                if (propertyName !== '_id' && propertyName !== '_type') {
+                    let property = Model.schema.getProperty(propertyName);
+                    let value = data[propertyName];
+                    if (property.isArray()) {
+                        value = data[propertyName].split('|');
+                    }
+                    if (property.isRelation()) {
+                        if (property.isArray()) {
+                            let ids = [];
+                            for (let id of value) {
+                                ids.push({
+                                    _id: id,
+                                    _type: property.type
+                                });
+                            }
+                            obj[propertyName] = ids;
+                            // obj[propertyName] = value.map((id) => {
+                            //     return {
+                            //         _id: id,
+                            //         _type: property.type
+                            //     };
+                            // });
+                        } else {
+                            obj[propertyName] = {
+                                _id: value,
+                                _type: property.type
+                            };
+                        }
+                    } else {
+                        obj[propertyName] = value;
+                    }
+                } else {
+                    obj[propertyName] = data[propertyName];
+                }
+            }
+        }
+        db.validate(Model.name, obj).then((attrs) => {
+            let instance = Model.wrap(attrs);
+            callback(null, instance);
+        }).catch((error) => {
+            callback(error);
+        });
+    });
 };
 
 // export let query2sparql = function(db, modelType, query, options) {
