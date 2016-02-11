@@ -794,12 +794,6 @@ export let instanceStreamWriter = function(db, resourceName) {
                                 });
                             }
                             obj[propertyName] = ids;
-                            // obj[propertyName] = value.map((id) => {
-                            //     return {
-                            //         _id: id,
-                            //         _type: property.type
-                            //     };
-                            // });
                         } else {
                             obj[propertyName] = {
                                 _id: value,
