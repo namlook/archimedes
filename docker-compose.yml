@@ -1,7 +1,6 @@
 
 virtuoso:
-    image: namlook/docker-virtuoso:7.2.1
-    # image: tenforce/virtuoso:virtuoso-v7.2.0
+    image: tenforce/virtuoso:virtuoso-v7.2.0-latest
     ports:
         - "8890:8890"
         - "1111:1111"
@@ -11,7 +10,7 @@ virtuoso:
     restart: always
     privileged: true
     volumes:
-        - ~/virtuozodb:/var/lib/virtuoso/db
+        - ~/Documents/Kitematic/virtuoso:/var/lib/virtuoso/db
 
 blazegraph:
     image: lyrasis/blazegraph:1.5.3
