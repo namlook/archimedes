@@ -19,8 +19,10 @@ describe('Utils', function() {
     var db;
     before(function(done) {
         triplestore({
+            engine: 'stardog',
             graphUri: 'http://test.org',
-            endpoint: 'http://localhost:8890/sparql' // not used here
+            host: 'localhost',
+            port: 5820
         }).register(modelSchemas)
           .then((registeredDb) => {
             db = registeredDb;

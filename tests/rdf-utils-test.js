@@ -28,8 +28,10 @@ describe('Rdf utils', function() {
     var db;
     before(function(done) {
         triplestore({
+            engine: 'stardog', // not used here
             graphUri: 'http://tests.archimedes.org',
-            endpoint: 'http://localhost:8890/sparql' // not used here
+            host: 'localhost',
+            port: 5820
         }).register(modelSchemas)
           .then((registeredDb) => {
             db = registeredDb;

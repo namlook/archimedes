@@ -2,6 +2,8 @@
 import database from './database';
 import rdfAdapter from './adapters/rdf';
 import memoryAdapter from './adapters/memory';
+import url from 'url';
+import _ from 'lodash';
 
 export var triplestore = function(config) {
     if (!config.engine) {
@@ -23,7 +25,13 @@ export var triplestore = function(config) {
             break;
 
         case 'blazegraph':
-            endpoint = `${baseUri}/bigdata/sparql`;
+            endpoint = `${baseUri}/blazegraph/sparql`;
+            break;
+
+        case 'stardog':
+            let databaseName = url.parse(config.graphUri).host;
+            databaseName = _.words(databaseName).join('');
+            endpoint = `${baseUri}/annex/${databaseName}/sparql/query`;
             break;
 
         default:
@@ -33,7 +41,9 @@ export var triplestore = function(config) {
 
     let rdf = rdfAdapter({
         graphUri: config.graphUri,
-        endpoint: endpoint
+        endpoint: endpoint,
+        engine: config.engine,
+        auth: config.auth
     });
 
     return database(rdf, config);
