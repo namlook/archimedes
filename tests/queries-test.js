@@ -3,11 +3,11 @@ import 'source-map-support/register';
 
 import Lab from 'lab';
 var lab = exports.lab = Lab.script();
+var it = lab.it;
+var describe = lab.describe;
+var before = lab.before;
 
 import Code from 'code';
-var describe = lab.describe;
-var it = lab.it;
-var before = lab.before;
 var expect = Code.expect;
 
 import testQueries from './queries';
@@ -155,24 +155,19 @@ describe('query', function(){
         });
     });
 
-
     var testDbFn = function(testQuery) {
         return function(done) {
-            processDbTest(db, testQuery).then(() => {
-                done();
-            }).catch((error) => {
+            processDbTest(db, testQuery).catch((error) => {
                 console.log(error);
-            });
+            }).then(done);
         };
     };
 
     var testModelFn = function(testQuery) {
         return function(done) {
-            processModelTest(db, testQuery).then(() => {
-                done();
-            }).catch((error) => {
+            processModelTest(db, testQuery).catch((error) => {
                 console.log(error);
-            });
+            }).then(done);
         };
     };
 
@@ -192,6 +187,3 @@ describe('query', function(){
         testLauncher(`model> ${testQuery.model}: ${inspect(testQuery.query)} (${inspect(testQuery.options)})`, {parallel: false}, testModelFn(testQuery));
     }
 });
-
-
-

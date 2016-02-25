@@ -1,12 +1,12 @@
 import Lab from 'lab';
 var lab = exports.lab = Lab.script();
+let describe = lab.describe;
+let it = lab.it;
+let before = lab.before;
+let beforeEach = lab.beforeEach;
 
 import Code from 'code';
-var describe = lab.describe;
-var it = lab.it;
-var before = lab.before;
-var beforeEach = lab.beforeEach;
-var expect = Code.expect;
+let expect = Code.expect;
 
 import store from './db';
 import _ from 'lodash';
@@ -24,12 +24,10 @@ describe('Model instance persistance', function() {
     });
 
     beforeEach(function(done) {
-        db.clear().then(() => {
-            done();
-        }).catch((error) => {
+        db.clear().catch((error) => {
             console.log(error);
             console.log(error.stack);
-        });
+        }).then(done);
     });
 
 
@@ -38,11 +36,10 @@ describe('Model instance persistance', function() {
             let blogPost = db.BlogPost.create();
             let promise = blogPost.save();
             expect(promise.then).to.be.a.function();
-            promise.then(() => {
-                done();
-            }).catch((error) => {
-                console.log(error);
-            });
+            promise.catch((error) => {
+                console.log('xxx', error);
+                console.log(error.stack);
+            }).then(done);
         });
 
 

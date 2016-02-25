@@ -114,6 +114,3 @@ describe('#aggregate()', function(){
         testLauncher(`${testQuery.model}: ${testQuery.should}`, {parallel: false}, testFn(testQuery));
     }
 });
-
-
-

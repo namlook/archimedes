@@ -90,7 +90,6 @@ describe('#groupBy()', function(){
         });
     });
 
-
     var testFn = function(testQuery) {
         return function(done) {
             processTest(db, testQuery).then(() => {
@@ -114,6 +113,3 @@ describe('#groupBy()', function(){
         testLauncher(`${testQuery.model}: ${inspect(testQuery.groupBy)}`, {parallel: false}, testFn(testQuery));
     }
 });
-
-
-
