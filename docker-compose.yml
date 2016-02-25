@@ -19,4 +19,4 @@ blazegraph:
     restart: always
     privileged: true
     volumes:
-        - ~/blazegraph:/data
+        - ~/Documents/Kitematic/blazegraph:/data
