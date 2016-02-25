@@ -1,6 +1,7 @@
 
 import wreck from 'wreck';
 import got from 'got';
+import request from 'request';
 import querystring from 'querystring';
 import _ from 'lodash';
 
@@ -8,51 +9,69 @@ import streamStream from 'stream-stream';
 
 import Promise from 'bluebird';
 
-let sparqlClient = function(endpoint) {
+var internals = {};
+
+let sparqlClient = function(endpoint, config) {
+
+
+
+    internals.getConfig = function(sparql) {
+        let queryOperators = ['select', 'construct', 'describe', 'ask'];
+        let isQuery = _.compact(queryOperators.map((op) => {
+            return _.startsWith(_.trim(sparql.toLowerCase()), op);
+        })).length;
+
+        let body = {query: sparql};
+        if (!isQuery) {
+            if (config.engine !== 'stardog') {
+                body = {update: sparql};
+            }
+        }
+
+        // console.log('sparql>>>>>>>');
+        // console.log(sparql);
+        // console.log('<<<<<<<<<<sparql');
+
+        let options = {
+            headers: {
+                'content-type': 'application/x-www-form-urlencoded',
+                'accept': 'application/sparql-results+json'
+            },
+            body: querystring.stringify(body)
+        };
+
+        if (config.auth) {
+            var auth = 'Basic ' + new Buffer('admin:admin').toString('base64');
+            // delete conf.options.auth;
+            options.headers.Authorization = auth;
+            // options.auth = `${config.auth.user}:${config.auth.password}`;
+        }
+
+        // var startTime = Date.now();
+        // console.log(endpoint, options);
+
+        return {endpoint: endpoint, options: options};
+        // return got.post(endpoint, options);
+    };
+
+
 
     return {
+
         execute(sparql) {
             return new Promise((resolve, reject) => {
-                let queryOperators = ['select', 'construct', 'describe', 'ask'];
-                let isQuery = _.compact(queryOperators.map((op) => {
-                    return _.startsWith(_.trim(sparql.toLowerCase()), op);
-                })).length;
+                let conf = internals.getConfig(sparql);
 
-
-                let body;
-                if (isQuery) {
-                    body = {query: sparql};
-                } else {
-                    body = {update: sparql};
-                }
-
-                // console.log('sparql>>>>>>>');
-                // console.log(sparql);
-                // console.log('<<<<<<<<<<sparql');
-
-                let options = {
-                    headers: {
-                        'content-type': 'application/x-www-form-urlencoded',
-                        'accept': 'application/sparql-results+json'
-                    },
-                    body: querystring.stringify(body)
-                    // payload: querystring.stringify(body)
-                };
-
-                got.post(endpoint, options, (err, payload, response/*, payload*/) => {
-                    if (payload) {
-                        payload = payload.toString();
+                request.post(conf.endpoint, conf.options, function(error, response, body) {
+                    if (error) {
+                        console.log('xxx', error);
+                        return reject(error);
                     }
 
-                    if (err) {
-                        // console.log('*****', sparql, err);
-                        return reject(err);
+                    let payload = body;
+                    if (response.statusCode > 400) {
+                        return reject(new Error(payload));
                     }
-
-                    if (response.statusCode >= 400) {
-                        return reject(payload);
-                    }
-
 
                     let data;
                     try {
@@ -60,12 +79,60 @@ let sparqlClient = function(endpoint) {
                     } catch (e) {
                         data = undefined;
                     }
-                    resolve(data);
+
+                    if (data && data.results) {
+                        resolve(data);
+                    } else {
+                        resolve();
+                    }
+
+                    // console.log(Date.now() - startTime);
+                });
+            });
+        },
+
+        _execute(sparql) {
+            return new Promise((resolve, reject) => {
+                let conf = internals.getConfig(sparql);
+                // if (conf.options.headers.auth) {
+                //     conf.options.auth = `${config.auth.user}:${config.auth.password}`;
+                // }
+                got.post(conf.endpoint, conf.options).then(function(response) {
+                    let payload = response.body;
+                    console.log(response.statusCode);
+                    if (response.statusCode > 400) {
+                        return reject(new Error(payload));
+                    }
+
+                    let data;
+                    try {
+                        data = JSON.parse(payload);
+                    } catch (e) {
+                        data = undefined;
+                    }
+
+                    console.log('data>', data);
+                    if (data && data.results) {
+                        resolve(data);
+                    } else {
+                        resolve();
+                    }
+
+                    // console.log(Date.now() - startTime);
+                }).catch(function(error){
+                    console.log('xxx', error);
+                    reject(error);
                 });
             });
         },
 
         stream(sparql) {
+            let conf = internals.getConfig(sparql);
+            return request.post(conf.endpoint, conf.options);
+            // return got.stream(conf.endpoint, conf.options);
+        },
+
+        _stream(sparql) {
             let queryOperators = ['select', 'construct', 'describe', 'ask'];
             let isQuery = _.compact(queryOperators.map((op) => {
                 return _.startsWith(_.trim(sparql.toLowerCase()), op);
