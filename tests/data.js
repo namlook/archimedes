@@ -1,7 +1,7 @@
 
 import store from './db';
 import _ from 'lodash';
-
+import Promise from 'bluebird';
 import {inspect} from 'util';
 
 var generateTags = function(i) {
@@ -106,6 +106,7 @@ export default function loadDb() {
                 console.log(results[1].length, 'comments saved');
                 console.log(results[2].length, 'users saved');
             }
+
             resolve(db);
 
         }).catch((error) => {
@@ -124,6 +125,3 @@ if (require.main === module) {
         console.log(error.stack);
     });
 }
-
-
-

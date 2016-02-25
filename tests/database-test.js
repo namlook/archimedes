@@ -13,7 +13,7 @@ import archimedes from '../lib/database';
 
 import _ from 'lodash';
 import uuid from 'uuid';
-
+import Promise from 'bluebird';
 import fs from 'fs';
 
 let stream2promise = function(stream) {
@@ -588,12 +588,18 @@ describe('Database', function() {
 
     describe('#fetch()', function(){
         it('should return a promise', (done) => {
-            let promise = db.fetch('BlogPost', 'foo');
-            expect(promise.then).to.be.a.function();
-            promise.then(() => {
-                done();
-            }).catch((error) => {
-                console.log(error);
+            db.sync('BlogPost', {
+                _id: 'thepost',
+                _type: 'BlogPost',
+                title: 'the post'
+            }).then(() => {
+                let promise = db.fetch('BlogPost', 'thepost');
+                expect(promise.then).to.be.a.function();
+                promise.then(() => {
+                    done();
+                }).catch((error) => {
+                    console.log(error);
+                });
             });
         });
 
@@ -674,12 +680,18 @@ describe('Database', function() {
 
     describe('#update()', function() {
         it('should return a promise', (done) => {
-            let promise = db.update('BlogPost', 'thepost', []);
-            expect(promise.then).to.be.a.function();
-            promise.then(() => {
-                done();
-            }).catch((error) => {
-                console.log(error);
+            db.sync('BlogPost', {
+                _id: 'thepost',
+                _type: 'BlogPost',
+                title: 'the post'
+            }).then(() => {
+                let promise = db.update('BlogPost', {_id: 'thepost'}, []);
+                expect(promise.then).to.be.a.function();
+                promise.then(() => {
+                    done();
+                }).catch((error) => {
+                    console.log(error);
+                });
             });
         });
 

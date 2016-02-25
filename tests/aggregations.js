@@ -142,6 +142,7 @@ export default [
             gender: 'author.gender',
             ratting: {$avg: 'ratting'}
         },
+        options: {sort: '-ratting'},
         results: [
             { gender: 'male', ratting: 2.5 },
             { gender: 'female', ratting: 1.5 }
