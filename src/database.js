@@ -748,7 +748,10 @@ export default function(dbAdapter, config) {
 
                 return this._validateOperations(modelType, operations);
             }).then((validatedOperations) => {
-                return this.adapter.update(modelType, modelId, validatedOperations);
+                if (validatedOperations.length) {
+                    return this.adapter.update(modelType, modelId, validatedOperations);
+                }
+                return Promise.resolve();
             });
         },
 

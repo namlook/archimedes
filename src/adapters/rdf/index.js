@@ -15,7 +15,6 @@ import {
     uri2id,
     propertyName2Sparson} from './utils';
 import {Generator as SparqlGenerator} from 'sparqljs';
-
 import es from 'event-stream';
 import JSONStream from 'JSONStream';
 
@@ -42,7 +41,7 @@ export default function(config) {
 
         let internals = {};
         internals.store = [];
-        internals.sparqlClient = sparqlClient(config.endpoint);
+        internals.sparqlClient = sparqlClient(config.endpoint, config);
 
         return {
             name: 'rdf',
@@ -102,7 +101,7 @@ export default function(config) {
              * @returns a promise
              */
             clear() {
-                return this.execute(`CLEAR GRAPH <${config.graphUri}>`);
+                return this.execute(`CLEAR SILENT GRAPH <${config.graphUri}>`);
             },
 
             clearResource(modelType) {
@@ -523,6 +522,9 @@ export default function(config) {
 
                     return this.execute(sparql);
                 }).then((data) => {
+                    if (!data.length) {
+                        return 0;
+                    }
                     return parseInt(data[0].count.value, 10);
                 });
             },
@@ -1185,21 +1187,22 @@ export default function(config) {
 
                     if (deleteTriples.length) {
                         sparson.updates.push({
-                            updateType: 'insertdelete',
+                            // updateType: 'insertdelete',
+                            updateType: 'deletewhere',
                             delete: [
                                 {
                                     type: 'graph',
                                     name: config.graphUri,
                                     triples: deleteTriples
                                 }
-                            ],
-                            insert: [],
-                            where: [
-                                {
-                                    type: 'bgp',
-                                    triples: deleteTriples
-                                }
                             ]
+                            // insert: [],
+                            // where: [
+                            //     {
+                            //         type: 'bgp',
+                            //         triples: deleteTriples
+                            //     }
+                            // ]
                         });
                     }
 
@@ -1283,6 +1286,7 @@ export default function(config) {
                         updates: [
                             {
                                 updateType: 'insertdelete',
+                                // updateType: 'deletewhere',
                                 delete: [
                                     {
                                         type: 'graph',
