@@ -16,6 +16,8 @@ import chalk from 'chalk';
 import _ from 'lodash';
 import {inspect} from 'util';
 
+import highland from 'highland';
+
 
 var processTest = function(db, testQuery) {
 
@@ -25,11 +27,17 @@ var processTest = function(db, testQuery) {
             return resolve();
         }
 
-        let promise = db.aggregate(testQuery.model, testQuery.aggregation, testQuery.query, testQuery.options);
+        let query = testQuery.options || {};
 
-        if (testQuery.error != null) {
+        query.field = testQuery.field;
+        query.filter = testQuery.filter;
 
-            promise.catch((error) => {
+
+        console.log(query);
+
+        let stream = db.query(testQuery.model, query);
+        stream.on('error', function(error) {
+            if (testQuery.error != null) {
                 try {
                     expect(error.message).to.equal(testQuery.error);
                     if (_.has(error, 'extra.0.message')) {
@@ -42,40 +50,39 @@ var processTest = function(db, testQuery) {
                     console.log('>>>', chalk.red(inspect(e, {depth: 10, colors: true})));
                     console.log('------------------');
                     console.log(error.stack);
+                    console.log('iii', e);
                     return reject(e);
                 }
                 return resolve();
-            });
+            } else {
+                console.log('xxx>', error);
+                return reject(error);
+            }
+        });
 
-        } else {
-
-            promise.then((results) => {
+        highland(stream)
+            .errors(function(error) {
+                console.log('errors>', error);
+            })
+            .toArray(function(results) {
+                // console.log('===', results);
                 try {
                     if (testQuery.results) {
                         expect(results).to.deep.equal(testQuery.results);
                     }
+                    return resolve();
                 } catch(e) {
                     console.log('------------------');
                     console.log('expected>', chalk.blue(inspect(testQuery, {depth: 10, colors: true})));
                     console.log('------------------');
                     console.log('actual>', chalk.red(inspect(results, {depth: 10, colors: true})));
                     console.log('------------------');
+                    console.log('uuuu', e);
                     return reject(e);
                 }
-
-                return resolve();
-            }).catch((error) => {
-                console.log('xxxx', testQuery);
-                console.log(inspect(error, {depth: 10}));
-                console.log(error.stack);
-                return reject(error);
             });
-
-        }
-
     });
 };
-
 
 describe('#aggregate()', function(){
 
@@ -96,7 +103,8 @@ describe('#aggregate()', function(){
             processTest(db, testQuery).then(() => {
                 done();
             }).catch((error) => {
-                console.log(error);
+                console.log('testFn>', error);
+                console.log(error.stack);
             });
         };
     };
