@@ -7,13 +7,14 @@ import _ from 'lodash';
 
 import streamStream from 'stream-stream';
 
+// import highland from 'highland';
+import JSONStream from 'JSONStream';
+
 import Promise from 'bluebird';
 
 var internals = {};
 
 let sparqlClient = function(endpoint, config) {
-
-
 
     internals.getConfig = function(sparql) {
         let queryOperators = ['select', 'construct', 'describe', 'ask'];
@@ -128,8 +129,15 @@ let sparqlClient = function(endpoint, config) {
 
         stream(sparql) {
             let conf = internals.getConfig(sparql);
-            return request.post(conf.endpoint, conf.options);
+            return request.post(conf.endpoint, conf.options)
+                // .pipe(JSONStream.parse('results.bindings.*'))
             // return got.stream(conf.endpoint, conf.options);
+        },
+
+        queryStream(sparql) {
+            let conf = internals.getConfig(sparql);
+            return request.post(conf.endpoint, conf.options)
+                .pipe(JSONStream.parse('results.bindings.*'));
         },
 
         _stream(sparql) {

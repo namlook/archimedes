@@ -533,6 +533,10 @@ export default function(dbAdapter, config) {
             });
         },
 
+        query(modelType, query, options) {
+            return this.adapter.query(modelType, query, options);
+        },
+
         /**
          * Returns a promise which resolve the aggregate the
          * properties values that match the query

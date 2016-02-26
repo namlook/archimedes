@@ -18,6 +18,9 @@ import {Generator as SparqlGenerator} from 'sparqljs';
 import es from 'event-stream';
 import JSONStream from 'JSONStream';
 
+import sparqlQueryBuilder from './sparql-query-builder';
+import sparqlResultsConverter from './sparql-results-converter';
+
 const RDF_DATATYPES = {
     'http://www.w3.org/2001/XMLSchema#integer': 'number',
     'http://www.w3.org/2001/XMLSchema#decimal': 'number',
@@ -527,6 +530,36 @@ export default function(config) {
                     }
                     return parseInt(data[0].count.value, 10);
                 });
+            },
+
+            query(modelName, query, options) {
+                let graphUri = config.graphUri;
+                let queryBuilder = sparqlQueryBuilder(db, graphUri);
+                let sparql = queryBuilder.build(modelName, query, options);
+
+                console.log(sparql);
+
+                let converter = sparqlResultsConverter(db, modelName, query.field);
+
+                let stream = internals.sparqlClient.queryStream(sparql);
+                return stream.pipe(es.map((item, callback) => {
+                    try {
+                        return callback(null, converter.convert(item));
+                    } catch(err) {
+                        return callback(err);
+                    }
+                }));
+
+                // return this.execute(sparql).then((data) => {
+                //     let results = [];
+                //     for (let item of data) {
+                //         console.log(converter.convert(item));
+                //     }
+                //     // console.log(data);
+                // }).catch((error) => {
+                //     console.log('xxx', error);
+                //     console.log(error.stack);
+                // });
             },
 
 
