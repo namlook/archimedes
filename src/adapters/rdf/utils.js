@@ -33,11 +33,12 @@ export let propertyRdfUri = function(modelClass, propertyName) {
         throw new Error(`unknown property "${propertyName}" on model "${modelClass.name}"`);
     }
 
-    if (_.isArray(property)) {
-        return property.map((o) => o.meta.rdfUri);
-    } else {
-        return property.meta.rdfUri;
-    }
+    // if (_.isArray(property)) {
+    //     return property.map((o) => o.meta.rdfUri);
+    // } else {
+    //     return property.meta.rdfUri;
+    // }
+    return property.meta.rdfUri;
 };
 
 
