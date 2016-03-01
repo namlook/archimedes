@@ -7,7 +7,7 @@ import {inspect} from 'util';
 var generateTags = function(i) {
     let _tags = [];
     for (let j = 0; j < i % 4; j++) {
-        _tags.push(`tag${i + j}`);
+        _tags.push(`tag"${i + j}`);
     }
     return _tags;
 };

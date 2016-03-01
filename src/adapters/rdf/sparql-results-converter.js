@@ -43,7 +43,6 @@ rdfInternals.RDF_DATATYPES = {
 };
 
 
-
 module.exports = function(db, modelName, fields) {
 
     let internals = {};
@@ -57,9 +56,20 @@ module.exports = function(db, modelName, fields) {
         let modelClass = db[modelName];
         let modelSchema = modelClass.schema;
         let arrayProperties = [];
+
         for (let fieldName of Object.keys(fields)) {
             let propertyName = fields[fieldName];
+
+            /**
+             * if the propertyName is an object, it means that it is an aggregator,
+             * XXX let's skip that for now
+             */
+            if (_.isObject(propertyName)) {
+                continue;
+            }
+
             let property = modelSchema.getProperty(propertyName);
+            console.log('...', propertyName, !!property);
             if(property.isArray()) {
                 arrayProperties.push(propertyName);
             }
@@ -75,7 +85,6 @@ module.exports = function(db, modelName, fields) {
 
         switch (valueType) {
             case 'string':
-                // TODO parseJSON
                 let propertyName = fields[fieldName];
                 if (internals.arrayProperties.indexOf(propertyName) > -1) {
                     value = JSON.parse(value).map((val) => decodeURI(val));
@@ -126,9 +135,11 @@ module.exports = function(db, modelName, fields) {
     return {
         convert(item) {
             let doc = {};
-            doc._id = rdfInternals.rdfURI2id(db, modelName, item._id.value);
-            delete item._id;
-            doc._type = modelName;
+            if (item._id) {
+                doc._id = rdfInternals.rdfURI2id(db, modelName, item._id.value);
+                delete item._id;
+                doc._type = modelName;
+            }
 
             for (let fieldName of Object.keys(item)) {
                 let rdfInfo = item[fieldName];
