@@ -136,8 +136,7 @@ let sparqlClient = function(endpoint, config) {
 
         queryStream(sparql) {
             let conf = internals.getConfig(sparql);
-            return request.post(conf.endpoint, conf.options)
-                .pipe(JSONStream.parse('results.bindings.*'));
+            return request.post(conf.endpoint, conf.options);
         },
 
         _stream(sparql) {

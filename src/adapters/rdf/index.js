@@ -542,13 +542,29 @@ export default function(config) {
                 let converter = sparqlResultsConverter(db, modelName, query.field);
 
                 let stream = internals.sparqlClient.queryStream(sparql);
-                return stream.pipe(es.map((item, callback) => {
-                    try {
-                        return callback(null, converter.convert(item));
-                    } catch(err) {
-                        return callback(err);
+                stream.on('response', function(response) {
+                    if (response.statusCode !== 200) {
+                        if (response.statusCode === 400) {
+                            console.error(sparql);
+                            throw new Error('bad sparql query');
+                        } else {
+                            throw new Error(`database error: ${response.statusCode}`);
+                        }
                     }
-                }));
+                });
+
+
+                return stream
+                    .pipe(JSONStream.parse('results.bindings.*'))
+                    .pipe(es.map((item, callback) => {
+                        let doc;
+                        try {
+                            doc = converter.convert(item);
+                        } catch(err) {
+                            return callback(err);
+                        }
+                        return callback(null, doc);
+                    }));
 
                 // return this.execute(sparql).then((data) => {
                 //     let results = [];
