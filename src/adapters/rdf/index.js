@@ -83,6 +83,7 @@ export default function(config) {
 
             afterRegister(passedDb) {
                 return Promise.resolve().then(() => {
+                    let rdfClasses2ModelNameMapping = {};
                     _.forOwn(passedDb.registeredModels, (model) => {
 
                         let propertyUrisMapping = {};
@@ -91,7 +92,12 @@ export default function(config) {
                             propertyUrisMapping[propertyUri] = property.name;
                         }
                         _.set(model, 'meta.propertyUrisMapping', propertyUrisMapping);
+
+                        /*** build inverse modelRdfClasses ***/
+                        rdfClasses2ModelNameMapping[model.meta.classRdfUri] = model.schema.name;
                     });
+
+                    _.set(passedDb, 'rdfClasses2ModelNameMapping', rdfClasses2ModelNameMapping);
 
                     return passedDb;
                 });
