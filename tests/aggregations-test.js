@@ -27,13 +27,10 @@ var processTest = function(db, testQuery) {
             return resolve();
         }
 
-        let query = testQuery.options || {};
+        let query = _.create(testQuery.options);
 
         query.field = testQuery.field;
         query.filter = testQuery.filter;
-
-
-        console.log(query);
 
         let stream = db.query(testQuery.model, query);
         stream.on('error', function(error) {
