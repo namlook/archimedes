@@ -70,9 +70,9 @@ var processTest = function(db, testQuery) {
                     return resolve();
                 } catch(e) {
                     console.log('------------------');
-                    console.log('expected>', chalk.blue(inspect(testQuery, {depth: 10, colors: true})));
-                    console.log('------------------');
+                    console.log('query>', chalk.grey(inspect(_.omit(testQuery, 'results'), {depth: 10, colors: true})));
                     console.log('actual>', chalk.red(inspect(results, {depth: 10, colors: true})));
+                    console.log('expected>', chalk.blue(inspect(testQuery.results, {depth: 10, colors: true})));
                     console.log('------------------');
                     return reject(e);
                 }

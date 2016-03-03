@@ -5,10 +5,12 @@ export default [
         should: 'fetch some basic fields',
         model: 'BlogPost',
         field: {
+            _id: '_id',
+            _type: '_type',
             title: 'title',
             score: 'ratting',
             author: 'author',
-            tags: 'tags'
+            tags: ['tags']
         },
         results: [
           { _id: 'blogpost1', _type: 'BlogPost',
@@ -51,13 +53,9 @@ export default [
         options: {limit: 2, sort: ['title']},
         results: [
             {
-                _id: 'blogpost0',
-                _type: 'BlogPost',
                 title: 'post 0'
             },
             {
-                _id: 'blogpost1',
-                _type: 'BlogPost',
                 title: 'post 1'
             }
         ]
@@ -67,6 +65,8 @@ export default [
         should: 'sort the results on multiple fields',
         model: 'BlogPost',
         field: {
+            _id: '_id',
+            _type: '_type',
             title: 'title',
             score: 'ratting'
         },
@@ -87,6 +87,8 @@ export default [
         should: 'fetch relations properties',
         model: 'BlogPost',
         field: {
+            _id: '_id',
+            _type: '_type',
             title: 'title',
             authorName: 'author.name',
             authorGender: 'author.gender'
@@ -114,6 +116,8 @@ export default [
         should: 'be able to filter on a requested field',
         model: 'BlogPost',
         field: {
+            _id: '_id',
+            _type: '_type',
             title: 'title'
         },
         filter: {
@@ -128,6 +132,8 @@ export default [
         should: 'filter on a string',
         model: 'BlogPost',
         field: {
+            _id: '_id',
+            _type: '_type',
             score: 'ratting'
         },
         filter: {
@@ -142,10 +148,13 @@ export default [
         should: 'filter on a string on a relation',
         model: 'BlogPost',
         field: {
+            _id: '_id',
+            _type: '_type',
             title: 'title',
             score: 'ratting'
         },
         filter: {
+            '_type': 'BlogPost',
             'author.gender': 'female'
         },
         results: [
@@ -160,6 +169,8 @@ export default [
         should: 'filter on a string on a relation (2)',
         model: 'BlogPost',
         field: {
+            _id: '_id',
+            _type: '_type',
             title: 'title',
             authorGender: 'author.gender'
         },
@@ -179,6 +190,8 @@ export default [
         should: 'filter on a string on a relation ($in)',
         model: 'BlogPost',
         field: {
+            _id: '_id',
+            _type: '_type',
             title: 'title'
         },
         filter: {
@@ -196,6 +209,8 @@ export default [
         should: 'filter on a string ($ne)',
         model: 'BlogPost',
         field: {
+            _id: '_id',
+            _type: '_type',
             score: 'ratting'
         },
         filter: {
@@ -218,6 +233,8 @@ export default [
         should: 'filter on a string ($in)',
         model: 'BlogPost',
         field: {
+            _id: '_id',
+            _type: '_type',
             score: 'ratting'
         },
         filter: {
@@ -233,6 +250,8 @@ export default [
         should: 'filter on a string ($nin)',
         model: 'BlogPost',
         field: {
+            _id: '_id',
+            _type: '_type',
             title: 'title',
             score: 'ratting'
         },
@@ -253,6 +272,8 @@ export default [
         should: 'filter on a number',
         model: 'BlogPost',
         field: {
+            _id: '_id',
+            _type: '_type',
             title: 'title',
             score: 'ratting'
         },
@@ -272,6 +293,8 @@ export default [
         should: 'filter on a number ($ne)',
         model: 'BlogPost',
         field: {
+            _id: '_id',
+            _type: '_type',
             title: 'title',
             score: 'ratting'
         },
@@ -297,6 +320,8 @@ export default [
         should: 'filter on a number ($lt)',
         model: 'BlogPost',
         field: {
+            _id: '_id',
+            _type: '_type',
             title: 'title',
             score: 'ratting'
         },
@@ -318,6 +343,8 @@ export default [
         should: 'filter on a number ($gt)',
         model: 'BlogPost',
         field: {
+            _id: '_id',
+            _type: '_type',
             title: 'title',
             score: 'ratting'
         },
@@ -337,6 +364,8 @@ export default [
         should: 'filter on a number ($in)',
         model: 'BlogPost',
         field: {
+            _id: '_id',
+            _type: '_type',
             title: 'title',
             score: 'ratting'
         },
@@ -356,6 +385,8 @@ export default [
         should: 'filter on a number ($nin)',
         model: 'BlogPost',
         field: {
+            _id: '_id',
+            _type: '_type',
             title: 'title',
             score: 'ratting'
         },
@@ -375,6 +406,8 @@ export default [
         should: 'filter multiple time on a same property',
         model: 'BlogPost',
         field: {
+            _id: '_id',
+            _type: '_type',
             title: 'title',
             score: 'ratting'
         },
@@ -393,8 +426,13 @@ export default [
         should: 'filter on an array',
         model: 'BlogPost',
         field: {
+            _id: '_id',
+            _type: '_type',
             title: 'title',
-            tags: 'tags'
+            tags: {
+                $aggregator: 'array',
+                $property: 'tags'
+            }
         },
         filter: {
             tags: 'tag"7'
@@ -412,6 +450,8 @@ export default [
         should: 'filter on an array (2)',
         model: 'BlogPost',
         field: {
+            _id: '_id',
+            _type: '_type',
             title: 'title',
         },
         filter: {
@@ -423,6 +463,116 @@ export default [
         results: [
             { _id: 'blogpost6', _type: 'BlogPost', title: 'post 6' },
             { _id: 'blogpost7', _type: 'BlogPost', title: 'post 7' }
+        ]
+    },
+
+    {
+        should: 'filter on an array (3)',
+        model: 'BlogPost',
+        field: {
+            _id: '_id',
+            _type: '_type',
+            title: 'title',
+            tag: 'tags'
+        },
+        filter: {
+            tags: 'tag"7'
+        },
+        options: {
+            sort: ['title']
+        },
+        results: [
+            { _id: 'blogpost6', _type: 'BlogPost', title: 'post 6', tag: 'tag"7' },
+            { _id: 'blogpost7', _type: 'BlogPost', title: 'post 7', tag: 'tag"7' }
+        ]
+    },
+
+    {
+        should: 'aggregate using OBJECT aggregator',
+        model: 'BlogPost',
+        field: {
+            tags: 'tags',
+            publishedCount: {
+                $aggregator: 'object',
+                $fields: {
+                    isPublished: 'isPublished',
+                    total: {$aggregator: 'count'}
+                }
+            },
+        },
+        filter: {
+            ratting: 3
+        },
+        // options: {sort: ['_id']},
+        results: [
+            {bof: 'blah'}
+        ]
+    },
+
+
+    {
+        should: 'aggregate using OBJECT aggregator (deep relation)',
+        model: 'BlogPost',
+        field: {
+            ratting: 'ratting',
+            creditedUser: {
+                $aggregator: 'object',
+                $fields: {
+                    name: 'credits.name',
+                    gender: 'credits.gender'
+                }
+            },
+        },
+        filter: {
+            ratting: 3
+        },
+        // options: {sort: ['_id']},
+        results: [
+            {bof: 'blah'}
+        ]
+    },
+
+    {
+        should: 'forge object from aggregation (2)',
+        model: 'BlogPost',
+        field: {
+            tag: 'tags',
+            // tag: {
+            //     $aggregator: 'array',
+            //     $property: {
+            //         $aggregator: 'object',
+            //         $properties: {
+            //             title: 'tags'
+            //         }
+            //     }
+            // },
+            creditedGenderCount: {
+                $aggregator: 'object',
+                $properties: {
+                    gender: 'credits.gender',
+                    count: {$aggregator: 'count'}
+                }
+            }
+        },
+        options: {sort: ['tag']},
+        results: [
+            { bof: 'bla'},
+        ]
+    },
+
+    {
+        should: 'forge array from aggregation',
+        model: 'BlogPost',
+        field: {
+            tag: 'tags',
+            // creditGenderCount: [{
+                gender: 'credits.gender',
+                count: {$aggregator: 'count'}
+            // }]
+        },
+        options: {sort: ['tag']},
+        results: [
+            { bof: 'bla'},
         ]
     },
 
@@ -460,19 +610,64 @@ export default [
     {
         should: 'forge deep objects',
         model: 'BlogPost',
-        field: {'yo.title': 'title', 'yo.user': 'author.name'},
+        field: {
+            _id: '_id',
+            _type: '_type',
+            'yo.title': 'title',
+            'yo.user': 'author.name'
+        },
         options: {sort: ['yo.title']},
         results: [
-            { yo: { user: 'user 0', title: 'post 0' } },
-            { yo: { user: 'user 1', title: 'post 1' } },
-            { yo: { user: 'user 2', title: 'post 2' } },
-            { yo: { user: 'user 3', title: 'post 3' } },
-            { yo: { user: 'user 4', title: 'post 4' } },
-            { yo: { user: 'user 0', title: 'post 5' } },
-            { yo: { user: 'user 1', title: 'post 6' } },
-            { yo: { user: 'user 2', title: 'post 7' } },
-            { yo: { user: 'user 3', title: 'post 8' } },
-            { yo: { user: 'user 4', title: 'post 9' } }
+            {
+                _id: 'blogpost0',
+                _type: 'BlogPost',
+                yo: { user: 'user 0', title: 'post 0' }
+            },
+            {
+                _id: 'blogpost1',
+                _type: 'BlogPost',
+                yo: { user: 'user 1', title: 'post 1' }
+            },
+            {
+                _id: 'blogpost2',
+                _type: 'BlogPost',
+                yo: { user: 'user 2', title: 'post 2' }
+            },
+            {
+                _id: 'blogpost3',
+                _type: 'BlogPost',
+                yo: { user: 'user 3', title: 'post 3' }
+            },
+            {
+                _id: 'blogpost4',
+                _type: 'BlogPost',
+                yo: { user: 'user 4', title: 'post 4' }
+            },
+            {
+                _id: 'blogpost5',
+                _type: 'BlogPost',
+                yo: { user: 'user 0', title: 'post 5' }
+            },
+            {
+                _id: 'blogpost6',
+                _type: 'BlogPost',
+                yo: { user: 'user 1', title: 'post 6' }
+            },
+            {
+                _id: 'blogpost7',
+                _type: 'BlogPost',
+                yo: { user: 'user 2', title: 'post 7' }
+            },
+            {
+                _id: 'blogpost8',
+                _type: 'BlogPost',
+                yo: { user: 'user 3', title: 'post 8' }
+            },
+            {
+                _id: 'blogpost9',
+                _type: 'BlogPost',
+                yo: { user: 'user 4', title: 'post 9' }
+            }
         ]
     },
 
@@ -482,18 +677,18 @@ export default [
         field: {
             label: 'gender',
             total: {
-                aggregator: 'count',
-                property: '_id'
+                $aggregator: 'count',
+                $property: '_id'
                 // distinct: true
             }
             // {
             //     operator: 'cluster',
-            //     property: 'elevation',
+            //     $property: 'elevation',
             //     step: 100
             // },
             // {
-            //     operator: 'floor',
-            //     property: 'elevation'
+            //     $operator: 'floor',
+            //     $property: {$aggregator: 'avg', $property: 'elevation'}
             // },
             // {
             //     operator: 'compute',
@@ -512,8 +707,8 @@ export default [
         field: {
             author: 'author',
             avgRatting: {
-                aggregator: 'avg',
-                property: 'ratting'
+                $aggregator: 'avg',
+                $property: 'ratting'
             }
         },
         options: {sort: ['-avgRatting']},
@@ -532,8 +727,8 @@ export default [
         field: {
             author: 'author',
             totalRatting: {
-                aggregator: 'sum',
-                property: 'ratting'
+                $aggregator: 'sum',
+                $property: 'ratting'
             }
         },
         options: {sort: ['-totalRatting']},
@@ -553,8 +748,8 @@ export default [
         field: {
             authorName: 'author.name',
             minRatting: {
-                aggregator: 'min',
-                property: 'ratting'
+                $aggregator: 'min',
+                $property: 'ratting'
             }
         },
         options: {sort: ['minRatting', 'authorName']},
@@ -573,8 +768,8 @@ export default [
         field: {
             authorName: 'author.name',
             maxRatting: {
-                aggregator: 'max',
-                property: 'ratting'
+                $aggregator: 'max',
+                $property: 'ratting'
             }
         },
         options: {sort: ['-maxRatting', 'authorName']},
@@ -591,15 +786,14 @@ export default [
         should: 'aggregate with a query',
         model: 'User',
         field: {
-            sex: 'gender',
-            count: {
-                aggregator: 'count',
-                property: 'gender'
-            }
+            sex: 'gender'
+        },
+        aggregate: {
+            total: {$count: 'gender'}
         },
         filter: {gender: 'male'},
         results: [
-            { sex: 'male', count: 3 }
+            { sex: 'male', total: 3 }
         ]
     },
 
@@ -607,7 +801,7 @@ export default [
         should: 'accept no property for the COUNT aggregator',
         model: 'User',
         field: {
-            sex: 'gender', count: {aggregator: 'count'}},
+            sex: 'gender', count: {$aggregator: 'count'}},
         options: {sort: ['sex']},
         results: [
             { sex: 'female', count: 2 },
@@ -622,7 +816,7 @@ export default [
     //     field: {
     //         author: 'author',
     //         avgRatting: {
-    //             aggregator: 'compute',
+    //             $aggregator: 'compute',
     //             expression: 'floor(avg(<ratting>))'
     //         }
     //     },
@@ -642,8 +836,8 @@ export default [
     //     field: {
     //         author: 'author',
     //         stdevRatting: {
-    //             aggregator: 'stdev',
-    //             property: 'ratting'
+    //             $aggregator: 'stdev',
+    //             $property: 'ratting'
     //         }
     //     },
     //     options: {sort: ['-avgRatting']},
@@ -686,8 +880,8 @@ export default [
         field: {
             gender: 'author.gender',
             total: {
-                aggregator: 'count',
-                property: 'author'
+                $aggregator: 'count',
+                $property: 'author'
             }
         },
         options: {sort: ['-total']},
@@ -701,7 +895,7 @@ export default [
         model: 'BlogPost',
         field: {
             sex: 'author.gender',
-            count: {aggregator: 'count'}
+            count: {$aggregator: 'count'}
         },
         filter: {'author.gender': 'male'},
         results: [
@@ -714,8 +908,8 @@ export default [
         field: {
             gender: 'author.gender',
             nbSubscriptions: {
-                aggregator: 'count',
-                property: 'author.subscribedMailingList'
+                $aggregator: 'count',
+                $property: 'author.subscribedMailingList'
             }
         },
         filter: {'author.gender': 'female', 'author.subscribedMailingList': true},
@@ -730,8 +924,8 @@ export default [
         field: {
             gender: 'author.gender',
             ratting: {
-                aggregator: 'avg',
-                property: 'ratting'
+                $aggregator: 'avg',
+                $property: 'ratting'
             }
         },
         options: {sort: ['-ratting']},
@@ -749,7 +943,7 @@ export default [
         field: {
             isPublished: 'isPublished',
             gender: 'author.gender',
-            total: { aggregator: 'count' }
+            total: { $aggregator: 'count' }
         },
         options: {sort: ['isPublished', 'gender']},
         results: [
@@ -765,7 +959,7 @@ export default [
         field: {
             isPublished: 'isPublished',
             gender: 'author.gender',
-            total: {aggregator: 'count'}
+            total: {$aggregator: 'count'}
         },
         options: {sort: ['-total', 'isPublished', 'gender']},
         results: [
@@ -782,8 +976,8 @@ export default [
             isPublished: 'isPublished',
             gender: 'author.gender',
             total: {
-                aggregator: 'avg',
-                property: 'ratting'
+                $aggregator: 'avg',
+                $property: 'ratting'
             }
         },
         options: {sort: ['isPublished', 'gender']},
@@ -801,8 +995,8 @@ export default [
             isPublished: 'isPublished',
             gender: 'author.gender',
             total: {
-                aggregator: 'avg',
-                property: 'ratting'
+                $aggregator: 'avg',
+                $property: 'ratting'
             }
         },
         filter: {isPublished: {$exists: true}},
@@ -834,7 +1028,7 @@ export default [
         field: {
             isPublished: 'isPublished',
             gender: 'author.gender',
-            total: {aggregator: 'count'}
+            total: {$aggregator: 'count'}
         },
         options: {limit: 2, sort: ['isPublished', 'gender']},
         results: [
@@ -912,8 +1106,8 @@ export default [
         field: {
             gender: 'author.gender',
             ratting: {
-                aggregator: 'unknownAggregator',
-                property: 'ratting'
+                $aggregator: 'unknownAggregator',
+                $property: 'ratting'
             }
         },
         error: 'aggregate: unknown operator "unknownAggregator"'
@@ -924,8 +1118,8 @@ export default [
         field: {
             gender: 'author.gender',
             ratting: {
-                aggregator: 'avg',
-                property: 'unknownProperty'
+                $aggregator: 'avg',
+                $property: 'unknownProperty'
             }
         },
         error: 'aggregate: unknown property "unknownProperty" for model "BlogPost"'
@@ -956,7 +1150,7 @@ export default [
 //         label: '_type',
 //         'values+.gender': 'gender',
 //         'values+.total': {
-//             aggregator: 'count'
+//             $aggregator: 'count'
 //         }
 //     }
 // }
@@ -968,7 +1162,7 @@ export default [
 //         values: [{
 //             gender: 'gender',
 //             total: {
-//                 aggregator: 'count'
+//                 $aggregator: 'count'
 //             }
 //         }]
 //
@@ -999,7 +1193,7 @@ export default [
     // {
     //     model: 'Thing',
     //     groupBy: {
-    //         property: ['_type', 'gender']
+    //         $property: ['_type', 'gender']
     //     },
     //     results: [
     //         {
