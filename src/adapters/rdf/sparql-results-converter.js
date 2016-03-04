@@ -45,7 +45,7 @@ rdfInternals.RDF_DATATYPES = {
 };
 
 
-module.exports = function(db, modelName, queryFields) {
+module.exports = function(db, modelName, sanitizedQueryFields) {
 
     const internals = {};
 
@@ -53,31 +53,17 @@ module.exports = function(db, modelName, queryFields) {
      * returns the list of properties fieldName whose property
      * is an array
      */
-     internals.arrayProperties = [];
-    // internals.arrayProperties = (function() {
-    //     const modelClass = db[modelName];
-    //     const modelSchema = modelClass.schema;
-    //     const arrayProperties = [];
-    //
-    //     for (let fieldName of Object.keys(fields)) {
-    //         let propertyName = fields[fieldName];
-    //
-    //         /**
-    //          * if the propertyName is an object, it means that it is an aggregator,
-    //          * XXX let's skip that for now
-    //          */
-    //         if (_.isObject(propertyName)) {
-    //             continue;
-    //         }
-    //
-    //         let property = modelSchema.getProperty(propertyName);
-    //         console.log('...', propertyName, !!property);
-    //         if(property.isArray()) {
-    //             arrayProperties.push(propertyName);
-    //         }
-    //     }
-    //     return arrayProperties;
-    // })();
+     internals.arrayProperties = (function() {
+        let properties = [];
+        for (let fieldName of Object.keys(sanitizedQueryFields)) {
+            let propertyInfos = sanitizedQueryFields[fieldName];
+            if (propertyInfos.$array) {
+                properties.push(propertyInfos.$property);
+            }
+        }
+        return properties;
+     })();
+
 
     internals.convertLiteralValue = function(fieldName, value, rdfType) {
         let valueType = 'string';
@@ -87,16 +73,20 @@ module.exports = function(db, modelName, queryFields) {
 
         switch (valueType) {
             case 'string':
-                let propertyName = queryFields[fieldName];
-                if (_.isArray(propertyName)) {
-                    value = JSON.parse(value).map((val) => decodeURI(val));
-                    let property = db[modelName].schema.getProperty(propertyName);
-                    if (property.isRelation()) {
-                        value = value.map((uri) => ({
-                            _id: rdfInternals.rdfURI2id(db, property.type, uri),
-                            _type: property.type
-                        }));
-                    }
+                let propertyInfos = sanitizedQueryFields[fieldName];
+                let propertyName = propertyInfos.$property;
+                if (propertyInfos.$array) {
+                    value = JSON.parse(value);//.map((val) => decodeURIComponent(val));
+                    // let property = db[modelName].schema.getProperty(propertyName);
+                    // if (property.isRelation()) {
+                    //     if (!propertyInfos.$fields) {
+                    //         value = value.map((uri) => rdfInternals.rdfURI2id(db, property.type, uri));
+                    //     }
+                    //     // value = value.map((uri) => ({
+                    //     //     _id: rdfInternals.rdfURI2id(db, property.type, uri),
+                    //     //     _type: property.type
+                    //     // }));
+                    // }
                 }
                 break;
 
@@ -125,9 +115,13 @@ module.exports = function(db, modelName, queryFields) {
 
     internals.convertIRIValue = function(fieldName, value) {
 
-        const propertyInfos = queryFields[fieldName];
-        console.log('++++', fieldName, propertyInfos, value);
-        const propertyName = propertyInfos.$property;
+        const propertyInfos = sanitizedQueryFields[fieldName];
+        let propertyName = propertyInfos.$property;
+
+        if (_.endsWith(propertyName, '._id')) {
+            propertyName = propertyName.split('.').slice(0, -1).join('.');
+        }
+
         const property = db[modelName].schema.getProperty(propertyName);
         return {
             _id: rdfInternals.rdfURI2id(db, property.type, value),
@@ -139,7 +133,9 @@ module.exports = function(db, modelName, queryFields) {
         convert(item) {
             const doc = {};
 
-            let _idProperty = _(queryFields).pairs().find((o) => o[1].$property === '_id');
+            let _idProperty = _(sanitizedQueryFields)
+                                .pairs()
+                                .find((o) => o[1].$property === '_id');
             if (_idProperty) {
                 let _idVariableName = _idProperty[0];
                 let uri = item[_idVariableName].value;
@@ -147,7 +143,9 @@ module.exports = function(db, modelName, queryFields) {
                 delete item[_idVariableName];
             }
 
-            let _typeProperty = _(queryFields).pairs().find((o) => o[1].$property === '_type');
+            let _typeProperty = _(sanitizedQueryFields)
+                                    .pairs()
+                                    .find((o) => o[1].$property === '_type');
             if (_typeProperty) {
                 let _typeVariableName = _typeProperty[0];
                 doc[_typeVariableName] = modelName; //db.rdfClasses2ModelNameMapping[item._type.value];
@@ -158,6 +156,7 @@ module.exports = function(db, modelName, queryFields) {
                 let rdfInfo = item[fieldName];
                 fieldName = fieldName.split(rdfInternals.RELATION_SEPARATOR).join('.');
                 let value;
+                console.log('%%%%', fieldName, rdfInfo);
                 if (rdfInfo.type === 'literal') {
                     value = internals.convertLiteralValue(
                         fieldName, rdfInfo.value, rdfInfo.datatype

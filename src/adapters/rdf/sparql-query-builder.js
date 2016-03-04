@@ -157,19 +157,24 @@ module.exports = function(db, graphUri) {
         const queryFields = {};
         for (let fieldName of Object.keys(fields)) {
             let propertyInfos = fields[fieldName];
+            let isArray = false;
+
+            if (_.isArray(propertyInfos)) {
+                propertyInfos = propertyInfos[0];
+                isArray = true;
+            }
+
+            console.log('*****', fieldName, propertyInfos, isArray);
 
             if (_.isString(propertyInfos)) {
                 propertyInfos = {$property: propertyInfos};
             } else if (!propertyInfos.$property) {
-
-                if (!_(['count', 'object']).includes(propertyInfos.$aggregator)) {
-
-                    /** TODO loop over the operator and ajust adjust accordingly **/
-                    throw new Error(`$property not found for the field ${fieldName}`);
-                }
-
+                throw new Error('$property unfound');
             }
 
+            propertyInfos.$array = isArray;
+
+            let propertyName = propertyInfos.$property;
 
             let aggregator = propertyInfos.$aggregator;
 
@@ -187,6 +192,8 @@ module.exports = function(db, graphUri) {
 
             queryFields[fieldName] = propertyInfos;
         }
+
+        console.dir(queryFields, {depth: 10});
         return queryFields;
     };
 
@@ -508,14 +515,16 @@ module.exports = function(db, graphUri) {
     //     return filterOperation;
     // };
 
-    internals.buildVariableName = function(propertyName, isArray) {
-        let arrayPrefix = '';
-        // if (isArray) {
-            // arrayPrefix = 'array_';
-        // }
-        const variable = `${arrayPrefix}${propertyName}`;
+    internals.buildInnerVariableName = function(propertyName) {
+        if (_.endsWith(propertyName, '._id')) {
+            propertyName = propertyName.split('.').slice(0, -1).join('.');
+        }
 
-        return variable.split('.').join(rdfInternals.RELATION_SEPARATOR);
+        return propertyName.split('.').join(rdfInternals.RELATION_SEPARATOR);
+    };
+
+    internals.buildFinalVariableName = function(propertyName) {
+        return propertyName.split('.').join(rdfInternals.RELATION_SEPARATOR);
     };
 
     // internals.buildFilterItem = function(fieldName, propertyName, predicate, operator, rdfValue) {
@@ -781,37 +790,37 @@ module.exports = function(db, graphUri) {
     // };
 
 
-    internals.buildGroupBy = function(modelName, fields) {
-        let groupBy;
-        let variables = internals.buildFieldVariables(modelName, fields);
-        // let arrayProperties = internals.getArrayProperties(modelName, fields);
-
-        // if (arrayProperties.length) {
-        //
-        //     groupBy = [];
-        //     groupBy = groupBy.concat(variables.map(function(v) {
-        //         return {expression: v};
-        //     }));
-        //
-        // } else {
-            groupBy = [];
-
-            /** insert only non-aggregator variables **/
-            for (let variable of variables) {
-                if (!_.isObject(variable)) {
-                    groupBy.push({expression: variable});
-                }
-            }
-
-            /** if the number of groupBy equals the number of variable,
-             * there are no aggregators so we just have to dump the groupBy
-             */
-            if (groupBy.length === variables.length) {
-                groupBy = null;
-            }
-        // }
-        return groupBy;
-    };
+    // internals.buildGroupBy = function(modelName, fields) {
+    //     let groupBy;
+    //     let variables = internals.buildFieldVariables(modelName, fields);
+    //     // let arrayProperties = internals.getArrayProperties(modelName, fields);
+    //
+    //     // if (arrayProperties.length) {
+    //     //
+    //     //     groupBy = [];
+    //     //     groupBy = groupBy.concat(variables.map(function(v) {
+    //     //         return {expression: v};
+    //     //     }));
+    //     //
+    //     // } else {
+    //         groupBy = [];
+    //
+    //         /** insert only non-aggregator variables **/
+    //         for (let variable of variables) {
+    //             if (!_.isObject(variable)) {
+    //                 groupBy.push({expression: variable});
+    //             }
+    //         }
+    //
+    //         /** if the number of groupBy equals the number of variable,
+    //          * there are no aggregators so we just have to dump the groupBy
+    //          */
+    //         if (groupBy.length === variables.length) {
+    //             groupBy = null;
+    //         }
+    //     // }
+    //     return groupBy;
+    // };
 
 
     // internals.buildAllFieldsVariables = function(modelName, fields, isDistinct) {
@@ -867,6 +876,68 @@ module.exports = function(db, graphUri) {
         return sanitizedQueryFilters;
     }
 
+    internals.isArrayProperty = function(modelName, propertyName, scope) {
+        let isSpecialProperty = _(['_id', '_type']).includes(propertyName);
+        if (!isSpecialProperty) {
+
+            if (_.endsWith(propertyName, '._id')) {
+                propertyName = propertyName.split('.').slice(0, -1).join('.');
+            }
+
+            let property = db[modelName].schema.getProperty(propertyName);
+            if (!property) {
+                throw new Error(`unknown ${scope} property "${propertyName}" for model "${modelName}"`);
+            }
+
+            if (property.isArray()) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    internals.findArrayProperties = function(modelName, query) {
+
+        let arrayProperties = [];
+
+        for (let fieldName of Object.keys(query.field)) {
+            let propertyInfos = query.field[fieldName];
+            let propertyName = propertyInfos.$property;
+            // let isArray = internals.isArrayProperty(modelName, propertyName, 'field');
+            let isArray = propertyInfos.$array;
+            if (isArray) {
+                arrayProperties.push(propertyName);
+            }
+        }
+
+        // for (let propertyName of Object.keys(query.filter)) {
+        //     let isArray = internals.isArrayProperty(modelName, propertyName, 'filter');
+        //     if (isArray && !_(arrayProperties).includes(propertyName)) {
+        //         arrayProperties.push(propertyName);
+        //     }
+        // }
+
+        return arrayProperties;
+    };
+
+
+    // internals.findEmbedRelations = function(modelName, queryFields) {
+    //     let embedRelations = {};
+    //     console.log('-----', queryFields);
+    //     for (let fieldName of Object.keys(queryFields)) {
+    //         let fieldInfos = queryFields[fieldName];
+    //         if (fieldInfos.$embedRelation) {
+    //             console.log('!!!!', fieldName, fieldInfos);
+    //             fieldName = fieldName.split('.0.').join('.')
+    //             console.log('$$$', fieldName);
+    //             _.set(embedRelations, fieldName, {$property: fieldInfos.$property})
+    //         }
+    //     }
+    //     console.log('++++===', embedRelations);
+    //     return embedRelations;
+    // }
+
+
     internals.validateQuery = function(query) {
 
         /** validate order by **/
@@ -891,22 +962,33 @@ module.exports = function(db, graphUri) {
     internals.buildStatements = function(modelName, queryFields, queryAggregation) {
         let statements = {};
 
+
         /*** find all needed properties to build the statements ****/
         let propertyNames = [];
         for (let fieldName of Object.keys(queryFields)) {
-            let propertyInfos = queryFields[fieldName];
-            propertyNames.push(propertyInfos.$property);
+            let fieldInfos = queryFields[fieldName];
+            console.log('prop***', fieldName, fieldInfos);
+            propertyNames.push(fieldInfos.$property);
+            // includes the embed fields
+            if (fieldInfos.$fields) {
+                for (let embedFieldName of Object.keys(fieldInfos.$fields)) {
+                    let embedPropertyName = fieldInfos.$fields[embedFieldName];
+                    propertyNames.push(embedPropertyName);
+                }
+            }
         }
 
-        // const excludedOperators = ['$exits', '$nexists'];
         for (let fieldName of Object.keys(queryAggregation)) {
             let aggregation = queryAggregation[fieldName];
+            console.log('aggre***', fieldName, aggregation);
             propertyNames.push(aggregation.$property);
         }
+
 
         /*** generate all subProperties in order to build variables ****/
         let subProperties = [];
         for (let propertyName of propertyNames) {
+            console.log('***', modelName, propertyName);
             let splitedPropertyName = propertyName.split('.');
             if (splitedPropertyName.slice(-1)[0] === '_id') {
                 splitedPropertyName.pop(); // remove the '._id'
@@ -958,7 +1040,7 @@ module.exports = function(db, graphUri) {
         for (let propertyName of propertyNames) {
 
             let operations = queryFilters[propertyName];
-            let variable = internals.buildVariableName(propertyName);
+            let variable = internals.buildInnerVariableName(propertyName);
             filters[variable] = {propertyName: propertyName, operations: []};
 
             for (let operator of Object.keys(operations)) {
@@ -1060,7 +1142,7 @@ module.exports = function(db, graphUri) {
                 variable = variable.slice(1);
             }
 
-            variable = internals.buildVariableName(variable);
+            variable = internals.buildInnerVariableName(variable);
 
             orderBy.push({
                 expression: `?${variable}`,
@@ -1103,35 +1185,154 @@ module.exports = function(db, graphUri) {
 
         query = internals.sanitizeQuery(modelName, query);
 
+        let arrayProperties = internals.findArrayProperties(modelName, query);
+
         let queryFields = query.field;
         let queryFilters = query.filter;
         let queryAggregation = query.aggregate;
 
-        let clauses = internals.buildClauses(modelName, queryFields, queryFilters, queryAggregation);
+        let arrayPropertyFieldMapping = {};
+
+        let selectVariables = [];
+        let bindings = [];
+        let groupByVariables = [];
+
 
         /*** build select variables ***/
-        let selectVariables = [];
         for (let fieldName of Object.keys(queryFields)) {
             let propertyInfos = queryFields[fieldName];
             let propertyName = propertyInfos.$property;
-            let variable = internals.buildVariableName(propertyName);
-            selectVariables.push({
-                expression: `?_${variable}`,
-                variable: `?${fieldName}`
-            });
+            let variable = internals.buildInnerVariableName(propertyName);
+            if (!_(arrayProperties).includes(propertyName)) {
+                let finalVariable = internals.buildFinalVariableName(fieldName);
+                selectVariables.push({
+                    expression: `?_${variable}`,
+                    variable: `?${finalVariable}`
+                });
+                groupByVariables.push({expression: `?_${variable}`});
+            } else {
+                arrayPropertyFieldMapping[propertyName] = fieldName;
+            }
         }
 
+        /*** build object concatenation statements  ****/
+        for (let fieldName of Object.keys(queryFields)) {
+            let fieldInfos = queryFields[fieldName];
+
+            /** if there is no $fields, it is not a deep relation **/
+            if (!fieldInfos.$fields) {
+                continue;
+            }
+
+            let variable = internals.buildFinalVariableName(fieldInfos.$property);
+
+            let binding = {
+                type: 'bind',
+                variable: `?_encoded_${variable}`,
+                expression: {
+                    type: 'operation',
+                    operator: 'concat',
+                    args: []
+                }
+            }
+
+            let bindingArgs = ['"{"']
+
+            let embedFieldNames = Object.keys(fieldInfos.$fields);
+            for (let i = 0; i < embedFieldNames.length; i++) {
+                let embedFieldName = embedFieldNames[i];
+                let embedPropertyName = fieldInfos.$fields[embedFieldName];
+
+                console.log('....', fieldName, embedFieldName, embedPropertyName);
+                let embedVariable = internals.buildInnerVariableName(embedPropertyName);
+                bindingArgs.push(`"\"${embedFieldName}\":\""`); // name, sex
+                bindingArgs.push({
+                    type: 'operation',
+                    operator: 'encode_for_uri',
+                    args: [{
+                        type: 'operation',
+                        operator: 'str',
+                        args: [`?_${embedVariable}`] //?_credits____gender"
+                    }]
+                });
+
+                let isLastItem = i >= embedFieldNames.length - 1;
+                console.log(i, embedFieldNames.length, isLastItem);
+                if (!isLastItem) {
+                    bindingArgs.push('"\","');
+                }
+            }
+
+            bindingArgs.push('"\"}"');
+            binding.expression.args = bindingArgs;
+            bindings.push(binding);
+        }
+
+        /*** build select variables from array properties ****/
+        console.log('>>>>>', arrayProperties);
+        let selectArrayVariables = [];
+        for (let propertyName of arrayProperties) {
+            let variable = internals.buildInnerVariableName(propertyName);
+            let fieldName = arrayPropertyFieldMapping[propertyName];
+            console.log('=====', fieldName, propertyName, arrayPropertyFieldMapping);
+            let finalVariable = internals.buildFinalVariableName(fieldName);
+
+
+            let quote = '\"';
+            let isJsonObject = queryFields[fieldName].$fields
+            if (isJsonObject) {
+                /** we don't have to quote  json object **/
+                quote = '';
+            }
+
+            selectVariables.push({
+                expression: {
+                    type: 'operation',
+                    operator: 'concat',
+                    args: [
+                        `"[${quote}"`,
+                        {
+                            expression: `?_encoded_${variable}`,
+                            type: 'aggregate',
+                            aggregation: 'group_concat',
+                            distinct: true,
+                            separator: `${quote}, ${quote}`
+                        },
+                        `"${quote}]"`
+                    ]
+                },
+                variable: `?${finalVariable}`
+            });
+
+            /** skip the bindings if we are dealing with an embed array of object
+             * the concatenation has been already done
+             */
+            if (!queryFields[fieldName].$fields) {
+                bindings.push({
+                    type: 'bind',
+                    variable: `?_encoded_${variable}`,
+                    expression: {
+                        type: 'operation',
+                        operator: 'encode_for_uri',
+                        args: [{
+                            type: 'operation',
+                            operator: 'str',
+                            args: [`?_${variable}`]
+                        }]
+                    }
+                });
+            }
+        }
+
+
         /*** build aggregation variables ***/
-        let groupByVariables;
         let aggregations = Object.keys(queryAggregation);
         if (aggregations.length) {
-            groupByVariables = selectVariables.map((o) => ({
-                expression: o.expression
-            }));
             for (let fieldName of aggregations) {
                 let aggregationInfo = queryAggregation[fieldName];
                 let propertyName = aggregationInfo.$property;
-                let variable = internals.buildVariableName(propertyName);
+                let variable = internals.buildInnerVariableName(propertyName);
+                let finalVariable = internals.buildFinalVariableName(fieldName);
                 selectVariables.push({
                     expression: {
                         expression: `?_${variable}`,
@@ -1139,10 +1340,13 @@ module.exports = function(db, graphUri) {
                         aggregation: aggregationInfo.$aggregator,
                         distinct: aggregationInfo.distinct
                     },
-                    variable: `?${fieldName}`
+                    variable: `?${finalVariable}`
                 });
             }
         }
+
+        let clauses = internals.buildClauses(modelName, queryFields, queryFilters, queryAggregation);
+
 
         /*** build statements ***/
         let triples = []
@@ -1191,7 +1395,7 @@ module.exports = function(db, graphUri) {
             type: 'query',
             queryType: 'SELECT',
             variables: selectVariables,
-            where: [triples].concat(filters),
+            where: [triples].concat(filters).concat(bindings),
             group: groupByVariables,
             order: internals.buildOrderBy(query['sort']),
             distinct: query.distinct,
