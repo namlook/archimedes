@@ -545,6 +545,8 @@ export default function(config) {
 
                 console.log(sparql);
 
+                // TODO: sanitize the query here
+
                 let converter = sparqlResultsConverter(db, modelName, query.field);
 
                 let stream = internals.sparqlClient.queryStream(sparql);

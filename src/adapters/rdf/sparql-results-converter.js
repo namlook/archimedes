@@ -125,9 +125,10 @@ module.exports = function(db, modelName, queryFields) {
 
     internals.convertIRIValue = function(fieldName, value) {
 
-        const propertyName = queryFields[fieldName];
+        const propertyInfos = queryFields[fieldName];
+        console.log('++++', fieldName, propertyInfos, value);
+        const propertyName = propertyInfos.$property;
         const property = db[modelName].schema.getProperty(propertyName);
-
         return {
             _id: rdfInternals.rdfURI2id(db, property.type, value),
             _type: property.type

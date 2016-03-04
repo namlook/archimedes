@@ -10,13 +10,36 @@ var it = lab.it;
 var before = lab.before;
 var expect = Code.expect;
 
-import testQueries from './new-query-test';
 import loadDb from './data';
 import chalk from 'chalk';
 import _ from 'lodash';
 import {inspect} from 'util';
 
 import highland from 'highland';
+
+
+
+
+import field from './field-assertions';
+import fieldErrors from './field-error-assertions';
+
+import filter from './filter-assertions';
+import filterErrors from './filter-error-assertions';
+
+import aggregation from './aggregation-assertions';
+import aggregationErrors from './aggregation-error-assertions';
+
+import queryOptions from './query-option-assertions'
+
+const testQueries = {
+    field,
+    'field-errors': fieldErrors,
+    filter,
+    'filter-errors': filterErrors,
+    aggregation,
+    'aggregation-errors': aggregationErrors,
+    'query-options': queryOptions
+};
 
 
 var processTest = function(db, testQuery) {
@@ -81,7 +104,7 @@ var processTest = function(db, testQuery) {
     });
 };
 
-describe('#aggregate()', function(){
+describe('#query()', function(){
 
     var db;
     before(function(done) {
@@ -106,16 +129,19 @@ describe('#aggregate()', function(){
         };
     };
 
-
-    for (let i = 0; i < testQueries.length; i++) {
-        let testQuery = testQueries[i];
-        let testLauncher = it;
-        if (testQuery.only) {
-            testLauncher = it.only;
-        }
-        if (testQuery.skip) {
-            testLauncher = it.skip;
-        }
-        testLauncher(`${testQuery.model}: ${testQuery.should}`, {parallel: false}, testFn(testQuery));
+    for (let section of Object.keys(testQueries)) {
+        describe(`[${section}]`, function() {
+            for (let testQuery of testQueries[section]) {
+                let testLauncher = it;
+                if (testQuery.only) {
+                    testLauncher = it.only;
+                }
+                if (testQuery.skip) {
+                    testLauncher = it.skip;
+                }
+                testLauncher(`${testQuery.model}: ${testQuery.should}`, {parallel: false}, testFn(testQuery));
+            }
+        });
     }
+
 });
