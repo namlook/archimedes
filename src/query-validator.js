@@ -78,7 +78,7 @@ class QueryValidator {
 
     _validateValue(value, propertyName, operator) {
         if (operator) {
-            if (!_.contains(allowedOperators, operator)) {
+            if (!_.includes(allowedOperators, operator)) {
                 this.errors.push({
                     message: `unknown operator "${operator}"`,
                     path: propertyName
@@ -152,7 +152,7 @@ class QueryValidator {
                 }
             }
 
-            if (_.contains(propertyName, '.')) {
+            if (_.includes(propertyName, '.')) {
                 let relationName = propertyName.split('.')[0];
                 let propRelation = this._modelSchema.getProperty(relationName);
                 if (!propRelation) {

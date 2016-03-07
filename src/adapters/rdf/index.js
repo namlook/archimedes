@@ -626,7 +626,7 @@ export default function(config) {
                                     isID = true;
                                 }
 
-                                operator = _.trimLeft(operator, '$');
+                                operator = _.trimStart(operator, '$');
                                 let postSorting = 0;
                                 if (operator === 'concat') {
                                     operator = 'group_concat';
@@ -718,7 +718,7 @@ export default function(config) {
                             let predicate;
                             if (_.endsWith(propertyName, '._type')) {
                                 predicate = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
-                            } else if (_.contains(propertyName, '.')) {
+                            } else if (_.includes(propertyName, '.')) {
                                 predicate = propertyName2Sparson(modelClass, propertyName);
                             } else if (propertyName !== true) {
                                 predicate = propertyRdfUri(modelClass, propertyName);
@@ -912,7 +912,7 @@ export default function(config) {
                     for (let propertyName of propertyNames) {
                         let propertyUri = propertyRdfUri(db[modelType], propertyName);
                         let predicate;
-                        if (_.contains(propertyName, '.')) {
+                        if (_.includes(propertyName, '.')) {
                             predicate = propertyName2Sparson(db[modelType], propertyName);
                         } else {
                             predicate = propertyUri;
@@ -933,7 +933,7 @@ export default function(config) {
                     let {target: targetName} = aggregation;
                     let targetPropertyUri = propertyRdfUri(db[modelType], targetName);
                     let aggregationPredicate;
-                    if (_.contains(targetName, '.')) {
+                    if (_.includes(targetName, '.')) {
                         aggregationPredicate = propertyName2Sparson(db[modelType], targetName);
                     } else {
                         aggregationPredicate = targetPropertyUri;
@@ -953,7 +953,7 @@ export default function(config) {
 
                         let descending = false;
                         if (propertyName[0] === '-') {
-                            propertyName = _.trimLeft(propertyName, '-');
+                            propertyName = _.trimStart(propertyName, '-');
                             descending = true;
                         }
 
@@ -1019,11 +1019,11 @@ export default function(config) {
 
                         let _compute = function(item, nameIdx, names) {
                             let variable = names[nameIdx];
-                            let name = _.trimLeft(variable, '?');
+                            let name = _.trimStart(variable, '?');
                             let label = item[name].value;
 
                             if (nameIdx + 2 >= names.length) {
-                                let nextName = _.trimLeft(names[nameIdx + 1], '?');
+                                let nextName = _.trimStart(names[nameIdx + 1], '?');
 
                                 let value = parseFloat(item[nextName].value);
                                 if (aggregation.operator !== 'count') {
@@ -1229,7 +1229,7 @@ export default function(config) {
                     }
 
                     let deleteTriples = operations.map((operation) => {
-                        if (_.contains(['unset', 'pull'], operation.operator)) {
+                        if (_.includes(['unset', 'pull'], operation.operator)) {
                             return operation2triple(db, modelType, uri, operation);
                         }
                     });
@@ -1267,7 +1267,7 @@ export default function(config) {
                     // var objectVariableIndex = 0;
                     // var deletewhereTriples = [];
                     let insertTriples = operations.map((operation) => {
-                        if (_.contains(['set', 'push'], operation.operator)) {
+                        if (_.includes(['set', 'push'], operation.operator)) {
                             let triple = operation2triple(db, modelType, uri, operation);
                             // deletewhereTriples.push([{
                             //     subject: uri,
@@ -1391,7 +1391,7 @@ export default function(config) {
                     }
 
                     /** hack for virtuoso **/
-                    if (results && _.contains(sparql.toLowerCase(), 'construct')) {
+                    if (results && _.includes(sparql.toLowerCase(), 'construct')) {
                         results = results.map((item) => {
                             if (item.subject) {
                                 return item;

@@ -164,8 +164,6 @@ module.exports = function(db, graphUri) {
                 isArray = true;
             }
 
-            console.log('*****', fieldName, propertyInfos, isArray);
-
             if (_.isString(propertyInfos)) {
                 propertyInfos = {$property: propertyInfos};
             } else if (!propertyInfos.$property) {
@@ -193,7 +191,6 @@ module.exports = function(db, graphUri) {
             queryFields[fieldName] = propertyInfos;
         }
 
-        console.dir(queryFields, {depth: 10});
         return queryFields;
     };
 
@@ -250,8 +247,7 @@ module.exports = function(db, graphUri) {
         return sanitizedQueryAggregation;
     };
 
-    /**
-     * returns the list of properties fieldName whose property
+    /** returns the list of properties fieldName whose property
      * is an array
      */
     // internals.getArrayProperties = function(modelName, fields) {
@@ -366,8 +362,7 @@ module.exports = function(db, graphUri) {
         };
     };
 
-    /**
-     * build the sparson "field“ section wich will be added
+    /** build the sparson "field“ section wich will be added
      * to the `whereClause`
      */
     // internals.buildFields = function(modelName, fields, filter, includes) {
@@ -967,7 +962,6 @@ module.exports = function(db, graphUri) {
         let propertyNames = [];
         for (let fieldName of Object.keys(queryFields)) {
             let fieldInfos = queryFields[fieldName];
-            console.log('prop***', fieldName, fieldInfos);
             propertyNames.push(fieldInfos.$property);
             // includes the embed fields
             if (fieldInfos.$fields) {
@@ -980,7 +974,6 @@ module.exports = function(db, graphUri) {
 
         for (let fieldName of Object.keys(queryAggregation)) {
             let aggregation = queryAggregation[fieldName];
-            console.log('aggre***', fieldName, aggregation);
             propertyNames.push(aggregation.$property);
         }
 
@@ -988,7 +981,6 @@ module.exports = function(db, graphUri) {
         /*** generate all subProperties in order to build variables ****/
         let subProperties = [];
         for (let propertyName of propertyNames) {
-            console.log('***', modelName, propertyName);
             let splitedPropertyName = propertyName.split('.');
             if (splitedPropertyName.slice(-1)[0] === '_id') {
                 splitedPropertyName.pop(); // remove the '._id'
@@ -1162,7 +1154,7 @@ module.exports = function(db, graphUri) {
         query.aggregate = queryAggregation;
 
         // /*** add the _id if no present in field ***/
-        // let hasId = _(query.field).pairs().find((o) => o[1].$property === '_id');
+        // let hasId = _(query.field).toPairs().find((o) => o[1].$property === '_id');
         // if (!hasId) {
         //     query.field._id = {$property: '_id'}
         // }
@@ -1170,7 +1162,7 @@ module.exports = function(db, graphUri) {
         /**
          * filter on the _type and add it in field if not present
          */
-        // let hasType = _(query.field).pairs().find((o) => o[1].$property === '_type');
+        // let hasType = _(query.field).toPairs().find((o) => o[1].$property === '_type');
         // if (!hasType) {
         //     query.field._type = {$property: '_type'};
         // }
@@ -1269,12 +1261,10 @@ module.exports = function(db, graphUri) {
         }
 
         /*** build select variables from array properties ****/
-        console.log('>>>>>', arrayProperties);
         let selectArrayVariables = [];
         for (let propertyName of arrayProperties) {
             let variable = internals.buildInnerVariableName(propertyName);
             let fieldName = arrayPropertyFieldMapping[propertyName];
-            console.log('=====', fieldName, propertyName, arrayPropertyFieldMapping);
             let finalVariable = internals.buildFinalVariableName(fieldName);
 
 

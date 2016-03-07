@@ -72,7 +72,7 @@ export default function(dbAdapter, config) {
                             if (typeof propConfig.items === 'string') {
                                 propConfig.items = {type: propConfig.items};
                             }
-                        } else if (!_.contains(validPropertyTypes, propConfig.type)) {
+                        } else if (!_.includes(validPropertyTypes, propConfig.type)) {
                             if (!models[propConfig.type]) {
                                 return reject(new StructureError(`${modelName} invalid type for property "${propName}"`));
                             }
@@ -237,7 +237,7 @@ export default function(dbAdapter, config) {
                     error.forEach((detail) => {
                         let propertyName = detail.path;
                         let badValue = pojo[propertyName];
-                        if (detail.type === 'boolean.base' && _.contains([1, 0], badValue)) {
+                        if (detail.type === 'boolean.base' && _.includes([1, 0], badValue)) {
                             virtuosoFix = true;
                             pojo[propertyName] = Boolean(badValue);
                         }
@@ -573,7 +573,7 @@ export default function(dbAdapter, config) {
                             let propertyName = value[operator];
                             if (!(operator === '$count' && propertyName === true)) {
                                 if (!modelClass.schema.getProperty(propertyName)) {
-                                    let ispecialProperty = _.contains(['_id', '_type'], propertyName) || _.endsWith(propertyName, '._id') || _.endsWith(propertyName, '._type');
+                                    let ispecialProperty = _.includes(['_id', '_type'], propertyName) || _.endsWith(propertyName, '._id') || _.endsWith(propertyName, '._type');
                                     if (!ispecialProperty) {
                                         throw new ValidationError(`aggregate: unknown property "${propertyName}" for model "${modelType}"`);
                                     }
@@ -582,7 +582,7 @@ export default function(dbAdapter, config) {
                         }
                     } else {
                         if (!modelClass.schema.getProperty(value)) {
-                            let ispecialProperty = _.contains(['_id', '_type'], value) || _.endsWith(value, '._id') || _.endsWith(value, '._type');
+                            let ispecialProperty = _.includes(['_id', '_type'], value) || _.endsWith(value, '._id') || _.endsWith(value, '._type');
                             if (!ispecialProperty) {
                                 throw new ValidationError(`aggregate: unknown property "${value}" for model "${modelType}"`);
                             }
@@ -1052,7 +1052,7 @@ export default function(dbAdapter, config) {
 
                         let value = pojo[propertyName];
 
-                        if (!_.contains(['_id', '_type'], propertyName)) {
+                        if (!_.includes(['_id', '_type'], propertyName)) {
                             let property = Model.schema.getProperty(propertyName);
                             if (!property) {
                                 if (stripUnknown) {

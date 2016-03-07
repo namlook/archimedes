@@ -159,7 +159,7 @@ export default class ModelSchemaProperty {
             let {inverseRelationships} = db[this.type].schema;
 
             let results = inverseRelationships.map((invRel) => {
-                if (_.contains(modelMixinsChain, invRel.type)) {
+                if (_.includes(modelMixinsChain, invRel.type)) {
                     return invRel;
                 }
             });

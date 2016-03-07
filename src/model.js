@@ -60,7 +60,7 @@ var modelFactory = function(db, name, modelClassSchema) {
     if (error) {
         let errorDetail = error.details[0];
         let path = ` (${errorDetail.path})`;
-        if (!_.contains(path, '.')) {
+        if (!_.includes(path, '.')) {
             path = '';
         }
         throw new StructureError(`${name} ${errorDetail.message}${path}`, error);
@@ -193,7 +193,7 @@ var modelFactory = function(db, name, modelClassSchema) {
         mixedWith() {
             let results = [];
             _.forOwn(this.db.registeredModels, (model, modelName) => {
-                if (_.contains(model.mixinsChain, modelName)) {
+                if (_.includes(model.mixinsChain, modelName)) {
                     results.push(modelName);
                 }
             });

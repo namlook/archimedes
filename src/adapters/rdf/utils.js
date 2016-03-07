@@ -100,7 +100,7 @@ export let buildRdfValue = function(db, modelType, propertyName, value) {
         rdfValue = instanceRdfUri(db[value._type], value._id);
     } else {
         let propertyType = modelClass.schema.getProperty(propertyName).type;
-        if (_.contains(['date', 'datetime'], propertyType)) {
+        if (_.includes(['date', 'datetime'], propertyType)) {
             rdfValue = N3Util.createLiteral(moment(value).toISOString(), 'http://www.w3.org/2001/XMLSchema#dateTime');
         } else {
             rdfValue = N3Util.createLiteral(value);
@@ -228,7 +228,7 @@ export let pojo2triples = function(db, modelType, pojo) {
 
     _.forOwn(pojo, (values, propertyName) => {
 
-        if (_.contains(['_id', '_type'], propertyName)) {
+        if (_.includes(['_id', '_type'], propertyName)) {
             return;
         }
 
@@ -324,7 +324,7 @@ export let query2whereClause = function(db, modelType, query, options) {
         let idAsValue = false;
         let predicate, propertyUri;
 
-        if (_.contains(propertyName, '.')) {
+        if (_.includes(propertyName, '.')) {
             if (_.endsWith(propertyName, '._id')) {
                 propertyName = propertyName.split('.').slice(0, -1).join('.');
                 let property = modelClass.schema.getProperty(propertyName);
@@ -398,7 +398,7 @@ export let query2whereClause = function(db, modelType, query, options) {
             let property = db[modelType].schema.getProperty(propertyName);
             let isDate = false;
             if (property) {
-                isDate = _.contains(['date', 'datetime'], property.type);
+                isDate = _.includes(['date', 'datetime'], property.type);
             }
 
 

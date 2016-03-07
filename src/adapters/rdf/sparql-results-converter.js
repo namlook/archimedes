@@ -71,12 +71,23 @@ module.exports = function(db, modelName, sanitizedQueryFields) {
             valueType = rdfInternals.RDF_DATATYPES[rdfType];
         }
 
+        const _decodeURIValue = function(iriValue) {
+            if (_.isPlainObject(iriValue)) {
+                let decodedPairs = _.toPairs(iriValue).map((pair) => {
+                    return [pair[0], decodeURIValue(pair[1])];
+                });
+                return _.fromPairs(decodedPairs);
+            } else {
+                return decodeURIComponent(iriValue);
+            }
+        }
+
         switch (valueType) {
             case 'string':
                 let propertyInfos = sanitizedQueryFields[fieldName];
                 let propertyName = propertyInfos.$property;
                 if (propertyInfos.$array) {
-                    value = JSON.parse(value);//.map((val) => decodeURIComponent(val));
+                    value = JSON.parse(value).map((val) => _decodeURIValue(val));
                     // let property = db[modelName].schema.getProperty(propertyName);
                     // if (property.isRelation()) {
                     //     if (!propertyInfos.$fields) {
@@ -134,7 +145,7 @@ module.exports = function(db, modelName, sanitizedQueryFields) {
             const doc = {};
 
             let _idProperty = _(sanitizedQueryFields)
-                                .pairs()
+                                .toPairs()
                                 .find((o) => o[1].$property === '_id');
             if (_idProperty) {
                 let _idVariableName = _idProperty[0];
@@ -144,7 +155,7 @@ module.exports = function(db, modelName, sanitizedQueryFields) {
             }
 
             let _typeProperty = _(sanitizedQueryFields)
-                                    .pairs()
+                                    .toPairs()
                                     .find((o) => o[1].$property === '_type');
             if (_typeProperty) {
                 let _typeVariableName = _typeProperty[0];

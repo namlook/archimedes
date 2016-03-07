@@ -190,7 +190,7 @@ export default function(db, modelClass, attrs) {
                 }
             }
 
-            let uniqValues = _.uniq(oldValues.concat(acceptedValues), (item) => {
+            let uniqValues = _.uniqBy(oldValues.concat(acceptedValues), (item) => {
                 return JSON.stringify(item);
             });
 
@@ -343,9 +343,8 @@ export default function(db, modelClass, attrs) {
                 let value = this.get(property.name);
 
                 let shouldBeIncluded = (
-                    _.isBoolean(includedProperties) &&
-                    includedProperties) || _.includes(includedProperties, property.name
-                );
+                    _.isBoolean(includedProperties) && includedProperties
+                ) || _.includes(includedProperties, property.name);
 
                 if (property.isRelation()) {
                     if (property.isArray()) {
@@ -414,7 +413,7 @@ export default function(db, modelClass, attrs) {
             }
 
             if (included && included.length) {
-                let uniqIncluded = _.uniq(included, (o) => `${o.type}/${o.id}`);
+                let uniqIncluded = _.uniqBy(included, (o) => `${o.type}/${o.id}`);
                 included.length = 0; // clear the array without loosing the reference
                 uniqIncluded.forEach((item) => {
                     included.push(item);
