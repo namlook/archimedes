@@ -156,6 +156,7 @@ module.exports = function(db, graphUri) {
         fields = fields || {};
         const queryFields = {};
         for (let fieldName of Object.keys(fields)) {
+
             let propertyInfos = fields[fieldName];
             let isArray = false;
 
@@ -174,10 +175,18 @@ module.exports = function(db, graphUri) {
 
             let propertyName = propertyInfos.$property;
 
+            if (propertyName.split('?').length > 1) {
+                let optionalPropertyName = propertyName.split('?')[0];
+                propertyName = propertyName.split('?').join('');
+                propertyInfos.$property = propertyName;
+                propertyInfos.$optional = optionalPropertyName;
+            }
+
             let aggregator = propertyInfos.$aggregator;
 
             if (aggregator) {
-                let validAggregator = _(rdfInternals.validAggregators).includes(aggregator);
+                let validAggregator = _(rdfInternals.validAggregators)
+                                            .includes(aggregator);
 
                 if (!validAggregator) {
                     throw new Error(`unknown aggregator "${aggregator}" for field "${fieldName}"`);
@@ -288,27 +297,32 @@ module.exports = function(db, graphUri) {
         let modelSchema = modelClass.schema;
         let property;
 
-        if (propertyName === '_type') {
+        // if (propertyName === '_type') {
+        //     return 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
+        // }
+
+        if (propertyName === '_type' || _.endsWith(propertyName, '._type')) {
             return 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
         }
 
-        if (parent) {
-            let relationType = modelSchema.getProperty(parent).type;
-            let relationModelSchema = db[relationType].schema;
-            property = relationModelSchema.getProperty(propertyName);
-        } else {
-            property = modelSchema.getProperty(propertyName);
-        }
+        // if (parent) {
+        //     let relationType = modelSchema.getProperty(parent).type;
+        //     let relationModelSchema = db[relationType].schema;
+        //     property = relationModelSchema.getProperty(propertyName);
+        // } else {
+        //     property = modelSchema.getProperty(propertyName);
+        // }
+        property = modelSchema.getProperty(propertyName);
 
-        if (property.isInverseRelationship()) { // only for filter
-            return {
-                type: 'path',
-                pathType: '^',
-                items: [property.meta.rdfUri]
-            };
-        } else {
+        // if (property.isInverseRelationship()) { // only for filter
+        //     return {
+        //         type: 'path',
+        //         pathType: '^',
+        //         items: [property.meta.rdfUri]
+        //     };
+        // } else {
             return property.meta.rdfUri;
-        }
+        // }
     };
 
     /**
@@ -514,7 +528,6 @@ module.exports = function(db, graphUri) {
         if (_.endsWith(propertyName, '._id')) {
             propertyName = propertyName.split('.').slice(0, -1).join('.');
         }
-
         return propertyName.split('.').join(rdfInternals.RELATION_SEPARATOR);
     };
 
@@ -957,12 +970,18 @@ module.exports = function(db, graphUri) {
     internals.buildStatements = function(modelName, queryFields, queryAggregation) {
         let statements = {};
 
+        let optionalSubPropertyNames = [];
 
         /*** find all needed properties to build the statements ****/
         let propertyNames = [];
         for (let fieldName of Object.keys(queryFields)) {
             let fieldInfos = queryFields[fieldName];
             propertyNames.push(fieldInfos.$property);
+
+            if (fieldInfos.$optional) {
+                optionalSubPropertyNames.push(fieldInfos.$optional);
+            }
+
             // includes the embed fields
             if (fieldInfos.$fields) {
                 for (let embedFieldName of Object.keys(fieldInfos.$fields)) {
@@ -972,6 +991,7 @@ module.exports = function(db, graphUri) {
             }
         }
 
+        /** find all needed properties form aggregation ***/
         for (let fieldName of Object.keys(queryAggregation)) {
             let aggregation = queryAggregation[fieldName];
             propertyNames.push(aggregation.$property);
@@ -982,12 +1002,19 @@ module.exports = function(db, graphUri) {
         let subProperties = [];
         for (let propertyName of propertyNames) {
             let splitedPropertyName = propertyName.split('.');
+
             if (splitedPropertyName.slice(-1)[0] === '_id') {
                 splitedPropertyName.pop(); // remove the '._id'
             }
             for (let i = 0; i < splitedPropertyName.length; i++) {
                 let subProperty = splitedPropertyName.slice(0, i + 1).join('.');
                 subProperties.push(subProperty);
+                if (
+                    _(optionalSubPropertyNames).includes(subProperty)
+                    && !_(optionalSubPropertyNames).includes(propertyName)
+                ) {
+                    optionalSubPropertyNames.push(propertyName);
+                }
             }
         }
 
@@ -1002,6 +1029,11 @@ module.exports = function(db, graphUri) {
                                 .split('.')
                                 .join(rdfInternals.RELATION_SEPARATOR);
 
+            let optional = false;
+            if (_(optionalSubPropertyNames).includes(propertyName)) {
+                optional = true;
+            }
+
             let isRelation = propertyName.split('.').length > 1;
             if (isRelation) {
                 subject = propertyName.split('.').slice(0, -1).join('.');
@@ -1012,10 +1044,11 @@ module.exports = function(db, graphUri) {
                 predicate = internals.buildPredicate(modelName, propertyName);
             }
 
-
-            statements[variable] = {subject, predicate};
+            statements[variable] = {subject, predicate, optional};
 
         }
+
+        console.dir(statements, {depth: 10});
 
         return statements;
     };
@@ -1122,10 +1155,6 @@ module.exports = function(db, graphUri) {
             return null;
         }
 
-        if (!_.isArray(sortedVariables)) {
-            throw new Error('sortedVariable must be an array');
-        }
-
         let orderBy = [];
         for (let variable of sortedVariables) {
             let descending = false;
@@ -1141,7 +1170,556 @@ module.exports = function(db, graphUri) {
                 descending: descending
             });
         }
+
         return orderBy;
+    };
+
+    // query.field = {
+    //     title: title,
+    //     authorName: 'author?.name',
+    //     tags: ['tags'],
+    //     creditedAuthor: [{
+    //         $property: 'credits',
+    //         $fields: {
+    //             name: 'credits.name',
+    //             sex: 'credits.gender'
+    //         }
+    //     }]
+    // }
+    // [
+    //     {fieldName: 'title', propertyName: 'title', sorted: 'asc', subject: '_id'},
+    //     {fieldName: 'authorName', propertyName: 'author.name', subject: 'author', optional: true},
+    //     {fieldName: 'tags', propertyName: 'tags', array: true, subject: '_id'},
+    //     {fieldName: 'creditedAuthor', propertyName: 'credits', array: true, subject: '_id', inner: true},
+    //     {fieldName: null, propertyName: 'author', optional: true, inner: true},
+    //     {fieldName: 'name', propertyName: 'credits.name', subject: 'credits'},
+    //     {fieldName: 'sex', propertyName: 'credits.gender', subject: 'credits'}
+    // ]
+    internals._buildFieldProperties = function(modelName, query, sortedFields) {
+
+        const convertPair2property = function([fieldName, fieldInfos]) {
+            let isArray = _.isArray(fieldInfos);
+            fieldInfos = isArray ? fieldInfos[0] : fieldInfos;
+
+            if (_.isString(fieldInfos)) {
+                fieldInfos = {$property: fieldInfos};
+            }
+
+            let propertyName = fieldInfos.$property;
+
+            let optional = _.includes(propertyName, '?');
+            if (optional) {
+                propertyName = propertyName.split('?').join('');
+            }
+
+            return {
+                fieldName,
+                propertyName,
+                optional,
+                array: isArray,
+                inner: false,//isInner,
+                fields: fieldInfos.$fields,
+            };
+        };
+
+        return  _.toPairs(query.field).map(convertPair2property);
+    };
+
+    internals._buildStatementProperties = function(modelName, fieldProperties, aggregationProperties, sortedFields) {
+
+        const sortedField = (fieldName) => _.get(
+            _.find(sortedFields, {fieldName: fieldName}),
+            'order'
+        );
+
+        const findParents = function(propertyName) {
+            let splitedPropertyName = propertyName.split('.');
+            if (splitedPropertyName.length > 1) {
+                let x = splitedPropertyName.slice(0, -1).join('.');
+                return _.flatten(_.compact([x, findParents(x)]));
+            }
+        };
+
+        const stripEndingId = (propertyName) => {
+            return  _.endsWith(propertyName, '._id') ?
+                propertyName.split('.').slice(0, -1).join('.') : propertyName;
+        }
+
+
+        let properties = fieldProperties.concat(
+            aggregationProperties.map((o) => ({
+                fieldName: o.fieldName,
+                propertyName: o.propertyName,
+                array: o.array,
+                inner: true
+            }))
+        ).map((o) => { // add sortBy info
+            o.sortBy = sortedField(o.fieldName)
+            return o;
+        }).map((o) => {
+            o.propertyRaw = o.propertyName;
+            o.propertyName = stripEndingId(o.propertyName);
+            o.parent = o.propertyName.split('.').slice(0, -1).join('.');
+            return o;
+        });
+
+
+        let innerProperties = _(properties)
+            .filter((o) => o.parent)
+            .map((o) => o.propertyRaw)
+            .flatMap(findParents)
+            .uniq()
+            .map((propertyName) => {
+                let optional = propertyName.split('?').length > 1;
+                let propertyRaw = propertyName;
+                if (optional) {
+                    propertyName = propertyName.split('?').join('');
+                }
+                let parent = propertyName.split('.').slice(0, -1).join('.');
+                return {
+                    propertyName,
+                    optional,
+                    parent,
+                    inner: true,
+                    propertyRaw
+                };
+            })
+            .value();
+
+        return innerProperties.concat(properties);
+    };
+
+    // query.filter = {
+    //     title: {$startsWith: 'hello'},
+    //     ratting: {$gt: 3, $lt: 5}
+    //     tags: {$in: ['tag\"1', 'tag\"2']},
+    //     'credits.name': 'user1'
+    // }
+    // [
+    //     {propertyName: 'title', operator: 'startsWith', rdfValue: 'hello'},
+    //     {propertyName: 'ratting', operator: 'gt', rdfValue: '3^^xsd:integer'},
+    //     {propertyName: 'ratting', operator: 'lt', rdfValue: '5^^xsd:integer'},
+    //     {propertyName: 'tags', operator: 'in', rdfValue: ['tag\"1', 'tag\"2']},
+    //     {propertyName: 'credits.name', operator: 'eq', rdfValue: 'user1'}
+    // ]
+    internals._buildFilterProperties = function(modelName, query) {
+        return _.flatten(
+            _.toPairs(query.filter)
+            .map(([propertyName, filterInfos]) => {
+
+                if (!_.isPlainObject(filterInfos)) {
+                    filterInfos = {$eq: filterInfos};
+                }
+                let filters = _.toPairs(filterInfos)
+                    .map(([operator, value]) => {
+                        let rdfValue;
+                        if (_.isArray(value)) {
+                            rdfValue = value.map((v) => rdfInternals.buildRdfValue(
+                                modelName, propertyName, v));
+                        } else {
+                            rdfValue = rdfInternals.buildRdfValue(modelName, propertyName, value);
+                        }
+                        return {propertyName, operator, rdfValue};
+                    });
+
+                return _.flatten(filters);
+            })
+        );
+    };
+
+    // query.aggregate = {
+    //     avgRatting: {$avg: 'ratting', distinct: true},
+    //     sumRatting: {$sum: 'ratting'},
+    //     total: {$count: true}
+    // }
+    // [
+    //     {fieldName: 'avgRatting', propertyName: 'ratting', aggregator: 'avg', distinct: true},
+    //     {fieldName: 'sumRatting', propertyName: 'ratting', aggregator: 'sum'},
+    //     {fieldName: 'total', propertyName: '_id', aggregator: 'count'},
+    // ]
+    internals._buildAggregationProperties = function(model, query) {
+        return _.toPairs(query.aggregate)
+            .map(([fieldName, aggregation]) => {
+
+                let aggregator, aggregationInfos;
+                if (_.has(aggregation, '$aggregator')) {
+                    aggregationInfos = aggregation;
+                    aggregator = aggregation.$aggregator;
+                    if (aggregator === 'count' && !aggregationInfos.$property) {
+                        aggregationInfos.$property = '_id';
+                    }
+                } else {
+                    [aggregator, aggregationInfos] = _.toPairs(aggregation)[0];
+                    aggregator = aggregator.slice(1);
+                    if (aggregationInfos === true) {
+                        aggregationInfos = {$property: '_id'};
+                    }
+                }
+
+                if (!_.isPlainObject(aggregationInfos)) {
+                    aggregationInfos = {$property: aggregationInfos};
+                }
+
+                aggregator = aggregator.toLowerCase();
+
+                console.log('((((()))))', aggregationInfos);
+
+                return {
+                    fieldName,
+                    aggregator,
+                    array: aggregator === 'array',
+                    propertyName: aggregationInfos.$property,
+                    distinct: aggregationInfos.distinct
+                };
+            });
+    };
+
+    internals._selectVariableSparson = function(modelName, properties) {
+        const innerVariable = internals.buildInnerVariableName;
+        const finalVariable = internals.buildFinalVariableName;
+        /*** build select variables ***/
+        return properties
+            .filter((o) => !o.aggregator && !o.array && !o.inner)
+            .map((o) => ({
+                expression: `?_${innerVariable(o.propertyName)}`,
+                variable: `?${finalVariable(o.fieldName)}`
+            }));
+    };
+
+    internals._selectArraySparson = function(modelName, properties) {
+        const innerVariable = internals.buildInnerVariableName;
+        const finalVariable = internals.buildFinalVariableName;
+        return properties
+            .filter((o) => o.array && !o.inner)
+            .map((o) => {
+                let quote = o.fields ? '' : '\"';
+
+                return {
+                    expression: {
+                        type: 'operation',
+                        operator: 'concat',
+                        args: [
+                            `"[${quote}"`,
+                            {
+                                expression: `?_encoded_${innerVariable(o.propertyName)}`,
+                                type: 'aggregate',
+                                aggregation: 'group_concat',
+                                distinct: true,
+                                separator: `${quote}, ${quote}`
+                            },
+                            `"${quote}]"`
+                        ]
+                    },
+                    variable: `?${finalVariable(o.fieldName)}`
+                };
+            });
+    };
+
+    internals._selectAggregationSparson = function(modelName, aggregationProperties) {
+        const innerVariable = internals.buildInnerVariableName;
+        const finalVariable = internals.buildFinalVariableName;
+        // return aggregationProperties
+        //     .map((o) => ({
+        //         expression: {
+        //             expression: `?_${innerVariable(o.propertyName)}`,
+        //             type: 'aggregate',
+        //             aggregation: o.aggregator,
+        //             distinct: o.distinct
+        //         },
+        //         variable: `?${finalVariable(o.fieldName)}`
+        //     }));
+
+        return aggregationProperties
+            .map((o) => {
+                if (o.array) {
+                    let quote = o.fields ? '' : '\"';
+
+                    return {
+                        expression: {
+                            type: 'operation',
+                            operator: 'concat',
+                            args: [
+                                `"[${quote}"`,
+                                {
+                                    expression: `?_encoded_${innerVariable(o.propertyName)}`,
+                                    type: 'aggregate',
+                                    aggregation: 'group_concat',
+                                    distinct: o.distinct,
+                                    separator: `${quote}, ${quote}`
+                                },
+                                `"${quote}]"`
+                            ]
+                        },
+                        variable: `?${finalVariable(o.fieldName)}`
+                    }
+                } else {
+                    return {
+                        expression: {
+                            expression: `?_${innerVariable(o.propertyName)}`,
+                            type: 'aggregate',
+                            aggregation: o.aggregator,
+                            distinct: o.distinct
+                        },
+                        variable: `?${finalVariable(o.fieldName)}`
+                    };
+                }
+            });
+    };
+
+    internals._requiredWhereSparson = function(modelName, properties) {
+        const innerVariable = internals.buildInnerVariableName;
+        const buildPredicate = internals.buildPredicate;
+        /*** build field where statement ***/
+        let triples = _.flatten(
+            properties
+                .filter((o) => !o.filter && o.propertyName !== '_id' && !o.optional)
+                .map((o) => {
+                    let _triples = [{
+                        subject: `?_${innerVariable(o.parent || '_id')}`,
+                        predicate: buildPredicate(modelName, o.propertyName),//, o.parent),
+                        object: `?_${innerVariable(o.propertyName)}`
+                    }];
+
+                    let embedTriples = _.toPairs(o.fields)
+                        .map(([embedFieldName, embedPropertyName]) => ({
+                            subject: `?_${innerVariable(o.propertyName)}`,
+                            predicate: buildPredicate(modelName, embedPropertyName),//, o.parent),
+                            object: `?_${innerVariable(embedPropertyName)}`
+                        }));
+
+                    return _triples.concat(embedTriples)
+                })
+        );
+
+        return triples;
+    };
+
+
+        internals._optionalWhereSparson = function(modelName, properties) {
+            const innerVariable = internals.buildInnerVariableName;
+            const buildPredicate = internals.buildPredicate;
+            return _(properties)
+                .filter((o) => !o.filter && o.propertyName !== '_id' && o.optional)
+                .groupBy((o) => o.propertyRaw.split('?')[0]) // group by clauses
+                .map((props) => ({
+                    type: 'optional',
+                    patterns: _(props).map((prop) => {
+
+                        let triples = {
+                            subject: `?_${innerVariable(prop.parent || '_id')}`,
+                            predicate: buildPredicate(modelName, prop.propertyName),//, o.parent),
+                            object: `?_${innerVariable(prop.propertyName)}`
+                        }
+
+                        let embedTriples = _.toPairs(prop.fields)
+                            .map(([embedFieldName, embedPropertyName]) => ({
+                                subject: `?_${innerVariable(prop.propertyName)}`,
+                                predicate: buildPredicate(modelName, embedPropertyName),//, o.parent),
+                                object: `?_${innerVariable(embedPropertyName)}`
+                            }));
+
+                        return [triples].concat(embedTriples);
+
+                    }).flatten()
+                }))
+                .value();
+        };
+
+    internals._filterWhereSparson = function(modelName, filterProperties) {
+        const innerVariable = internals.buildInnerVariableName;
+        const buildPathPredicate = internals.buildPathPredicate;
+        return filterProperties.map((o) => {
+            if (o.propertyName === '_id') {
+
+                return {
+                    type: 'filter',
+                    expression: {
+                        type: 'operation',
+                        operator: rdfInternals.operatorMapping[o.operator],
+                        args: [`?__id`, o.rdfValue]
+                    }
+                };
+
+            } else {
+
+                let filterExistance;
+                let operator = o.operator;
+                let filters = [];
+
+                if (_(['$exists', '$nexists']).includes(operator)) {
+                    filterExistance = rdfInternals.operatorMapping[operator];
+                } else {
+
+                    filterExistance = rdfInternals.filterExistanceOperatorMapping[operator];
+                    if (filterExistance === 'notexists') {
+                        operator = rdfInternals.inverseOperatorMapping[operator];
+                    }
+
+                    filters.push({
+                        type: 'filter',
+                        expression: {
+                            type: 'operation',
+                            operator: rdfInternals.operatorMapping[operator],
+                            args: [
+                                `?_filter_${innerVariable(o.propertyName)}`,
+                                o.rdfValue
+                            ]
+                        }
+                    });
+
+                }
+
+                return {
+                    type: 'filter',
+                    expression: {
+                        type: 'operation',
+                        operator: filterExistance,
+                        args: [{
+                            type: 'group',
+                            patterns: [{
+                                type: 'bgp',
+                                triples: [{
+                                    subject: '?__id',
+                                    predicate: buildPathPredicate(modelName, o.propertyName),
+                                    object: `?_filter_${innerVariable(o.propertyName)}`
+                                }]
+                            }].concat(filters)
+                        }]
+                    }
+                };
+            }
+        });
+    };
+
+    internals._bindingsSparson = function(modelName, properties) {
+        const innerVariable = internals.buildInnerVariableName;
+        /* encode_for_uri the value for  object */
+        const objectBindings = properties
+            .filter((o) => o.fields)
+            .map((o) => {
+                let args = _.toPairs(o.fields)
+                    .map(([embedFieldName, embedPropertyName]) => [
+                        `"\"${innerVariable(embedFieldName)}\":\""`,
+                        {
+                            type: 'operation',
+                            operator: 'encode_for_uri',
+                            args: [{
+                                type: 'operation',
+                                operator: 'str',
+                                args: [`?_${innerVariable(embedPropertyName)}`] //?_credits____gender"
+                            }]
+                        },
+                        '"\","'
+                    ]);
+
+                args = _.flatten(args);
+                args.pop(); // remove last comma
+
+                return {
+                    type: 'bind',
+                    variable: `?_encoded_${innerVariable(o.propertyName)}`,
+                    expression: {
+                        type: 'operation',
+                        operator: 'concat',
+                        args: ['"{"'].concat(args).concat(['"\"}"'])
+                    }
+                };
+            });
+
+        /* encode_for_uri the value for  object */
+        const arrayBindings = properties
+            .filter((o) => o.array && !o.fields)
+            .map((o) => ({
+                type: 'bind',
+                variable: `?_encoded_${innerVariable(o.propertyName)}`,
+                expression: {
+                    type: 'operation',
+                    operator: 'encode_for_uri',
+                    args: [{
+                        type: 'operation',
+                        operator: 'str',
+                        args: [`?_${innerVariable(o.propertyName)}`]
+                    }]
+                }
+            }));
+
+        return objectBindings.concat(arrayBindings);
+    };
+
+    internals._groupBySparson = function(modelName, properties) {
+        const innerVariable = internals.buildInnerVariableName;
+        return properties
+            .filter((o) => !o.aggregator && !o.array && !o.inner)
+            .map((o) => ({expression: `?_${innerVariable(o.propertyName)}`}));
+    };
+
+    internals._orderBySparson = function(modelName, sortedFields) {
+        const innerVariable = internals.buildInnerVariableName;
+        return sortedFields.map((o) => ({
+            expression: `?${innerVariable(o.fieldName)}`,
+            descending: o.order === 'desc'
+        }));
+    };
+
+
+    internals.buildSparson = function(modelName, query) {
+
+        let sortedFields = query.sort || [];
+        sortedFields = sortedFields.map((fieldName) => {
+            let descOrder = _.startsWith(fieldName, '-');
+            fieldName = descOrder ? fieldName.slice(1) : fieldName;
+            let order = descOrder ? 'desc' : 'asc';
+            return { fieldName, order };
+        });
+
+        let fieldProperties = internals._buildFieldProperties(modelName, query, sortedFields);
+        console.log('FIELD_PROPERTIES>', fieldProperties);
+        let filterProperties = internals._buildFilterProperties(modelName, query);
+        console.log('FILTER_PROPERTIES>', filterProperties);
+        let aggregationProperties = internals._buildAggregationProperties(modelName, query);
+        console.log('AGGREGATION_PROPERTIES>', aggregationProperties);
+        let statementProperties = internals._buildStatementProperties(modelName, fieldProperties, aggregationProperties, sortedFields);
+        console.log('WHERE_PROPERTIES>', statementProperties);
+
+        let selectVariableSparson = internals._selectVariableSparson(modelName, statementProperties);
+        let selectArraySparson = internals._selectArraySparson(modelName, statementProperties);
+        let selectAggregationSparson = internals._selectAggregationSparson(modelName, aggregationProperties);//internals._selectAggregationSparson(aggregationProperties);
+
+        let selectSparson = selectVariableSparson
+            .concat(selectArraySparson)
+            .concat(selectAggregationSparson);
+
+
+        /*** build where statement ***/
+        let requiredWhereSparson = internals._requiredWhereSparson(modelName, statementProperties);
+        let optionalWhereSparson = internals._optionalWhereSparson(modelName, statementProperties);
+        /* build bindings where statement */
+        let bindingSparson = internals._bindingsSparson(modelName, statementProperties);
+        /* build filter where statement */
+        let filterWhereSparson = internals._filterWhereSparson(modelName, filterProperties);
+
+        let whereSparson = requiredWhereSparson
+            .concat(filterWhereSparson)
+            .concat(optionalWhereSparson)
+            .concat(bindingSparson);
+
+
+        /*** build group by variables ***/
+        let groupBySparson = internals._groupBySparson(modelName, statementProperties);
+
+        /*** build order by variables ****/
+        let orderBySparson = internals._orderBySparson(modelName, sortedFields);
+
+        return {
+            type: 'query',
+            queryType: 'SELECT',
+            variables: selectSparson,
+            where: whereSparson,//[requiredTriples].concat(optionalTriples).concat(filters).concat(bindings),
+            group: groupBySparson,
+            order: orderBySparson.length ? orderBySparson: null,
+            distinct: query.distinct,
+            limit: query.limit
+        };
     };
 
     internals.sanitizeQuery = function(modelName, query) {
@@ -1173,7 +1751,7 @@ module.exports = function(db, graphUri) {
         return query;
     };
 
-    internals.buildSparson = function(modelName, query) {
+    internals._buildSparsonOld = function(modelName, query) {
 
         query = internals.sanitizeQuery(modelName, query);
 
@@ -1196,12 +1774,32 @@ module.exports = function(db, graphUri) {
             let propertyName = propertyInfos.$property;
             let variable = internals.buildInnerVariableName(propertyName);
             if (!_(arrayProperties).includes(propertyName)) {
-                let finalVariable = internals.buildFinalVariableName(fieldName);
-                selectVariables.push({
-                    expression: `?_${variable}`,
-                    variable: `?${finalVariable}`
-                });
-                groupByVariables.push({expression: `?_${variable}`});
+
+                // /** if the propertyInfos has $fields, we expose the inner fields
+                //  * instead
+                //  */
+                // if (propertyInfos.$fields) {
+                //     for (let innerFieldName of Object.keys(propertyInfos.$fields)) {
+                //         let innerPropertyName = propertyInfos.$fields[innerFieldName];
+                //         let innerVariable = internals.buildInnerVariableName(innerPropertyName);
+                //         let finalVariable = internals.buildFinalVariableName(`${fieldName}.${innerFieldName}`);
+                //         selectVariables.push({
+                //             expression: `?_${innerVariable}`,
+                //             variable: `?${finalVariable}`
+                //         });
+                //
+                //         groupByVariables.push({expression: `?_${innerVariable}`});
+                //     }
+                //
+                // } else {
+                    let finalVariable = internals.buildFinalVariableName(fieldName);
+                    selectVariables.push({
+                        expression: `?_${variable}`,
+                        variable: `?${finalVariable}`
+                    });
+                    groupByVariables.push({expression: `?_${variable}`});
+                // }
+
             } else {
                 arrayPropertyFieldMapping[propertyName] = fieldName;
             }
@@ -1235,7 +1833,6 @@ module.exports = function(db, graphUri) {
                 let embedFieldName = embedFieldNames[i];
                 let embedPropertyName = fieldInfos.$fields[embedFieldName];
 
-                console.log('....', fieldName, embedFieldName, embedPropertyName);
                 let embedVariable = internals.buildInnerVariableName(embedPropertyName);
                 bindingArgs.push(`"\"${embedFieldName}\":\""`); // name, sex
                 bindingArgs.push({
@@ -1249,7 +1846,6 @@ module.exports = function(db, graphUri) {
                 });
 
                 let isLastItem = i >= embedFieldNames.length - 1;
-                console.log(i, embedFieldNames.length, isLastItem);
                 if (!isLastItem) {
                     bindingArgs.push('"\","');
                 }
@@ -1337,21 +1933,44 @@ module.exports = function(db, graphUri) {
 
         let clauses = internals.buildClauses(modelName, queryFields, queryFilters, queryAggregation);
 
-
-        /*** build statements ***/
-        let triples = []
+        /*** build required and optional statements ***/
+        let _requiredTriples = [];
+        let _optionalTriples = {};
         for (let variable of Object.keys(clauses.statements)) {
             let statement = clauses.statements[variable];
-            triples.push({
+            let triple = {
                 subject: `?_${statement.subject}`,
                 predicate: statement.predicate,
                 object: `?_${variable}`
-            });
+            };
+
+            if (statement.optional) {
+                let optionalClauseName = variable.split(rdfInternals.RELATION_SEPARATOR)[0];
+
+                if (!_optionalTriples[optionalClauseName]) {
+                    _optionalTriples[optionalClauseName] = [];
+                }
+
+                _optionalTriples[optionalClauseName].push({
+                    type: 'bgp',
+                    triples: [triple]
+                });
+            } else {
+                _requiredTriples.push(triple);
+            }
         }
 
-        triples = {
+        let requiredTriples = {
             type: 'bgp',
-            triples: triples
+            triples: _requiredTriples
+        };
+
+        let optionalTriples = [];
+        for (let optionalClauseName of Object.keys(_optionalTriples)){
+            optionalTriples.push({
+                type: 'optional',
+                patterns: _optionalTriples[optionalClauseName]
+            });
         };
 
 
@@ -1385,7 +2004,7 @@ module.exports = function(db, graphUri) {
             type: 'query',
             queryType: 'SELECT',
             variables: selectVariables,
-            where: [triples].concat(filters).concat(bindings),
+            where: [requiredTriples].concat(optionalTriples).concat(filters).concat(bindings),
             group: groupByVariables,
             order: internals.buildOrderBy(query['sort']),
             distinct: query.distinct,
@@ -1395,8 +2014,16 @@ module.exports = function(db, graphUri) {
 
     return {
         build: function(modelName, query) {
+            let sparson = internals.buildSparson(modelName, query);
+            sparson.from = {
+                'default': [graphUri]
+            };
+            return new SparqlGenerator().stringify(sparson);
+        },
+        _buildOld: function(modelName, query) {
 
             internals.validateQuery(query);
+
 
             let sparson = internals.buildSparson(modelName, query);
             sparson.from = {

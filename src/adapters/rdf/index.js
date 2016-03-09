@@ -541,13 +541,17 @@ export default function(config) {
             query(modelName, query, options) {
                 let graphUri = config.graphUri;
                 let queryBuilder = sparqlQueryBuilder(db, graphUri);
+
+                /** if the _type is not present, set it to the modelName **/
+                query.filter = query.filter && query.filter || {};
+                if (!_.has(query, 'filter._type')) {
+                    _.set(query, 'filter._type', modelName);
+                }
                 let sparql = queryBuilder.build(modelName, query, options);
 
                 console.log(sparql);
 
-                // TODO: sanitize the query here
-
-                let converter = sparqlResultsConverter(db, modelName, query.field);
+                let converter = sparqlResultsConverter(db, modelName, query);
 
                 let stream = internals.sparqlClient.queryStream(sparql);
                 stream.on('response', function(response) {
