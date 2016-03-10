@@ -49,7 +49,7 @@ module.exports = function(db, modelName, query) {
 
     const internals = {};
 
-    internals.PROPERTIES = _.toPairs(query.field)
+    const fieldProperties = _.toPairs(query.field)
         .map(([fieldName, fieldInfos]) => {
             let isArray = _.isArray(fieldInfos);
             fieldInfos = isArray && fieldInfos[0] || fieldInfos;
@@ -76,39 +76,42 @@ module.exports = function(db, modelName, query) {
                 fields: fieldInfos.$fields,
                 propertyRaw: fieldInfos.$property
             };
-        }).concat(
-            _.toPairs(query.aggregate).map(([fieldName, aggregationInfos]) => {
-                console.log('*****', fieldName, aggregationInfos);
-                if (!aggregationInfos.$aggregator) {
-                    let [aggregator, propertyName] = _.toPairs(aggregationInfos)[0];
-                    aggregator = aggregator.slice(1);
-                    aggregationInfos = {
-                        $aggregator: aggregator,
-                        $property: propertyName
-                    };
-                } else if (!aggregationInfos.$property) {
-                    aggregationInfos.$property = true;
-                }
+        });
 
-                if (aggregationInfos.$property === true) {
-                    aggregationInfos.$property = '_id';
-                }
-
-                let propertyName = aggregationInfos.$property;
-                let aggregator = aggregationInfos.$aggregator.toLowerCase();
-
-                if(_.endsWith(propertyName, '._id')) {
-                    propertyName = propertyName.split('.').slice(0, -1).join('.');
-                }
-
-                return {
-                    fieldName,
-                    propertyName,
-                    array: aggregator === 'array',
-                    propertyRaw: aggregationInfos.$property
+    const aggregationProperties =  _.toPairs(query.aggregate)
+        .map(([fieldName, aggregationInfos]) => {
+            if (!aggregationInfos.$aggregator) {
+                let [aggregator, propertyName] = _.toPairs(aggregationInfos)[0];
+                aggregator = aggregator.slice(1);
+                aggregationInfos = {
+                    $aggregator: aggregator,
+                    $property: propertyName
                 };
-            })
-        );
+            } else if (!aggregationInfos.$property) {
+                aggregationInfos.$property = true;
+            }
+
+            if (aggregationInfos.$property === true) {
+                aggregationInfos.$property = '_id';
+            }
+
+            let propertyName = aggregationInfos.$property;
+            let aggregator = aggregationInfos.$aggregator.toLowerCase();
+
+            if(_.endsWith(propertyName, '._id')) {
+                propertyName = propertyName.split('.').slice(0, -1).join('.');
+            }
+
+            return {
+                fieldName,
+                propertyName,
+                aggregator,
+                array: aggregator === 'array',
+                propertyRaw: aggregationInfos.$property
+            };
+        });
+
+    internals.PROPERTIES = fieldProperties.concat(aggregationProperties);
 
     internals.PROPERTIES_BY_FIELDNAME = _.keyBy(internals.PROPERTIES, 'fieldName');
 
@@ -117,14 +120,13 @@ module.exports = function(db, modelName, query) {
             let descOrder = _.startsWith(fieldName, '-');
             fieldName = descOrder ? fieldName.slice(1) : fieldName;
             let order = descOrder ? 'desc' : 'asc';
-            console.log('_____', fieldName, descOrder, order);
             return { fieldName, order };
         }),
         'fieldName'
     );
 
-    console.log('PROPERTIES>', internals.PROPERTIES);
-    console.log('PROPERTIES_BY_FIELDNAME>', internals.PROPERTIES_BY_FIELDNAME);
+    // console.log('PROPERTIES>', internals.PROPERTIES);
+    // console.log('PROPERTIES_BY_FIELDNAME>', internals.PROPERTIES_BY_FIELDNAME);
 
     // internals.propertyName2FieldNameMapping = (function() {
     //     let _propertyName2FieldName = {};
@@ -159,132 +161,243 @@ module.exports = function(db, modelName, query) {
     //     return properties;
     //  })();
 
+    internals._decodeURIValue = function(_fieldName, iriValue, parent) {
+        if (_.isPlainObject(iriValue)) {
 
-    internals.convertLiteralValue = function(fieldName, value, rdfType) {
-        let valueType = 'string';
-        if (rdfType) {
-            valueType = rdfInternals.RDF_DATATYPES[rdfType];
-        }
+            let decodedPairs = _.toPairs(iriValue).map((pair) => {
+                return [
+                    pair[0],
+                    internals._decodeURIValue(pair[0], pair[1], _fieldName)
+                ];
+            });
+            return _.fromPairs(decodedPairs);
 
-        const _decodeURIValue = function(_fieldName, iriValue) {
-            if (_.isPlainObject(iriValue)) {
-                let decodedPairs = _.toPairs(iriValue).map((pair) => {
-                    return [pair[0], _decodeURIValue(pair[0], pair[1])];
-                });
-                return _.fromPairs(decodedPairs);
+        } else {
+            let decodedValue = decodeURIComponent(iriValue);
+
+            let propertyRaw, propertyName;
+            if (parent) {
+                let propInfos = internals.PROPERTIES_BY_FIELDNAME[parent];
+                propertyRaw = propInfos[_fieldName];
+                propertyName = propertyRaw;
             } else {
-                let decodedValue = decodeURIComponent(iriValue);
                 let propInfos = internals.PROPERTIES_BY_FIELDNAME[_fieldName];
-                console.log('++++', _fieldName, propInfos);
-                if (_.endsWith(propInfos.propertyRaw, '._id')) {
-                    const property = db[modelName].schema.getProperty(propInfos.propertyName);
-                    return rdfInternals.rdfURI2id(db, property.type, decodedValue);
-                } else {
-                    return decodedValue;
-                }
+                propertyRaw = propInfos.propertyRaw;
+                propertyName = propInfos.propertyName;
             }
-        }
+            if (_.endsWith(propertyRaw, '._id')) {
+                const property = db[modelName].schema.getProperty(propertyName);
+                return rdfInternals.rdfURI2id(db, property.type, decodedValue);
+            }
 
-        switch (valueType) {
-            case 'string':
+            return decodedValue;
+        }
+    };
+
+    internals.rdfValuesConvertor = function(fieldName){
+        return {
+            'number': parseFloat,
+            'date': (value) => new Date(value),
+            'boolean': (value) => _(['true', '1', 1, 'yes']).includes(value),
+            'string': function(value) {
                 let propertyInfos = internals.PROPERTIES_BY_FIELDNAME[fieldName];
                 let propertyName = propertyInfos.propertyName;
 
                 if (propertyInfos.array) {
                     value = JSON.parse(value).map(
-                        (val) => _decodeURIValue(fieldName, val));
+                        (val) => internals._decodeURIValue(fieldName, val)
+                    );
                     value = _.compact(value);
+
+                    /*** sort if needed ***/
                     let sortOrder = _.get(internals.SORTED_FIELDS, `${fieldName}.order`);
                     if (sortOrder) {
                         value = _.sortBy(value);
-                        console.log('+****°', value);
                         if (sortOrder === 'desc') {
                             value = _.reverse(value);
                         }
                     }
-                    console.log('!!!', value, sortOrder);
-                    // let property = db[modelName].schema.getProperty(propertyName);
-                    // if (property.isRelation()) {
-                    //     if (!propertyInfos.$fields) {
-                    //         value = value.map((uri) => rdfInternals.rdfURI2id(db, property.type, uri));
-                    //     }
-                    //     // value = value.map((uri) => ({
-                    //     //     _id: rdfInternals.rdfURI2id(db, property.type, uri),
-                    //     //     _type: property.type
-                    //     // }));
-                    // }
                 }
-                break;
 
-            case 'number':
-                value = parseFloat(value);
-                break;
+                return value;
+            },
+            'iri': function(value) {
+                const propertyInfos = internals.PROPERTIES_BY_FIELDNAME[fieldName];
+                let propertyName = propertyInfos.propertyName;
 
-            case 'boolean':
-                if (['true', '1', 1, 'yes'].indexOf(value) > -1) {
-                    value = true;
-                } else {
-                    value = false;
+                if (_.endsWith(propertyName, '._type')) {
+                    return db.rdfClasses2ModelNameMapping[value]
                 }
-                break;
 
-            case 'date':
-                value = new Date(value);
-                break;
-
-            default:
-                console.error('UNKNOWN DATATYPE !!!', valueType);
+                const property = db[modelName].schema.getProperty(propertyName);
+                return rdfInternals.rdfURI2id(db, property.type, value);
+            }
         }
-
-        return value;
     };
 
-    internals.convertIRIValue = function(fieldName, value) {
-        const propertyInfos = internals.PROPERTIES_BY_FIELDNAME[fieldName];
-        let propertyName = propertyInfos.propertyName;
 
-        if (_.endsWith(propertyName, '._type')) {
-            return db.rdfClasses2ModelNameMapping[value]
+    // internals.convertLiteralValue = function(fieldName, value, rdfType) {
+    //     let valueType = 'string';
+    //     if (rdfType) {
+    //         valueType = rdfInternals.RDF_DATATYPES[rdfType];
+    //     }
+    //
+    //
+    //     switch (valueType) {
+    //         case 'string':
+    //             let propertyInfos = internals.PROPERTIES_BY_FIELDNAME[fieldName];
+    //             let propertyName = propertyInfos.propertyName;
+    //
+    //             if (propertyInfos.array) {
+    //                 value = JSON.parse(value).map(
+    //                     (val) => _decodeURIValue(fieldName, val));
+    //                 value = _.compact(value);
+    //                 let sortOrder = _.get(internals.SORTED_FIELDS, `${fieldName}.order`);
+    //                 if (sortOrder) {
+    //                     value = _.sortBy(value);
+    //                     if (sortOrder === 'desc') {
+    //                         value = _.reverse(value);
+    //                     }
+    //                 }
+    //                 // let property = db[modelName].schema.getProperty(propertyName);
+    //                 // if (property.isRelation()) {
+    //                 //     if (!propertyInfos.$fields) {
+    //                 //         value = value.map((uri) => rdfInternals.rdfURI2id(db, property.type, uri));
+    //                 //     }
+    //                 //     // value = value.map((uri) => ({
+    //                 //     //     _id: rdfInternals.rdfURI2id(db, property.type, uri),
+    //                 //     //     _type: property.type
+    //                 //     // }));
+    //                 // }
+    //             }
+    //             break;
+    //
+    //         case 'number':
+    //             value = parseFloat(value);
+    //             break;
+    //
+    //         case 'boolean':
+    //             if (['true', '1', 1, 'yes'].indexOf(value) > -1) {
+    //                 value = true;
+    //             } else {
+    //                 value = false;
+    //             }
+    //             break;
+    //
+    //         case 'date':
+    //             value = new Date(value);
+    //             break;
+    //
+    //         default:
+    //             console.error('UNKNOWN DATATYPE !!!', valueType);
+    //     }
+    //
+    //     return value;
+    // };
+
+    // internals.convertIRIValue = function(fieldName, value) {
+    //     const propertyInfos = internals.PROPERTIES_BY_FIELDNAME[fieldName];
+    //     let propertyName = propertyInfos.propertyName;
+    //
+    //     if (_.endsWith(propertyName, '._type')) {
+    //         return db.rdfClasses2ModelNameMapping[value]
+    //     }
+    //
+    //     const property = db[modelName].schema.getProperty(propertyName);
+    //     return rdfInternals.rdfURI2id(db, property.type, value);
+    // };
+
+    internals.buildRdfValue = function(fieldName, rdfInfo) {
+        let convertor = internals.rdfValuesConvertor(fieldName);
+        let datatype = rdfInfo.type === 'literal' ? rdfInfo.datatype : 'iri';
+
+        let valueType;
+        if (!datatype) {
+            valueType = 'string';
+        } else if (datatype === 'iri') {
+            valueType = 'iri';
+        } else {
+            valueType = rdfInternals.RDF_DATATYPES[datatype];
         }
 
-        const property = db[modelName].schema.getProperty(propertyName);
-        return rdfInternals.rdfURI2id(db, property.type, value);
+        return convertor[valueType](rdfInfo.value);
     };
 
     return {
         convert(item) {
-            const doc = {};
 
-            let _idProperty = internals.PROPERTIES.find((o) => o.propertyName === '_id');
-            if (_idProperty) {
-                let _idVariableName = _idProperty.fieldName;
-                let uri = item[_idVariableName].value;
-                doc[_idVariableName] = rdfInternals.rdfURI2id(db, modelName, uri);
-                delete item[_idVariableName];
-            }
+            const findFieldNameFromProperty = function(propertyName) {
+                let propInfo = _.find(internals.PROPERTIES, function(o) {
+                    return o.propertyName === propertyName && !o.aggregator;
+                });
+                return propInfo ? propInfo.fieldName : null;
+            };
 
-            let _typeProperty = internals.PROPERTIES.find((o) => o.propertyName === '_type');
-            if (_typeProperty) {
-                let _typeVariableName = _typeProperty.fieldName;
-                doc[_typeVariableName] = modelName; //db.rdfClasses2ModelNameMapping[item._type.value];
-                delete item[_typeVariableName];
-            }
+            const _idFieldName = findFieldNameFromProperty('_id');
+            const _typeFieldName = findFieldNameFromProperty('_type');
 
-            for (let fieldName of Object.keys(item)) {
-                let rdfInfo = item[fieldName];
-                fieldName = fieldName.split(rdfInternals.RELATION_SEPARATOR).join('.');
-                let value;
-                if (rdfInfo.type === 'literal') {
-                    value = internals.convertLiteralValue(
-                        fieldName, rdfInfo.value, rdfInfo.datatype
-                    );
-                } else {
-                    value = internals.convertIRIValue(fieldName, rdfInfo.value);
-                }
-                _.set(doc, fieldName, value);
-            }
+            let doc = _(item)
+                .toPairs()
+                .map(([fieldName, rdfInfo]) => {
+                    if (fieldName === _idFieldName) {
+                        let uri = rdfInfo.value;
+                        return [
+                            _idFieldName,
+                            rdfInternals.rdfURI2id(db, modelName, uri)
+                        ];
+                    }
 
-            return doc;
+                    if (fieldName === _typeFieldName) {
+                        return [_typeFieldName, modelName];  //db.rdfClasses2ModelNameMapping[item._type.value];
+                    }
+
+                    fieldName = fieldName.split(rdfInternals.RELATION_SEPARATOR).join('.');
+                    let value = internals.buildRdfValue(fieldName, rdfInfo);
+
+                    return [fieldName, value];
+                })
+                .fromPairs()
+                .value();
+
+            const unflatten = (o) => _.zipObjectDeep(_.keys(o), _.values(o));
+
+            return unflatten(doc);
+
+
+
+
+            // const doc = {};
+            //
+            // let _idProperty = internals.PROPERTIES.find((o) => o.propertyName === '_id');
+            // if (_idProperty) {
+            //     let _idVariableName = _idProperty.fieldName;
+            //     let uri = item[_idVariableName].value;
+            //     doc[_idVariableName] = rdfInternals.rdfURI2id(db, modelName, uri);
+            //     delete item[_idVariableName];
+            // }
+            //
+            // let _typeProperty = internals.PROPERTIES.find((o) => o.propertyName === '_type');
+            // if (_typeProperty) {
+            //     let _typeVariableName = _typeProperty.fieldName;
+            //     doc[_typeVariableName] = modelName; //db.rdfClasses2ModelNameMapping[item._type.value];
+            //     delete item[_typeVariableName];
+            // }
+            //
+            // for (let fieldName of Object.keys(item)) {
+            //     let rdfInfo = item[fieldName];
+            //     fieldName = fieldName.split(rdfInternals.RELATION_SEPARATOR).join('.');
+            //     let value;
+            //     if (rdfInfo.type === 'literal') {
+            //         value = internals.convertLiteralValue(
+            //             fieldName, rdfInfo.value, rdfInfo.datatype
+            //         );
+            //     } else {
+            //         value = internals.convertIRIValue(fieldName, rdfInfo.value);
+            //     }
+            //     _.set(doc, fieldName, value);
+            // }
+            //
+            // return doc;
         }
     };
 };

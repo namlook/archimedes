@@ -1362,14 +1362,13 @@ module.exports = function(db, graphUri) {
 
                 aggregator = aggregator.toLowerCase();
 
-                console.log('((((()))))', aggregationInfos);
-
                 return {
                     fieldName,
                     aggregator,
                     array: aggregator === 'array',
                     propertyName: aggregationInfos.$property,
-                    distinct: aggregationInfos.distinct
+                    distinct: aggregationInfos.distinct,
+                    fields: aggregationInfos.$fields
                 };
             });
     };
