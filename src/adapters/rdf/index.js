@@ -547,9 +547,10 @@ export default function(config) {
                 if (!_.has(query, 'filter._type')) {
                     _.set(query, 'filter._type', modelName);
                 }
+
                 let sparql = queryBuilder.build(modelName, query, options);
 
-                console.log(sparql);
+                // console.log(sparql);
 
                 let converter = sparqlResultsConverter(db, modelName, query);
 

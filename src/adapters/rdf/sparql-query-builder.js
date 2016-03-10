@@ -1246,22 +1246,43 @@ module.exports = function(db, graphUri) {
         }
 
 
-        let properties = fieldProperties.concat(
-            aggregationProperties.map((o) => ({
-                fieldName: o.fieldName,
-                propertyName: o.propertyName,
-                array: o.array,
-                inner: true
-            }))
-        ).map((o) => { // add sortBy info
-            o.sortBy = sortedField(o.fieldName)
-            return o;
-        }).map((o) => {
-            o.propertyRaw = o.propertyName;
-            o.propertyName = stripEndingId(o.propertyName);
-            o.parent = o.propertyName.split('.').slice(0, -1).join('.');
-            return o;
-        });
+        let properties = _(fieldProperties)
+            .concat(aggregationProperties)
+            .map((o) => {
+                if (o.aggregator === 'array' && o.fields) {
+                    return _(o.fields)
+                        .toPairs()
+                        .map(([embedFieldName, embedPropertyName]) => ({
+                            fieldName: embedFieldName,
+                            propertyName: embedPropertyName,
+                            inObject: o.fieldName,
+                            inner: true
+                        }))
+                        .concat([o])
+                        .value();
+                }
+                return o;
+            })
+            .flatten()
+            .map((o) => {
+                if (!o.propertyName) {
+                    return o;
+                }
+                o.propertyRaw = o.propertyName;
+                let optional = o.propertyName.split('?').length > 1;
+                if (optional) {
+                    o.optional = true;
+                    o.propertyName = o.propertyName.split('?').join('');
+                }
+                o.propertyName = stripEndingId(o.propertyName);
+                o.parent = o.propertyName.split('.').slice(0, -1).join('.');
+                return o;
+            }).map((o) => { // add sortBy info
+                o.sortBy = sortedField(o.fieldName)
+                return o;
+            })
+            .value();
+
 
 
         let innerProperties = _(properties)
@@ -1286,7 +1307,23 @@ module.exports = function(db, graphUri) {
             })
             .value();
 
-        return innerProperties.concat(properties);
+
+        let statementProperties = innerProperties.concat(properties);
+
+        /** if there is only _id in field and no aggregation,
+         * add a statement so we can retrieve the _id
+         */
+        if (!_.find(statementProperties, (o) => o.propertyName !== '_id')) {
+            statementProperties.push({
+                propertyName: '_type',
+                fieldName: '_type',
+                propertyRaw: '_type',
+                inner: true
+            });
+        }
+
+        return statementProperties;
+
     };
 
     // query.filter = {
@@ -1368,7 +1405,8 @@ module.exports = function(db, graphUri) {
                     array: aggregator === 'array',
                     propertyName: aggregationInfos.$property,
                     distinct: aggregationInfos.distinct,
-                    fields: aggregationInfos.$fields
+                    fields: aggregationInfos.$fields,
+                    inner: true
                 };
             });
     };
@@ -1417,21 +1455,13 @@ module.exports = function(db, graphUri) {
     internals._selectAggregationSparson = function(modelName, aggregationProperties) {
         const innerVariable = internals.buildInnerVariableName;
         const finalVariable = internals.buildFinalVariableName;
-        // return aggregationProperties
-        //     .map((o) => ({
-        //         expression: {
-        //             expression: `?_${innerVariable(o.propertyName)}`,
-        //             type: 'aggregate',
-        //             aggregation: o.aggregator,
-        //             distinct: o.distinct
-        //         },
-        //         variable: `?${finalVariable(o.fieldName)}`
-        //     }));
 
         return aggregationProperties
             .map((o) => {
                 if (o.array) {
                     let quote = o.fields ? '' : '\"';
+
+                    let propertyName = o.propertyName || `EMBED_${o.fieldName}`;
 
                     return {
                         expression: {
@@ -1440,7 +1470,7 @@ module.exports = function(db, graphUri) {
                             args: [
                                 `"[${quote}"`,
                                 {
-                                    expression: `?_encoded_${innerVariable(o.propertyName)}`,
+                                    expression: `?_encoded_${innerVariable(propertyName)}`,
                                     type: 'aggregate',
                                     aggregation: 'group_concat',
                                     distinct: o.distinct,
@@ -1471,7 +1501,7 @@ module.exports = function(db, graphUri) {
         /*** build field where statement ***/
         let triples = _.flatten(
             properties
-                .filter((o) => !o.filter && o.propertyName !== '_id' && !o.optional)
+                .filter((o) => !o.filter && !o.fields && o.propertyName !== '_id' && !o.optional)
                 .map((o) => {
                     let _triples = [{
                         subject: `?_${innerVariable(o.parent || '_id')}`,
@@ -1592,35 +1622,40 @@ module.exports = function(db, graphUri) {
 
     internals._bindingsSparson = function(modelName, properties) {
         const innerVariable = internals.buildInnerVariableName;
-        /* encode_for_uri the value for  object */
-        const objectBindings = properties
-            .filter((o) => o.fields)
-            .map((o) => {
-                let args = _.toPairs(o.fields)
-                    .map(([embedFieldName, embedPropertyName]) => [
-                        `"\"${innerVariable(embedFieldName)}\":\""`,
-                        {
+        /* encode_for_uri the value for object */
+        const embedObjects = _(properties)
+            .filter((o) => o.inObject)
+            .groupBy('inObject')
+            .value();
+
+        const objectBindings = _.toPairs(embedObjects)
+            .map(([fieldName, embedProperties]) => {
+
+                let args = _(embedProperties).map((o) => [
+                    `"\"${innerVariable(o.fieldName)}\":\""`,
+                    {
+                        type: 'operation',
+                        operator: 'encode_for_uri',
+                        args: [{
                             type: 'operation',
-                            operator: 'encode_for_uri',
-                            args: [{
-                                type: 'operation',
-                                operator: 'str',
-                                args: [`?_${innerVariable(embedPropertyName)}`] //?_credits____gender"
-                            }]
-                        },
-                        '"\","'
-                    ]);
+                            operator: 'str',
+                            args: [`?_${innerVariable(o.propertyName)}`] //?_credits____gender"
+                        }]
+                    },
+                    '"\","'
+                ])
+                .flatten()
+                .tap((array) => array.pop()) // remove last comma
+                .value();
 
-                args = _.flatten(args);
-                args.pop(); // remove last comma
-
+                let propertyName = `EMBED_${fieldName}`;
                 return {
                     type: 'bind',
-                    variable: `?_encoded_${innerVariable(o.propertyName)}`,
+                    variable: `?_encoded_${innerVariable(propertyName)}`,
                     expression: {
                         type: 'operation',
                         operator: 'concat',
-                        args: ['"{"'].concat(args).concat(['"\"}"'])
+                        args: _.concat(['"{"'], args, ['"\"}"'])
                     }
                 };
             });
@@ -1672,13 +1707,13 @@ module.exports = function(db, graphUri) {
         });
 
         let fieldProperties = internals._buildFieldProperties(modelName, query, sortedFields);
-        console.log('FIELD_PROPERTIES>', fieldProperties);
+        // console.log('FIELD_PROPERTIES>', fieldProperties);
         let filterProperties = internals._buildFilterProperties(modelName, query);
-        console.log('FILTER_PROPERTIES>', filterProperties);
+        // console.log('FILTER_PROPERTIES>', filterProperties);
         let aggregationProperties = internals._buildAggregationProperties(modelName, query);
-        console.log('AGGREGATION_PROPERTIES>', aggregationProperties);
+        // console.log('AGGREGATION_PROPERTIES>', aggregationProperties);
         let statementProperties = internals._buildStatementProperties(modelName, fieldProperties, aggregationProperties, sortedFields);
-        console.log('WHERE_PROPERTIES>', statementProperties);
+        // console.log('WHERE_PROPERTIES>', statementProperties);
 
         let selectVariableSparson = internals._selectVariableSparson(modelName, statementProperties);
         let selectArraySparson = internals._selectArraySparson(modelName, statementProperties);
