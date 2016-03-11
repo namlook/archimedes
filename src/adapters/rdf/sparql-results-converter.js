@@ -1,28 +1,4 @@
 
-
-// var item = {
-//     _id: {
-//         type: 'uri',
-//         value: 'http://tests.archimedes.org/instances/blogpost6'
-//     },
-//     title: { type: 'literal', value: 'post 6' },
-//     post: { type: 'literal', value: 'this is the body of the post 6' },
-//     author: { type: 'uri', value: 'http://tests.archimedes.org/instances/user1' },
-//     tags: { type: 'literal', value: '["tag7", "tag6"]' }
-// }
-//
-// let item = {
-//     _id: { type: 'uri', value: 'http://tests.archimedes.org/instances/blogpost6' },
-//     title: { type: 'literal', value: 'post 6' },
-//     score: {
-//         datatype: 'http://www.w3.org/2001/XMLSchema#integer',
-//         type: 'literal',
-//         value: '0'
-//     },
-//     author: { type: 'uri', value: 'http://tests.archimedes.org/instances/user1' },
-//     tags: { type: 'literal', value: '["tag7", "tag6"]' }
-// }
-
 import _ from 'lodash';
 
 const rdfInternals = {};
@@ -128,39 +104,6 @@ module.exports = function(db, modelName, query) {
     // console.log('PROPERTIES>', internals.PROPERTIES);
     // console.log('PROPERTIES_BY_FIELDNAME>', internals.PROPERTIES_BY_FIELDNAME);
 
-    // internals.propertyName2FieldNameMapping = (function() {
-    //     let _propertyName2FieldName = {};
-    //     for (let fieldName of Object.keys(sanitizedQueryFields)) {
-    //         let propertyInfos = sanitizedQueryFields[fieldName];
-    //         if (propertyInfos.$fields) {
-    //             for (let innerFieldName of Object.keys(propertyInfos.$fields)) {
-    //                 let propertyName = propertyInfos.$fields[innerFieldName];
-    //                 _propertyName2FieldName[innerFieldName] = propertyName;
-    //             }
-    //         } else {
-    //             _propertyName2FieldName[fieldName] = propertyInfos.$property;
-    //         }
-    //     }
-    //     return _propertyName2FieldName;
-    // })();
-
-    // console.dir(internals.propertyName2FieldNameMapping, {depth: 10});
-
-    /**
-     * returns the list of properties fieldName whose property
-     * is an array
-     */
-    //  internals.arrayProperties = (function() {
-    //     let properties = [];
-    //     for (let fieldName of Object.keys(sanitizedQueryFields)) {
-    //         let propertyInfos = sanitizedQueryFields[fieldName];
-    //         if (propertyInfos.$array) {
-    //             properties.push(propertyInfos.$property);
-    //         }
-    //     }
-    //     return properties;
-    //  })();
-
     internals._decodeURIValue = function(_fieldName, iriValue, parent) {
         if (_.isPlainObject(iriValue)) {
 
@@ -235,78 +178,6 @@ module.exports = function(db, modelName, query) {
         }
     };
 
-
-    // internals.convertLiteralValue = function(fieldName, value, rdfType) {
-    //     let valueType = 'string';
-    //     if (rdfType) {
-    //         valueType = rdfInternals.RDF_DATATYPES[rdfType];
-    //     }
-    //
-    //
-    //     switch (valueType) {
-    //         case 'string':
-    //             let propertyInfos = internals.PROPERTIES_BY_FIELDNAME[fieldName];
-    //             let propertyName = propertyInfos.propertyName;
-    //
-    //             if (propertyInfos.array) {
-    //                 value = JSON.parse(value).map(
-    //                     (val) => _decodeURIValue(fieldName, val));
-    //                 value = _.compact(value);
-    //                 let sortOrder = _.get(internals.SORTED_FIELDS, `${fieldName}.order`);
-    //                 if (sortOrder) {
-    //                     value = _.sortBy(value);
-    //                     if (sortOrder === 'desc') {
-    //                         value = _.reverse(value);
-    //                     }
-    //                 }
-    //                 // let property = db[modelName].schema.getProperty(propertyName);
-    //                 // if (property.isRelation()) {
-    //                 //     if (!propertyInfos.$fields) {
-    //                 //         value = value.map((uri) => rdfInternals.rdfURI2id(db, property.type, uri));
-    //                 //     }
-    //                 //     // value = value.map((uri) => ({
-    //                 //     //     _id: rdfInternals.rdfURI2id(db, property.type, uri),
-    //                 //     //     _type: property.type
-    //                 //     // }));
-    //                 // }
-    //             }
-    //             break;
-    //
-    //         case 'number':
-    //             value = parseFloat(value);
-    //             break;
-    //
-    //         case 'boolean':
-    //             if (['true', '1', 1, 'yes'].indexOf(value) > -1) {
-    //                 value = true;
-    //             } else {
-    //                 value = false;
-    //             }
-    //             break;
-    //
-    //         case 'date':
-    //             value = new Date(value);
-    //             break;
-    //
-    //         default:
-    //             console.error('UNKNOWN DATATYPE !!!', valueType);
-    //     }
-    //
-    //     return value;
-    // };
-
-    // internals.convertIRIValue = function(fieldName, value) {
-    //     const propertyInfos = internals.PROPERTIES_BY_FIELDNAME[fieldName];
-    //     let propertyName = propertyInfos.propertyName;
-    //
-    //     if (_.endsWith(propertyName, '._type')) {
-    //         return db.rdfClasses2ModelNameMapping[value]
-    //     }
-    //
-    //     const property = db[modelName].schema.getProperty(propertyName);
-    //     return rdfInternals.rdfURI2id(db, property.type, value);
-    // };
-
     internals.buildRdfValue = function(fieldName, rdfInfo) {
         let convertor = internals.rdfValuesConvertor(fieldName);
         let datatype = rdfInfo.type === 'literal' ? rdfInfo.datatype : 'iri';
@@ -363,41 +234,6 @@ module.exports = function(db, modelName, query) {
 
             return unflatten(doc);
 
-
-
-
-            // const doc = {};
-            //
-            // let _idProperty = internals.PROPERTIES.find((o) => o.propertyName === '_id');
-            // if (_idProperty) {
-            //     let _idVariableName = _idProperty.fieldName;
-            //     let uri = item[_idVariableName].value;
-            //     doc[_idVariableName] = rdfInternals.rdfURI2id(db, modelName, uri);
-            //     delete item[_idVariableName];
-            // }
-            //
-            // let _typeProperty = internals.PROPERTIES.find((o) => o.propertyName === '_type');
-            // if (_typeProperty) {
-            //     let _typeVariableName = _typeProperty.fieldName;
-            //     doc[_typeVariableName] = modelName; //db.rdfClasses2ModelNameMapping[item._type.value];
-            //     delete item[_typeVariableName];
-            // }
-            //
-            // for (let fieldName of Object.keys(item)) {
-            //     let rdfInfo = item[fieldName];
-            //     fieldName = fieldName.split(rdfInternals.RELATION_SEPARATOR).join('.');
-            //     let value;
-            //     if (rdfInfo.type === 'literal') {
-            //         value = internals.convertLiteralValue(
-            //             fieldName, rdfInfo.value, rdfInfo.datatype
-            //         );
-            //     } else {
-            //         value = internals.convertIRIValue(fieldName, rdfInfo.value);
-            //     }
-            //     _.set(doc, fieldName, value);
-            // }
-            //
-            // return doc;
         }
     };
 };

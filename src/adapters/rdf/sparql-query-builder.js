@@ -246,93 +246,6 @@ module.exports = function(db, graphUri) {
         }
     };
 
-    internals.buildFilterSparson = function(variable, predicate, operator, rdfValue) {
-        if (predicate === '_id') {
-            return {
-                type: 'filter',
-                expression: {
-                    type: 'operation',
-                    operator: rdfInternals.operatorMapping[operator],
-                    args: [`?__id`, rdfValue]
-                }
-            }
-        }
-
-
-        let patterns = [{
-            type: 'bgp',
-            triples: [{
-                subject: '?__id',
-                predicate: predicate,
-                object: `?_filter_${variable}`
-            }]
-        }];
-
-        /*
-         * if we are only checking the existance, we don't need a filter
-         */
-        let filterExistance;
-
-        if (_(['$exists', '$nexists']).includes(operator)) {
-
-            filterExistance = rdfInternals.operatorMapping[operator];
-
-        } else {
-
-            filterExistance = rdfInternals.filterExistanceOperatorMapping[operator];
-
-            if (filterExistance === 'notexists') {
-                operator = rdfInternals.inverseOperatorMapping[operator];
-            }
-
-            patterns.push({
-                type: 'filter',
-                expression: {
-                    type: 'operation',
-                    operator: rdfInternals.operatorMapping[operator],
-                    args: [`?_filter_${variable}`, rdfValue]
-                }
-            });
-        }
-
-        return {
-            type: 'filter',
-            expression: {
-                type: 'operation',
-                operator: filterExistance,
-                args: [{
-                    type: 'group',
-                    patterns: patterns
-                }]
-            }
-        };
-    };
-
-    internals.buildOrderBy = function(sortedVariables) {
-
-        if (!sortedVariables) {
-            return null;
-        }
-
-        let orderBy = [];
-        for (let variable of sortedVariables) {
-            let descending = false;
-            if (variable[0] === '-') {
-                descending = true;
-                variable = variable.slice(1);
-            }
-
-            variable = internals.buildInnerVariableName(variable);
-
-            orderBy.push({
-                expression: `?${variable}`,
-                descending: descending
-            });
-        }
-
-        return orderBy;
-    };
-
     // query.field = {
     //     title: title,
     //     authorName: 'author?.name',
@@ -876,6 +789,7 @@ module.exports = function(db, graphUri) {
             .filter((o) => !o.aggregator && !o.array && !o.inner)
             .map((o) => ({expression: `?_${innerVariable(o.propertyName)}`}));
     };
+
 
     internals._orderBySparson = function(modelName, sortedFields) {
         const innerVariable = internals.buildInnerVariableName;

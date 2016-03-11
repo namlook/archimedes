@@ -20,16 +20,17 @@ import highland from 'highland';
 
 
 
-import field from './field-assertions';
-import fieldErrors from './field-error-assertions';
+import field from './query-assertions/field-assertions';
+import fieldErrors from './query-assertions/field-error-assertions';
 
-import filter from './filter-assertions';
-import filterErrors from './filter-error-assertions';
+import filter from './query-assertions/filter-assertions';
+import filterErrors from './query-assertions/filter-error-assertions';
 
-import aggregation from './aggregation-assertions';
-import aggregationErrors from './aggregation-error-assertions';
+import aggregation from './query-assertions/aggregation-assertions';
+import aggregationErrors from './query-assertions/aggregation-error-assertions';
 
-import queryOptions from './query-option-assertions'
+import queryOptions from './query-assertions/option-assertions'
+import queryOptionsError from './query-assertions/option-error-assertions'
 
 const testQueries = {
     field,
@@ -38,9 +39,9 @@ const testQueries = {
     'filter-errors': filterErrors,
     aggregation,
     'aggregation-errors': aggregationErrors,
-    'query-options': queryOptions
+    'query-options': queryOptions,
+    'query-options-error': queryOptionsError
 };
-
 
 var processTest = function(db, testQuery) {
 
