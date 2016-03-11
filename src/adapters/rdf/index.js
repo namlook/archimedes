@@ -540,7 +540,7 @@ export default function(config) {
 
             query(modelName, query, options) {
                 let graphUri = config.graphUri;
-                let queryBuilder = sparqlQueryBuilder(db, graphUri);
+                let queryBuilder = sparqlQueryBuilder(db, modelName, graphUri);
 
                 /** if the _type is not present, set it to the modelName **/
                 query.filter = query.filter && query.filter || {};
@@ -548,7 +548,7 @@ export default function(config) {
                     _.set(query, 'filter._type', modelName);
                 }
 
-                let sparql = queryBuilder.build(modelName, query, options);
+                let sparql = queryBuilder.build(query, options);
 
                 // console.log(sparql);
 

@@ -1,28 +1,10 @@
 
 import _ from 'lodash';
 
-const rdfInternals = {};
-
-rdfInternals.RELATION_SEPARATOR = '____';
-
-rdfInternals.rdfURI2id = function(db, modelName, uri) {
-    let modelClass = db[modelName];
-    let id = uri.replace(modelClass.meta.instanceRdfPrefix, '');
-    return _.trim(id, '/');
-};
-
-rdfInternals.RDF_DATATYPES = {
-    'http://www.w3.org/2001/XMLSchema#integer': 'number',
-    'http://www.w3.org/2001/XMLSchema#decimal': 'number',
-    'http://www.w3.org/2001/XMLSchema#float': 'number',
-    'http://www.w3.org/2001/XMLSchema#double': 'number',
-    'http://www.w3.org/2001/XMLSchema#boolean': 'boolean',
-    'http://www.w3.org/2001/XMLSchema#dateTime': 'date'
-};
-
+import rdfUtilities from './rdf-utils';
 
 module.exports = function(db, modelName, query) {
-
+    const rdfUtils = rdfUtilities(db);
     const internals = {};
 
     const fieldProperties = _.toPairs(query.field)
@@ -130,7 +112,7 @@ module.exports = function(db, modelName, query) {
             }
             if (_.endsWith(propertyRaw, '._id')) {
                 const property = db[modelName].schema.getProperty(propertyName);
-                return rdfInternals.rdfURI2id(db, property.type, decodedValue);
+                return rdfUtils.rdfURI2id(property.type, decodedValue);
             }
 
             return decodedValue;
@@ -173,12 +155,12 @@ module.exports = function(db, modelName, query) {
                 }
 
                 const property = db[modelName].schema.getProperty(propertyName);
-                return rdfInternals.rdfURI2id(db, property.type, value);
+                return rdfUtils.rdfURI2id(property.type, value);
             }
         }
     };
 
-    internals.buildRdfValue = function(fieldName, rdfInfo) {
+    internals.buildValueFromRdf = function(fieldName, rdfInfo) {
         let convertor = internals.rdfValuesConvertor(fieldName);
         let datatype = rdfInfo.type === 'literal' ? rdfInfo.datatype : 'iri';
 
@@ -188,7 +170,7 @@ module.exports = function(db, modelName, query) {
         } else if (datatype === 'iri') {
             valueType = 'iri';
         } else {
-            valueType = rdfInternals.RDF_DATATYPES[datatype];
+            valueType = rdfUtils.RDF_DATATYPES[datatype];
         }
 
         return convertor[valueType](rdfInfo.value);
@@ -214,7 +196,7 @@ module.exports = function(db, modelName, query) {
                         let uri = rdfInfo.value;
                         return [
                             _idFieldName,
-                            rdfInternals.rdfURI2id(db, modelName, uri)
+                            rdfUtils.rdfURI2id(modelName, uri)
                         ];
                     }
 
@@ -222,8 +204,8 @@ module.exports = function(db, modelName, query) {
                         return [_typeFieldName, modelName];  //db.rdfClasses2ModelNameMapping[item._type.value];
                     }
 
-                    fieldName = fieldName.split(rdfInternals.RELATION_SEPARATOR).join('.');
-                    let value = internals.buildRdfValue(fieldName, rdfInfo);
+                    fieldName = fieldName.split(rdfUtils.RELATION_SEPARATOR).join('.');
+                    let value = internals.buildValueFromRdf(fieldName, rdfInfo);
 
                     return [fieldName, value];
                 })

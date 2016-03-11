@@ -1,135 +1,19 @@
 
 import _ from 'lodash';
-import {Util as N3Util} from 'n3';
-import moment from 'moment';
+import rdfUtilities from './rdf-utils';
+import {Generator as SparqlGenerator} from 'sparqljs';
 
-let SparqlGenerator = require('sparqljs').Generator;
+module.exports = function(db, modelName, graphUri) {
 
-module.exports = function(db, graphUri) {
-
+    const rdfUtils = rdfUtilities(db);
     const internals = {};
-    const rdfInternals = {};
-
-    rdfInternals.RELATION_SEPARATOR = '____';
-
-    rdfInternals.operatorMapping = {
-        $gt: '>',
-        $lt: '<',
-        $gte: '>=',
-        $lte: '<=',
-        $eq: '=',
-        $ne: '!=',
-        $in: 'in',
-        $nin: 'notin',
-        $regex: 'regex',
-        $iregex: 'regex',
-        $exists: 'exists',
-        $nexists: 'notexists',
-        $strlen: 'strlen'
-    };
-
-    rdfInternals.inverseOperatorMapping = {
-        $gt: '$lte',
-        $lt: '$gte',
-        $gte: '$lt',
-        $lte: '$gt',
-        $eq: '$ne',
-        $ne: '$eq',
-        $in: '$nin',
-        $nin: '$in',
-        $exists: 'nexists',
-        $nexists: '$exists'
-    };
-
-    rdfInternals.filterExistanceOperatorMapping = {
-        $gt: 'exists',
-        $lt: 'exists',
-        $gte: 'exists',
-        $lte: 'exists',
-        $eq: 'exists',
-        $in: 'exists',
-        $regex: 'exists',
-        $iregex: 'exists',
-        $exists: 'exists',
-        $strlen: 'exists',
-        $ne: 'notexists',
-        $nin: 'notexists',
-        $nexists: 'notexists'
-    };
-
-    rdfInternals.validAggregators = [
-        'count',
-        'avg',
-        'sum',
-        'min',
-        'max',
-        //'object',
-        //'array'
-    ];
-
-    rdfInternals.buildClassRdfUri = function(modelName) {
-        return db[modelName].meta.classRdfUri;
-    };
-
-    rdfInternals.buildInstanceRdfUri = function(modelName, id) {
-        const modelClass = db[modelName];
-        return `${modelClass.meta.instanceRdfPrefix}/${id}`;
-    };
-
-
-    rdfInternals.buildRdfValue = function(modelName, propertyName, value) {
-
-        const modelClass = db[modelName];
-
-        // if (propertyName === '_type') {
-            // return rdfInternals.buildClassRdfUri(modelName);
-        // }
-
-        let rdfValue;
-        let isRelation = _.has(value, '_id') && _.has(value, '_type');
-
-        if (propertyName === '_type') {
-
-            rdfValue = rdfInternals.buildClassRdfUri(modelName);
-
-        } else if (propertyName === '_id') {
-
-            rdfValue = rdfInternals.buildInstanceRdfUri(modelName, value);
-
-        } else if (_.endsWith(propertyName, '._id')) {
-
-            propertyName = propertyName.split('.').slice(0, -1).join('.');
-            let property = modelClass.schema.getProperty(propertyName);
-            let relationModelName = property.modelSchema.name;
-            rdfValue = rdfInternals.buildInstanceRdfUri(relationModelName, value);
-
-        } else if (isRelation) {
-
-            rdfValue = rdfInternals.instanceRdfUri(value._type, value._id);
-
-        } else {
-
-            let propertyType = modelClass.schema.getProperty(propertyName).type;
-            if (_(['date', 'datetime']).includes(propertyType)) {
-                value = moment(value).toISOString();
-                let valueType = 'http://www.w3.org/2001/XMLSchema#dateTime';
-                rdfValue = N3Util.createLiteral(value, valueType);
-            } else {
-                rdfValue = N3Util.createLiteral(value);
-            }
-
-        }
-
-        return rdfValue;
-    };
-
 
     /*
      * returns the sparson predicate from a propertyName
      * Note that if the parent is specified, the predicate used will be
      * build against the parent schema.
      */
-    internals.buildPredicate = function(modelName, propertyName, parent) {
+    internals.buildPredicate = function(propertyName, parent) {
         const modelClass = db[modelName];
         let modelSchema = modelClass.schema;
         let property;
@@ -166,7 +50,7 @@ module.exports = function(db, graphUri) {
      * buid a predicate with a path:
      *   ?s (test:user/test/name) ?o
      */
-    internals.buildPathPredicate = function(modelName, propertyName) {
+    internals.buildPathPredicate = function(propertyName) {
         const modelClass = db[modelName];
         let modelSchema = modelClass.schema;
 
@@ -218,11 +102,11 @@ module.exports = function(db, graphUri) {
         if (_.endsWith(propertyName, '._id')) {
             propertyName = propertyName.split('.').slice(0, -1).join('.');
         }
-        return propertyName.split('.').join(rdfInternals.RELATION_SEPARATOR);
+        return propertyName.split('.').join(rdfUtils.RELATION_SEPARATOR);
     };
 
     internals.buildFinalVariableName = function(propertyName) {
-        return propertyName.split('.').join(rdfInternals.RELATION_SEPARATOR);
+        return propertyName.split('.').join(rdfUtils.RELATION_SEPARATOR);
     };
 
     internals.validateQuery = function(query) {
@@ -267,7 +151,7 @@ module.exports = function(db, graphUri) {
     //     {fieldName: 'name', propertyName: 'credits.name', subject: 'credits'},
     //     {fieldName: 'sex', propertyName: 'credits.gender', subject: 'credits'}
     // ]
-    internals._buildFieldProperties = function(modelName, query, sortedFields) {
+    internals._buildFieldProperties = function(query, sortedFields) {
 
         const convertPair2property = function([fieldName, fieldInfos]) {
             let isArray = _.isArray(fieldInfos);
@@ -297,7 +181,7 @@ module.exports = function(db, graphUri) {
         return  _.toPairs(query.field).map(convertPair2property);
     };
 
-    internals._buildStatementProperties = function(modelName, fieldProperties, aggregationProperties, sortedFields) {
+    internals._buildStatementProperties = function(fieldProperties, aggregationProperties, sortedFields) {
 
         const sortedField = (fieldName) => _.get(
             _.find(sortedFields, {fieldName: fieldName}),
@@ -411,7 +295,7 @@ module.exports = function(db, graphUri) {
     //     {propertyName: 'tags', operator: 'in', rdfValue: ['tag\"1', 'tag\"2']},
     //     {propertyName: 'credits.name', operator: 'eq', rdfValue: 'user1'}
     // ]
-    internals._buildFilterProperties = function(modelName, query) {
+    internals._buildFilterProperties = function(query) {
         return _(query.filter)
             .toPairs()
             .map(([propertyName, filterInfos]) => {
@@ -420,7 +304,7 @@ module.exports = function(db, graphUri) {
                 }
 
                 if (filterInfos._id && filterInfos._type) {
-                    let rdfValue = rdfInternals.buildRdfValue(filterInfos._type, '_id', filterInfos._id);
+                    let rdfValue = rdfUtils.buildRdfValue(filterInfos._type, '_id', filterInfos._id);
                     return [{
                         propertyName,
                         operator: '$eq',
@@ -439,10 +323,17 @@ module.exports = function(db, graphUri) {
                             }
                         }
                         if (_.isArray(value)) {
-                            rdfValue = value.map((v) => rdfInternals.buildRdfValue(
-                                modelName, propertyName, v));
+                            rdfValue = value.map(
+                                (v) => rdfUtils.buildRdfValue(
+                                    modelName, propertyName, v
+                                )
+                            );
                         } else {
-                            rdfValue = rdfInternals.buildRdfValue(modelName, propertyName, value);
+                            rdfValue = rdfUtils.buildRdfValue(
+                                modelName,
+                                propertyName,
+                                value
+                            );
                         }
                         return {propertyName, operator, rdfValue};
                     })
@@ -463,7 +354,7 @@ module.exports = function(db, graphUri) {
     //     {fieldName: 'sumRatting', propertyName: 'ratting', aggregator: 'sum'},
     //     {fieldName: 'total', propertyName: '_id', aggregator: 'count'},
     // ]
-    internals._buildAggregationProperties = function(model, query) {
+    internals._buildAggregationProperties = function(query) {
         return _.toPairs(query.aggregate)
             .map(([fieldName, aggregation]) => {
 
@@ -500,7 +391,7 @@ module.exports = function(db, graphUri) {
             });
     };
 
-    internals._selectVariableSparson = function(modelName, properties) {
+    internals._selectVariableSparson = function(properties) {
         const innerVariable = internals.buildInnerVariableName;
         const finalVariable = internals.buildFinalVariableName;
         /*** build select variables ***/
@@ -512,7 +403,7 @@ module.exports = function(db, graphUri) {
             }));
     };
 
-    internals._selectArraySparson = function(modelName, properties) {
+    internals._selectArraySparson = function(properties) {
         const innerVariable = internals.buildInnerVariableName;
         const finalVariable = internals.buildFinalVariableName;
         return properties
@@ -541,7 +432,7 @@ module.exports = function(db, graphUri) {
             });
     };
 
-    internals._selectAggregationSparson = function(modelName, aggregationProperties) {
+    internals._selectAggregationSparson = function(aggregationProperties) {
         const innerVariable = internals.buildInnerVariableName;
         const finalVariable = internals.buildFinalVariableName;
 
@@ -584,24 +475,29 @@ module.exports = function(db, graphUri) {
             });
     };
 
-    internals._requiredWhereSparson = function(modelName, properties) {
+    internals._requiredWhereSparson = function(properties) {
         const innerVariable = internals.buildInnerVariableName;
         const buildPredicate = internals.buildPredicate;
         /*** build field where statement ***/
         let triples = _.flatten(
             properties
-                .filter((o) => !o.filter && !o.fields && o.propertyName !== '_id' && !o.optional)
+                .filter((o) =>
+                    !o.filter
+                    && !o.fields
+                    && o.propertyName !== '_id'
+                    && !o.optional
+                )
                 .map((o) => {
                     let _triples = [{
                         subject: `?_${innerVariable(o.parent || '_id')}`,
-                        predicate: buildPredicate(modelName, o.propertyName),//, o.parent),
+                        predicate: buildPredicate(o.propertyName),//, o.parent),
                         object: `?_${innerVariable(o.propertyName)}`
                     }];
 
                     let embedTriples = _.toPairs(o.fields)
                         .map(([embedFieldName, embedPropertyName]) => ({
                             subject: `?_${innerVariable(o.propertyName)}`,
-                            predicate: buildPredicate(modelName, embedPropertyName),//, o.parent),
+                            predicate: buildPredicate(embedPropertyName),//, o.parent),
                             object: `?_${innerVariable(embedPropertyName)}`
                         }));
 
@@ -613,7 +509,7 @@ module.exports = function(db, graphUri) {
     };
 
 
-    internals._optionalWhereSparson = function(modelName, properties) {
+    internals._optionalWhereSparson = function(properties) {
         const innerVariable = internals.buildInnerVariableName;
         const buildPredicate = internals.buildPredicate;
         return _(properties)
@@ -625,14 +521,14 @@ module.exports = function(db, graphUri) {
 
                     let triples = {
                         subject: `?_${innerVariable(prop.parent || '_id')}`,
-                        predicate: buildPredicate(modelName, prop.propertyName),//, o.parent),
+                        predicate: buildPredicate(prop.propertyName),//, o.parent),
                         object: `?_${innerVariable(prop.propertyName)}`
                     }
 
                     let embedTriples = _.toPairs(prop.fields)
                         .map(([embedFieldName, embedPropertyName]) => ({
                             subject: `?_${innerVariable(prop.propertyName)}`,
-                            predicate: buildPredicate(modelName, embedPropertyName),//, o.parent),
+                            predicate: buildPredicate(embedPropertyName),//, o.parent),
                             object: `?_${innerVariable(embedPropertyName)}`
                         }));
 
@@ -643,7 +539,7 @@ module.exports = function(db, graphUri) {
             .value();
     };
 
-    internals._filterWhereSparson = function(modelName, filterProperties) {
+    internals._filterWhereSparson = function(filterProperties) {
         const innerVariable = internals.buildInnerVariableName;
         const buildPathPredicate = internals.buildPathPredicate;
         return filterProperties.map((o) => {
@@ -653,7 +549,7 @@ module.exports = function(db, graphUri) {
                     type: 'filter',
                     expression: {
                         type: 'operation',
-                        operator: rdfInternals.operatorMapping[o.operator],
+                        operator: rdfUtils.operatorMapping[o.operator],
                         args: [`?__id`, o.rdfValue]
                     }
                 };
@@ -666,13 +562,13 @@ module.exports = function(db, graphUri) {
 
                 if (_(['$exists', '$nexists']).includes(operator)) {
 
-                    filterExistance = rdfInternals.operatorMapping[operator];
+                    filterExistance = rdfUtils.operatorMapping[operator];
 
                 } else {
 
-                    filterExistance = rdfInternals.filterExistanceOperatorMapping[operator];
+                    filterExistance = rdfUtils.filterExistanceOperatorMapping[operator];
                     if (filterExistance === 'notexists') {
-                        operator = rdfInternals.inverseOperatorMapping[operator];
+                        operator = rdfUtils.inverseOperatorMapping[operator];
                     }
 
                     const args = [
@@ -688,7 +584,7 @@ module.exports = function(db, graphUri) {
                         type: 'filter',
                         expression: {
                             type: 'operation',
-                            operator: rdfInternals.operatorMapping[operator],
+                            operator: rdfUtils.operatorMapping[operator],
                             args: args
                         }
                     });
@@ -706,7 +602,7 @@ module.exports = function(db, graphUri) {
                                 type: 'bgp',
                                 triples: [{
                                     subject: '?__id',
-                                    predicate: buildPathPredicate(modelName, o.propertyName),
+                                    predicate: buildPathPredicate(o.propertyName),
                                     object: `?_filter_${innerVariable(o.propertyName)}`
                                 }]
                             }].concat(filters)
@@ -717,7 +613,7 @@ module.exports = function(db, graphUri) {
         });
     };
 
-    internals._bindingsSparson = function(modelName, properties) {
+    internals._bindingsSparson = function(properties) {
         const innerVariable = internals.buildInnerVariableName;
         /* encode_for_uri the value for object */
         const embedObjects = _(properties)
@@ -777,7 +673,7 @@ module.exports = function(db, graphUri) {
         return objectBindings.concat(arrayBindings);
     };
 
-    internals._groupBySparson = function(modelName, properties) {
+    internals._groupBySparson = function(properties) {
         const innerVariable = internals.buildInnerVariableName;
         const shouldGroupBy = _.find(properties, (o) => o.aggregator || o.array)
 
@@ -791,7 +687,7 @@ module.exports = function(db, graphUri) {
     };
 
 
-    internals._orderBySparson = function(modelName, sortedFields) {
+    internals._orderBySparson = function(sortedFields) {
         const innerVariable = internals.buildInnerVariableName;
         return sortedFields.map((o) => ({
             expression: `?${innerVariable(o.fieldName)}`,
@@ -800,7 +696,7 @@ module.exports = function(db, graphUri) {
     };
 
 
-    internals.buildSparson = function(modelName, query) {
+    internals.buildSparson = function(query) {
 
         let sortedFields = query.sort || [];
         sortedFields = sortedFields.map((fieldName) => {
@@ -810,18 +706,18 @@ module.exports = function(db, graphUri) {
             return { fieldName, order };
         });
 
-        let fieldProperties = internals._buildFieldProperties(modelName, query, sortedFields);
+        let fieldProperties = internals._buildFieldProperties(query, sortedFields);
         // console.log('FIELD_PROPERTIES>', fieldProperties);
-        let filterProperties = internals._buildFilterProperties(modelName, query);
+        let filterProperties = internals._buildFilterProperties(query);
         // console.log('FILTER_PROPERTIES>', filterProperties);
-        let aggregationProperties = internals._buildAggregationProperties(modelName, query);
+        let aggregationProperties = internals._buildAggregationProperties(query);
         // console.log('AGGREGATION_PROPERTIES>', aggregationProperties);
-        let statementProperties = internals._buildStatementProperties(modelName, fieldProperties, aggregationProperties, sortedFields);
+        let statementProperties = internals._buildStatementProperties(fieldProperties, aggregationProperties, sortedFields);
         // console.log('WHERE_PROPERTIES>', statementProperties);
 
-        let selectVariableSparson = internals._selectVariableSparson(modelName, statementProperties);
-        let selectArraySparson = internals._selectArraySparson(modelName, statementProperties);
-        let selectAggregationSparson = internals._selectAggregationSparson(modelName, aggregationProperties);//internals._selectAggregationSparson(aggregationProperties);
+        let selectVariableSparson = internals._selectVariableSparson(statementProperties);
+        let selectArraySparson = internals._selectArraySparson(statementProperties);
+        let selectAggregationSparson = internals._selectAggregationSparson(aggregationProperties);//internals._selectAggregationSparson(aggregationProperties);
 
         let selectSparson = selectVariableSparson
             .concat(selectArraySparson)
@@ -829,12 +725,12 @@ module.exports = function(db, graphUri) {
 
 
         /*** build where statement ***/
-        let requiredWhereSparson = internals._requiredWhereSparson(modelName, statementProperties);
-        let optionalWhereSparson = internals._optionalWhereSparson(modelName, statementProperties);
+        let requiredWhereSparson = internals._requiredWhereSparson(statementProperties);
+        let optionalWhereSparson = internals._optionalWhereSparson(statementProperties);
         /* build bindings where statement */
-        let bindingSparson = internals._bindingsSparson(modelName, statementProperties);
+        let bindingSparson = internals._bindingsSparson(statementProperties);
         /* build filter where statement */
-        let filterWhereSparson = internals._filterWhereSparson(modelName, filterProperties);
+        let filterWhereSparson = internals._filterWhereSparson(filterProperties);
 
         let whereSparson = requiredWhereSparson
             .concat(filterWhereSparson)
@@ -843,10 +739,10 @@ module.exports = function(db, graphUri) {
 
 
         /*** build group by variables ***/
-        let groupBySparson = internals._groupBySparson(modelName, statementProperties);
+        let groupBySparson = internals._groupBySparson(statementProperties);
 
         /*** build order by variables ****/
-        let orderBySparson = internals._orderBySparson(modelName, sortedFields);
+        let orderBySparson = internals._orderBySparson(sortedFields);
 
         return {
             type: 'query',
@@ -863,9 +759,9 @@ module.exports = function(db, graphUri) {
 
 
     return {
-        build: function(modelName, query) {
+        build: function(query) {
             // internals.validateQuery(query);
-            let sparson = internals.buildSparson(modelName, query);
+            let sparson = internals.buildSparson(query);
             sparson.from = {
                 'default': [graphUri]
             };
