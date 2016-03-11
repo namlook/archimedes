@@ -8,38 +8,54 @@ export default [
             _type: '_type',
             title: 'title',
             score: 'ratting',
-            author: 'author',
+            'author._id': 'author._id',
+            'author._type': 'author._type',
             tags: ['tags']
         },
+        options: {sort: ['title']},
         results: [
-          { _id: 'blogpost1', _type: 'BlogPost',
-            title: 'post 1', score: 1,
-            author: { _id: 'user1', _type: 'User' },
-            tags: [ 'tag"1' ] },
-          { _id: 'blogpost9', _type: 'BlogPost',
-            title: 'post 9', score: 3,
-            author: { _id: 'user4', _type: 'User' },
-            tags: [ 'tag"9' ] },
-          { _id: 'blogpost2', _type: 'BlogPost',
-            title: 'post 2', score: 2,
-            author: { _id: 'user2', _type: 'User' },
-            tags: [ 'tag"3', 'tag"2' ] },
-          { _id: 'blogpost3', _type: 'BlogPost',
-            title: 'post 3', score: 3,
-            author: { _id: 'user3', _type: 'User' },
-            tags: [ 'tag"3', 'tag"4', 'tag"5' ] },
-          { _id: 'blogpost5', _type: 'BlogPost',
-            title: 'post 5', score: 5,
-            author: { _id: 'user0', _type: 'User' },
-            tags: [ 'tag"5' ] },
-          { _id: 'blogpost7', _type: 'BlogPost',
-            title: 'post 7', score: 1,
-            author: { _id: 'user2', _type: 'User' },
-            tags: [ 'tag"7', 'tag"8', 'tag"9' ] },
-          { _id: 'blogpost6', _type: 'BlogPost',
-            title: 'post 6', score: 0,
-            author: { _id: 'user1', _type: 'User' },
-            tags: [ 'tag"7', 'tag"6' ] }
+            {
+                _id: 'blogpost1', _type: 'BlogPost',
+                title: 'post 1', score: 1,
+                author: { _id: 'user1', _type: 'User' },
+                tags: [ 'tag"1' ]
+            },
+            {
+                _id: 'blogpost2', _type: 'BlogPost',
+                title: 'post 2', score: 2,
+                author: { _id: 'user2', _type: 'User' },
+                tags: [ 'tag"3', 'tag"2' ]
+            },
+            {
+                _id: 'blogpost3', _type: 'BlogPost',
+                title: 'post 3', score: 3,
+                author: { _id: 'user3', _type: 'User' },
+                tags: [ 'tag"3', 'tag"4', 'tag"5' ]
+            },
+            {
+                _id: 'blogpost5', _type: 'BlogPost',
+                title: 'post 5', score: 5,
+                author: { _id: 'user0', _type: 'User' },
+                tags: [ 'tag"5' ]
+            },
+            {
+                _id: 'blogpost6', _type: 'BlogPost',
+                title: 'post 6', score: 0,
+                author: { _id: 'user1', _type: 'User' },
+                tags: [ 'tag"7', 'tag"6' ]
+            },
+            {
+                _id: 'blogpost7', _type: 'BlogPost',
+                title: 'post 7', score: 1,
+                author: { _id: 'user2', _type: 'User' },
+                tags: [ 'tag"7', 'tag"8', 'tag"9' ]
+            },
+            {
+                _id: 'blogpost9', _type: 'BlogPost',
+                title: 'post 9', score: 3,
+                author: { _id: 'user4', _type: 'User' },
+                tags: [ 'tag"9' ]
+            }
         ]
     },
 
@@ -104,8 +120,32 @@ export default [
             { title: 'post 9', userId: 'user4' }
         ]
     },
+
     {
-        should: 'forge deep objects',
+        should: 'frame the relation _id (2)',
+        model: 'BlogPost',
+        field: {
+            title: 'title',
+            'user._id': 'author._id',
+            'user._type': 'author._type'
+        },
+        options: {sort: ['title']},
+        results: [
+            { title: 'post 0', user: { _id: 'user0', _type: 'User' } },
+            { title: 'post 1', user: { _id: 'user1', _type: 'User' } },
+            { title: 'post 2', user: { _id: 'user2', _type: 'User' } },
+            { title: 'post 3', user: { _id: 'user3', _type: 'User' } },
+            { title: 'post 4', user: { _id: 'user4', _type: 'User' } },
+            { title: 'post 5', user: { _id: 'user0', _type: 'User' } },
+            { title: 'post 6', user: { _id: 'user1', _type: 'User' } },
+            { title: 'post 7', user: { _id: 'user2', _type: 'User' } },
+            { title: 'post 8', user: { _id: 'user3', _type: 'User' } },
+            { title: 'post 9', user: { _id: 'user4', _type: 'User' } }
+        ]
+    },
+
+    {
+        should: 'frame deep objects',
         model: 'BlogPost',
         field: {
             _id: '_id',
@@ -165,6 +205,29 @@ export default [
                 _type: 'BlogPost',
                 yo: { user: 'user 4', title: 'post 9' }
             }
+        ]
+    },
+
+    {
+        should: 'frame embed relation fields',
+        model: 'BlogPost',
+        field: {
+            title: 'title',
+            'author.name': 'author.name',
+            'author.sex': 'author.gender'
+        },
+        options: {sort: ['title']},
+        results: [
+            { title: 'post 0', author: { name: 'user 0', sex: 'male' } },
+            { title: 'post 1', author: { name: 'user 1', sex: 'female' } },
+            { title: 'post 2', author: { name: 'user 2', sex: 'male' } },
+            { title: 'post 3', author: { name: 'user 3', sex: 'female' } },
+            { title: 'post 4', author: { name: 'user 4', sex: 'male' } },
+            { title: 'post 5', author: { name: 'user 0', sex: 'male' } },
+            { title: 'post 6', author: { name: 'user 1', sex: 'female' } },
+            { title: 'post 7', author: { name: 'user 2', sex: 'male' } },
+            { title: 'post 8', author: { name: 'user 3', sex: 'female' } },
+            { title: 'post 9', author: { name: 'user 4', sex: 'male' } }
         ]
     }
 

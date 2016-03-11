@@ -2,96 +2,59 @@
 export default [
 
     {
-        should: 'aggregate using OBJECT aggregator',
+        should: 'forge object with aggregation',
         model: 'BlogPost',
         field: {
-            tags: 'tags',
-            publishedCount: {
-                $aggregator: 'object',
-                $fields: {
-                    isPublished: 'isPublished',
-                    total: {$aggregator: 'count'}
-                }
-            },
+            creditedAuthor: 'credits',
+            'publishedCount.isPublished': 'isPublished',
         },
-        filter: {
-            ratting: 3
+        aggregate: {
+            'publishedCount.total': {$count: true}
         },
-        // options: {sort: ['_id']},
+        options: {sort: ['-creditedAuthor']},
         results: [
-            {bof: 'blah'}
-        ]
-    },
-
-
-    {
-        should: 'aggregate using OBJECT aggregator (deep relation)',
-        model: 'BlogPost',
-        field: {
-            ratting: 'ratting',
-            creditedUser: {
-                $aggregator: 'object',
-                $fields: {
-                    name: 'credits.name',
-                    gender: 'credits.gender'
-                }
-            },
-        },
-        filter: {
-            ratting: 3
-        },
-        // options: {sort: ['_id']},
-        results: [
-            {bof: 'blah'}
+            {creditedAuthor: 'user2', publishedCount: {isPublished: false, total: 1}},
+            {creditedAuthor: 'user2', publishedCount: {isPublished: true, total: 1}},
+            {creditedAuthor: 'user1', publishedCount: {isPublished: true, total: 2}},
+            {creditedAuthor: 'user1', publishedCount: {isPublished: false, total: 2}},
+            {creditedAuthor: 'user0', publishedCount: {isPublished: true, total: 4}},
+            {creditedAuthor: 'user0', publishedCount: {isPublished: false, total: 3}}
         ]
     },
 
     {
-        should: 'forge object from aggregation (2)',
+        should: 'forge object with aggregation (2)',
         model: 'BlogPost',
         field: {
             tag: 'tags',
-            // tag: {
-            //     $aggregator: 'array',
-            //     $property: {
-            //         $aggregator: 'object',
-            //         $properties: {
-            //             title: 'tags'
-            //         }
-            //     }
-            // },
-            creditedGenderCount: {
-                $aggregator: 'object',
-                $properties: {
-                    gender: 'credits.gender',
-                    count: {$aggregator: 'count'}
-                }
-            }
+            'creditedGenderCount.gender': 'credits.gender'
+        },
+        aggregate: {
+            'creditedGenderCount.count': {$aggregator: 'count'}
         },
         options: {sort: ['tag']},
         results: [
-            { bof: 'bla'},
+            {tag: 'tag"1', creditedGenderCount: {gender: 'male', count: 1}},
+            {tag: 'tag"2', creditedGenderCount: {gender: 'male', count: 1}},
+            {tag: 'tag"2', creditedGenderCount: {gender: 'female', count: 1}},
+            {tag: 'tag"3', creditedGenderCount: {gender: 'male', count: 3}},
+            {tag: 'tag"3', creditedGenderCount: {gender: 'female', count: 2}},
+            {tag: 'tag"4', creditedGenderCount: {gender: 'male', count: 2}},
+            {tag: 'tag"4', creditedGenderCount: {gender: 'female', count: 1}},
+            {tag: 'tag"5', creditedGenderCount: {gender: 'male', count: 3}},
+            {tag: 'tag"5', creditedGenderCount: {gender: 'female', count: 1}},
+            {tag: 'tag"6', creditedGenderCount: {gender: 'male', count: 1}},
+            {tag: 'tag"6', creditedGenderCount: {gender: 'female', count: 1}},
+            {tag: 'tag"7', creditedGenderCount: {gender: 'male', count: 3}},
+            {tag: 'tag"7', creditedGenderCount: {gender: 'female', count: 2}},
+            {tag: 'tag"8', creditedGenderCount: {gender: 'male', count: 2}},
+            {tag: 'tag"8', creditedGenderCount: {gender: 'female', count: 1}},
+            {tag: 'tag"9', creditedGenderCount: {gender: 'male', count: 3}},
+            {tag: 'tag"9', creditedGenderCount: {gender: 'female', count: 1}}
         ]
     },
 
-    // {
-    //     should: 'forge array from aggregation',
-    //     model: 'BlogPost',
-    //     field: {
-    //         tag: 'tags',
-    //         creditGenderCount: [{
-    //             gender: 'credits.gender',
-    //             count: 'count'
-    //         }]
-    //     },
-    //     aggregate: {
-    //         count: {$aggregator: 'count'}
-    //     },
-    //     options: {sort: ['tag']},
-    //     results: [
-    //         { bof: 'bla'},
-    //     ]
-    // },
+
 
 
     {
@@ -126,7 +89,8 @@ export default [
         should: 'make an AVG aggregation',
         model: 'BlogPost',
         field: {
-            author: 'author'
+            'author._id': 'author._id',
+            'author._type': 'author._type'
         },
         aggregate: {
             avgRatting: {$avg: 'ratting'}
@@ -152,11 +116,11 @@ export default [
         },
         options: {sort: ['-totalRatting']},
         results: [
-            { author: { _id: 'user4', _type: 'User' }, totalRatting: 7 },
-            { author: { _id: 'user0', _type: 'User' }, totalRatting: 5 },
-            { author: { _id: 'user3', _type: 'User' }, totalRatting: 5 },
-            { author: { _id: 'user2', _type: 'User' }, totalRatting: 3 },
-            { author: { _id: 'user1', _type: 'User' }, totalRatting: 1 }
+            { author: 'user4', totalRatting: 7 },
+            { author: 'user0', totalRatting: 5 },
+            { author: 'user3', totalRatting: 5 },
+            { author: 'user2', totalRatting: 3 },
+            { author: 'user1', totalRatting: 1 }
         ]
     },
 
@@ -279,7 +243,12 @@ export default [
     {
         should: 'aggregate the relation _type',
         model: 'BlogPost',
-        field: {authorType: 'author._type', 'occ': {$count: true}},
+        field: {
+            authorType: 'author._type'
+        },
+        aggregate: {
+            occ: {$count: true}
+        },
         results: [
             { authorType: 'User', occ: 10 }
         ]
@@ -316,6 +285,8 @@ export default [
         model: 'BlogPost',
         field: {
             sex: 'author.gender',
+        },
+        aggregate: {
             count: {$aggregator: 'count'}
         },
         filter: {'author.gender': 'male'},
@@ -327,7 +298,9 @@ export default [
         should: 'aggregate on deep relations with query and operator',
         model: 'BlogPost',
         field: {
-            gender: 'author.gender',
+            gender: 'author.gender'
+        },
+        aggregate: {
             nbSubscriptions: {
                 $aggregator: 'count',
                 $property: 'author.subscribedMailingList'
@@ -355,47 +328,249 @@ export default [
         ]
     },
 
-
-
-    /*** concat ***/
+    /*** array ***/
     {
-        should: 'concat properties values',
+        should: 'aggregate values into an array',
         model: 'BlogPost',
-        field: {authorId: {$concat: 'author._id'}},
-        options: {sort: 'authorId'},
-        results: [{
-            authorId: [
-                'user0',
-                'user0',
-                'user1',
-                'user1',
-                'user2',
-                'user2',
-                'user3',
-                'user3',
-                'user4',
-                'user4'
-            ]
-        }]
+        field: {
+            _type: '_type'
+        },
+        aggregate: {
+            authorId: {$array: 'author._id'}
+        },
+        options: {sort: ['authorId']},
+        results: [
+            {
+                _type: 'BlogPost',
+                authorId: [
+                    'user0',
+                    'user0',
+                    'user1',
+                    'user1',
+                    'user2',
+                    'user2',
+                    'user3',
+                    'user3',
+                    'user4',
+                    'user4'
+                ]
+            }
+        ]
     },
     {
-        should: 'concat properties values with distinct',
+        should: 'aggregate values into an array (disinct)',
         model: 'BlogPost',
-        field: {authorId: {$concat: 'author._id'}},
-        options: {sort: 'authorId', distinct: true},
-        results: [{authorId: ['user0', 'user1', 'user2', 'user3', 'user4']}]
+        field: {
+            _type: '_type'
+        },
+        aggregate: {
+            authorId: {
+                $aggregator: 'array',
+                $property: 'author._id',
+                distinct: true
+            }
+        },
+        options: {sort: ['authorId']},
+        results: [
+            {
+                _type: 'BlogPost',
+                authorId: [
+                   'user0',
+                   'user1',
+                   'user2',
+                   'user3',
+                   'user4'
+                ]
+            }
+        ]
+    },
+
+    {
+        should: 'aggregate values into array of object',
+        model: 'BlogPost',
+        field: {
+            tag: 'tags',
+        },
+        aggregate: {
+            authors: {
+                $aggregator: 'array',
+                $fields: {
+                    gender: 'author.gender',
+                    name: 'author.name'
+                }
+            }
+        },
+        filter: {
+            ratting: 3
+        },
+        options: {sort: ['tag']},
+        results: [
+            { tag: 'tag"3', authors: [ { gender: 'female', name: 'user 3' } ] },
+            { tag: 'tag"4', authors: [ { gender: 'female', name: 'user 3' } ] },
+            { tag: 'tag"5', authors: [ { gender: 'female', name: 'user 3' } ] },
+            { tag: 'tag"9', authors: [ { gender: 'male', name: 'user 4' } ] }
+        ]
+    },
+
+    {
+        should: 'aggregate relations into an array',
+        model: 'BlogPost',
+        field: {
+            title: 'title'
+        },
+        aggregate: {
+            creditedAuthors: {$array: 'credits._id'}
+        },
+        options: {sort: ['title']},
+        results: [
+            {title: 'post 1', creditedAuthors: ['user0']},
+            {title: 'post 2', creditedAuthors: ['user0', 'user1']},
+            {title: 'post 3', creditedAuthors: ['user0', 'user1', 'user2']},
+            {title: 'post 5', creditedAuthors: ['user0']},
+            {title: 'post 6', creditedAuthors: ['user0', 'user1']},
+            {title: 'post 7', creditedAuthors: ['user0', 'user1', 'user2']},
+            {title: 'post 9', creditedAuthors: ['user0']}
+        ]
+    },
+
+    {
+        should: 'aggregate relations into an array (optional)',
+        model: 'BlogPost',
+        field: {
+            title: 'title',
+            'creditedAuthors': ['credits?._id']
+        },
+        options: {sort: ['title']},
+        results: [
+            { title: 'post 0', creditedAuthors: []},
+            { title: 'post 1', creditedAuthors: [ 'user0' ] },
+            { title: 'post 2', creditedAuthors: [ 'user0', 'user1' ] },
+            { title: 'post 3', creditedAuthors: [ 'user0', 'user1', 'user2' ] },
+            { title: 'post 4', creditedAuthors: []},
+            { title: 'post 5', creditedAuthors: [ 'user0' ] },
+            { title: 'post 6', creditedAuthors: [ 'user0', 'user1' ] },
+            { title: 'post 7', creditedAuthors: [ 'user0', 'user1', 'user2' ] },
+            { title: 'post 8', creditedAuthors: []},
+            { title: 'post 9', creditedAuthors: [ 'user0' ] }
+        ]
     },
 
 
-// {
-//     field: {
-//         label: '_type',
-//         'values+.gender': 'gender',
-//         'values+.total': {
-//             $aggregator: 'count'
-//         }
-//     }
-// }
+
+    {
+        should: 'aggregate deep relation fields into an array',
+        model: 'BlogPost',
+        field: {
+            title: 'title',
+        },
+        aggregate: {
+            creditedAuthors: {
+                $aggregator: 'array',
+                $fields: {
+                    name: 'credits.name',
+                    sex: 'credits.gender',
+                }
+            },
+        },
+        options: {sort: ['title']},
+        results: [
+            {
+                title: 'post 1',
+                creditedAuthors: [ { name: 'user 0', sex: 'male' } ]
+            },
+            {
+                title: 'post 2',
+                creditedAuthors: [
+                    { name: 'user 0', sex: 'male' },
+                    { name: 'user 1', sex: 'female' }
+                ]
+            },
+            {
+                title: 'post 3',
+                creditedAuthors: [
+                    { name: 'user 0', sex: 'male' },
+                    { name: 'user 1', sex: 'female' },
+                    { name: 'user 2', sex: 'male' }
+                ]
+            },
+            {
+                title: 'post 5',
+                creditedAuthors: [ { name: 'user 0', sex: 'male' } ]
+            },
+            {
+                title: 'post 6',
+                creditedAuthors: [
+                    { name: 'user 0', sex: 'male' },
+                    { name: 'user 1', sex: 'female' }
+                ]
+            },
+            {
+                title: 'post 7',
+                creditedAuthors: [
+                    { name: 'user 0', sex: 'male' },
+                    { name: 'user 1', sex: 'female' },
+                    { name: 'user 2', sex: 'male' }
+                ]
+            },
+            {
+                title: 'post 9',
+                creditedAuthors: [ { name: 'user 0', sex: 'male' } ]
+            }
+        ]
+    },
+
+    {
+        should: 'aggregate deep relation fields into an array (optional)',
+        model: 'BlogPost',
+        field: {
+            title: 'title'
+        },
+        aggregate: {
+            creditedAuthors: {
+                $aggregator: 'array',
+                $fields: {
+                    name: 'credits?.name',
+                    sex: 'credits?.gender',
+                }
+            },
+        },
+        options: {sort: ['title']},
+        results: [
+            { title: 'post 0', creditedAuthors: [] },
+            { title: 'post 1', creditedAuthors: [ { name: 'user 0', sex: 'male' } ] },
+            { title: 'post 2', creditedAuthors: [ { name: 'user 0', sex: 'male' }, { name: 'user 1', sex: 'female' } ] },
+            { title: 'post 3', creditedAuthors: [ { name: 'user 0', sex: 'male' }, { name: 'user 1', sex: 'female' }, { name: 'user 2', sex: 'male' } ] },
+            { title: 'post 4', creditedAuthors: [] },
+            { title: 'post 5', creditedAuthors: [ { name: 'user 0', sex: 'male' } ] },
+            { title: 'post 6', creditedAuthors: [ { name: 'user 0', sex: 'male' }, { name: 'user 1', sex: 'female' } ] },
+            { title: 'post 7', creditedAuthors: [ { name: 'user 0', sex: 'male' }, { name: 'user 1', sex: 'female' }, { name: 'user 2', sex: 'male' } ] },
+            { title: 'post 8', creditedAuthors: [] },
+            { title: 'post 9', creditedAuthors: [ { name: 'user 0', sex: 'male' } ] }
+        ]
+    }
+
+
+    // {
+    //     should: 'aggregate values into array of object with aggregation',
+    //     model: 'BlogPost',
+    //     field: {
+    //         tag: 'tags',
+    //     },
+    //     aggregate: {
+    //         creditGender: {
+    //             $aggregator: 'array',
+    //             $fields: {
+    //                 gender: 'credits.gender',
+    //                 count: {$count: true}
+    //             }
+    //         }
+    //     },
+    //     options: {sort: ['tag']},
+    //     results: [
+    //         { bof: 'bla'},
+    //     ]
+    // },
+
 
 // {
 //     model: 'Thing',
@@ -412,23 +587,7 @@ export default [
 // }
 //
 //
-// {
-//     field: {
-//         blogPostTitle: 'title',
-//         'morphologicalFiles+.title': 'morphologicalFiles.title',
-//         'morphologicalFiles+.path': 'morphologicalFiles.path'
-//     }
-// }
-//
-// {
-//     field: {
-//         blogPostTitle: 'title',
-//         morphologicalFiles: [{
-//             title: 'morphologicalFiles.title',
-//             path: 'morphologicalFiles.path'
-//         }]
-//     }
-// }
+
 
 
     // TODO to be implemented

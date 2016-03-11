@@ -228,6 +228,7 @@ export default function(dbAdapter, config) {
 
                 let modelSchema = this[modelType].schema;
                 let {error, value} = modelSchema.validate(pojo, options);
+
                 if (error) {
                     pojo = pojo || {};
 
@@ -256,6 +257,9 @@ export default function(dbAdapter, config) {
                     }
 
                 } else {
+
+                    /*** remove undefined value ***/
+                    value = _.omitBy(value, _.isUndefined);
 
                     resolve(value);
 

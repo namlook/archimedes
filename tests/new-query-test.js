@@ -50,8 +50,7 @@ var processTest = function(db, testQuery) {
             return resolve();
         }
 
-        let query = _.create(testQuery.options);
-
+        let query = _.assign({}, testQuery.options);
         query.field = testQuery.field;
         query.filter = testQuery.filter;
         query.aggregate = testQuery.aggregate;
