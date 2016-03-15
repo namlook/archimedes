@@ -50,8 +50,15 @@ module.exports = function(db, modelName, query) {
                     $property: propertyName
                 };
             } else if (!aggregationInfos.$property) {
-                aggregationInfos.$property = true;
+                let aggregator = aggregationInfos.$aggregator;
+                if (aggregator === 'count') {
+                    aggregationInfos.$property = true;
+                } else if (aggregator === 'array' && aggregationInfos.$fields) {
+                    let propertyName = _.values(aggregationInfos.$fields)[0].split('.')[0];
+                    aggregationInfos.$property = propertyName;
+                }
             }
+
 
             if (aggregationInfos.$property === true) {
                 aggregationInfos.$property = '_id';
@@ -69,6 +76,7 @@ module.exports = function(db, modelName, query) {
                 propertyName,
                 aggregator,
                 array: aggregator === 'array',
+                fields: aggregationInfos.$fields,
                 propertyRaw: aggregationInfos.$property
             };
         });
@@ -107,13 +115,28 @@ module.exports = function(db, modelName, query) {
             let propertyRaw, propertyName;
             if (parent) {
                 let propInfos = internals.PROPERTIES_BY_FIELDNAME[parent];
-                propertyRaw = propInfos[_fieldName];
-                propertyName = propertyRaw;
+                if (propInfos.fields) {
+                    propertyRaw = propInfos.fields[_fieldName];
+
+                    /** process embeded field's values in object **/
+                    if (_.endsWith(propertyRaw, '._id')) {
+                        propertyName = propertyRaw.split('._id')[0];
+                    } else if (_.endsWith(propertyRaw, '._type')) {
+                        return db.rdfClasses2ModelNameMapping[decodedValue]
+                    } else {
+                        propertyName = propertyRaw;
+                    }
+
+                } else {
+                    propertyRaw = propInfos[_fieldName];
+                    propertyName = propertyRaw;
+                }
             } else {
                 let propInfos = internals.PROPERTIES_BY_FIELDNAME[_fieldName];
                 propertyRaw = propInfos.propertyRaw;
                 propertyName = propInfos.propertyName;
             }
+
             if (_.endsWith(propertyRaw, '._id')) {
                 const property = db[modelName].schema.getProperty(propertyName);
                 return rdfUtils.rdfURI2id(property.type, decodedValue);
@@ -131,7 +154,6 @@ module.exports = function(db, modelName, query) {
             'string': function(value) {
                 let propertyInfos = internals.PROPERTIES_BY_FIELDNAME[fieldName];
                 let propertyName = propertyInfos.propertyName;
-
                 if (propertyInfos.array) {
                     value = JSON.parse(value).map(
                         (val) => internals._decodeURIValue(fieldName, val)

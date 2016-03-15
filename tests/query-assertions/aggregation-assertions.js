@@ -462,6 +462,8 @@ export default [
         ]
     },
 
+
+
     {
         should: 'aggregate relations into an array (optional)',
         model: 'BlogPost',
@@ -544,6 +546,69 @@ export default [
             {
                 title: 'post 9',
                 creditedAuthors: [ { name: 'user 0', sex: 'male' } ]
+            }
+        ]
+    },
+
+
+    {
+        should: 'aggregate deep relation fields into an array (2)',
+        model: 'BlogPost',
+        field: {
+            title: 'title',
+        },
+        aggregate: {
+            creditedAuthors: {
+                $aggregator: 'array',
+                $fields: {
+                    _id: 'credits._id',
+                    _type: 'credits._type',
+                }
+            },
+        },
+        options: {sort: ['title']},
+        results: [
+            {
+                title: 'post 1',
+                creditedAuthors: [ { _id: 'user0', _type: 'User' } ]
+            },
+            {
+                title: 'post 2',
+                creditedAuthors: [
+                    { _id: 'user0', _type: 'User' },
+                    { _id: 'user1', _type: 'User' }
+                ]
+            },
+            {
+                title: 'post 3',
+                creditedAuthors: [
+                    { _id: 'user0', _type: 'User' },
+                    { _id: 'user1', _type: 'User' },
+                    { _id: 'user2', _type: 'User' }
+                ]
+            },
+            {
+                title: 'post 5',
+                creditedAuthors: [ { _id: 'user0', _type: 'User' } ]
+            },
+            {
+                title: 'post 6',
+                creditedAuthors: [
+                    { _id: 'user0', _type: 'User' },
+                    { _id: 'user1', _type: 'User' }
+                ]
+            },
+            {
+                title: 'post 7',
+                creditedAuthors: [
+                    { _id: 'user0', _type: 'User' },
+                    { _id: 'user1', _type: 'User' },
+                    { _id: 'user2', _type: 'User' }
+                ]
+            },
+            {
+                title: 'post 9',
+                creditedAuthors: [ { _id: 'user0', _type: 'User' } ]
             }
         ]
     },

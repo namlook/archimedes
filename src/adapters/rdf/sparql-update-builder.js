@@ -142,7 +142,7 @@ export default function(db, graphUri) {
         },
 
 
-        update: function(modelName, query) {
+        updateQuery: function(modelName, query) {
 
         },
 
