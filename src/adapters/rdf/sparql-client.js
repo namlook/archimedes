@@ -7,7 +7,7 @@ import _ from 'lodash';
 
 import streamStream from 'stream-stream';
 
-// import highland from 'highland';
+import highland from 'highland';
 import JSONStream from 'JSONStream';
 
 import Promise from 'bluebird';
@@ -17,6 +17,9 @@ var internals = {};
 let sparqlClient = function(endpoint, config) {
 
     internals.getConfig = function(sparql) {
+        if (!sparql) {
+            throw new Error('sparql is required');
+        }
         let queryOperators = ['select', 'construct', 'describe', 'ask'];
         let isQuery = _.compact(queryOperators.map((op) => {
             return _.startsWith(_.trim(sparql.toLowerCase()), op);
@@ -134,9 +137,42 @@ let sparqlClient = function(endpoint, config) {
             // return got.stream(conf.endpoint, conf.options);
         },
 
-        queryStream(sparql) {
+        queryStream: function(sparql) {
             let conf = internals.getConfig(sparql);
-            return request.post(conf.endpoint, conf.options);
+            let stream = request.post(conf.endpoint, conf.options);
+            stream.on('response', function(response) {
+                if (response.statusCode !== 200) {
+                    if (response.statusCode === 400) {
+                        console.error(sparql);
+                        throw new Error('bad sparql query');
+                    } else {
+                        throw new Error(`database error: ${response.statusCode}`);
+                    }
+                }
+            });
+            return highland(stream);
+        },
+
+        n3WriterStream: function(sparql) {
+            let config = {
+                headers: {
+                    'content-type': 'text/x-nquads'
+                }
+            };
+            let stream = request.post(endpoint, config);
+            stream.on('response', function(response) {
+                if (response.statusCode !== 200) {
+                    highland(stream).toArray((o) => {
+                        let message = o.toString();
+                        if (response.statusCode === 400) {
+                            throw new Error(`bad rdf data: ${message}`);
+                        } else {
+                            throw new Error(`database error: ${response.statusCode}: ${message}`);
+                        }
+                    });
+                }
+            });
+            return stream;
         },
 
         _stream(sparql) {

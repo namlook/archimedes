@@ -200,9 +200,42 @@ export default function(dbAdapter, config) {
          *
          * @returns a promise
          */
-        clear() {
+        clear: function() {
             return this.adapter.clear();
         },
+
+        importJsonStream: function(arrayOrStreamOfPojos) {
+            return this.adapter.importJsonStream(arrayOrStreamOfPojos);
+        },
+
+        exportN3Stream: function(config) {
+            return this.adapter.exportN3Stream(config);
+        },
+
+        exportJsonStream: function() {
+            return this.adapter.exportJsonStream();
+        },
+
+        save: function(pojo) {
+            return this.adapter.save(pojo);
+        },
+
+        saveStream: function(arrayOrStreamOfPojos) {
+            return this.adapter.saveStream(arrayOrStreamOfPojos);
+        },
+
+        delete: function(pojo) {
+            return this.adapter['delete'](pojo);
+        },
+
+        deleteStream: function(arrayOrStreamOfPojos) {
+            return this.adapter.deleteStream(arrayOrStreamOfPojos);
+        },
+
+        query: function(modelName, query, options) {
+            return this.adapter.query(modelName, query, options);
+        },
+
 
 
         /**
@@ -537,9 +570,6 @@ export default function(dbAdapter, config) {
             });
         },
 
-        query(modelType, query, options) {
-            return this.adapter.query(modelType, query, options);
-        },
 
         /**
          * Returns a promise which resolve the aggregate the

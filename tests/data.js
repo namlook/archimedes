@@ -27,6 +27,7 @@ var generateCredits = function(i) {
 var blogposts = _.range(0, 10).map((i) => {
     return {
         _id: `blogpost${i}`,
+        _type: 'BlogPost',
         title: `post ${i}`,
         body: `this is the body of the post ${i}`,
         createdDate: new Date(Date.UTC(1984, 7, i + 1)),
@@ -84,37 +85,33 @@ var users = _.range(0, 5).map((i) => {
     return user;
 });
 
-var verbose = false;
+
+const highland = require('highland');
+
+let verbose = false;
 export default function loadDb() {
     return new Promise((resolve, reject) => {
 
-        var db;
-        store().then((registeredDB) => {
-            db = registeredDB;
-            return db.clear();
-
-        }).then(() => {
-            return Promise.all([
-                db.batchSync('BlogPost', blogposts),
-                db.batchSync('Comment', comments),
-                db.batchSync('User', users)
-            ]);
-        }).then((results) => {
-            if (verbose) {
-                console.log(inspect(results, {depth: 10}));
-                console.log(results[0].length, 'blogposts saved');
-                console.log(results[1].length, 'comments saved');
-                console.log(results[2].length, 'users saved');
-            }
-
-            resolve(db);
-
-        }).catch((error) => {
-            if (verbose) {
-                console.log(error);
-                console.log(error.stack);
-            }
-            reject(error);
+        store().then((db) => {
+            highland([
+                db.clear(),
+                db.saveStream(blogposts),
+                db.saveStream(comments),
+                db.saveStream(users)
+            ])
+            .sequence()
+            .done(() => {
+                // db.exportJsonStream()
+                    // .map((o) => {console.log(o); return o;})
+                //     .stopOnError((error) => {
+                //         console.log(error.stack);
+                //     })
+                //     .map(JSON.stringify)
+                //     .through(process.stdout)
+                    // .done(() => {
+                        resolve(db);
+                    // });
+            });
         });
     });
 }

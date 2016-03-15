@@ -54,8 +54,37 @@ export default [
         ]
     },
 
-
-
+    {
+        skip: true,
+        should: 'forge object with aggregation and all its fields',
+        model: 'BlogPost',
+        field: {
+            ratting: 'ratting?',
+            author: 'author?',
+            body: 'body?',
+            createdDate: 'createdDate?',
+            slug: 'slug?',
+            title: 'title?',
+            updatedDate: 'updatedDate?',
+            publishedDate: 'publishedDate?',
+            isPublished: 'isPublished?',
+            _type: '_type',
+            _id: '_id'
+        },
+        aggregate: {
+            tags: { '$array': 'tags?' },
+            credits: {
+                $aggregator: 'array',
+                $fields: {
+                    _id: 'credits?._id',
+                    _type: 'credits?._type'
+                }
+            },
+            backlinks: { '$array': 'backlinks?' }
+        },
+        options: {sort: ['ratting']},
+        results: ['bof']
+    },
 
     {
         should: 'make a COUNT aggregation',
@@ -358,7 +387,7 @@ export default [
         ]
     },
     {
-        should: 'aggregate values into an array (disinct)',
+        should: 'aggregate values into an array (distinct)',
         model: 'BlogPost',
         field: {
             _type: '_type'

@@ -20,6 +20,9 @@ import JSONStream from 'JSONStream';
 
 import sparqlQueryBuilder from './sparql-query-builder';
 import sparqlResultsConverter from './sparql-results-converter';
+import N3 from 'n3';
+
+import sparqlUpdateBuilder from './sparql-update-builder';
 
 const RDF_DATATYPES = {
     'http://www.w3.org/2001/XMLSchema#integer': 'number',
@@ -33,10 +36,13 @@ const RDF_DATATYPES = {
 import Promise from 'bluebird';
 
 
-export default function(config) {
-    config = config || {};
+import rdfUtilities from './rdf-utils';
+import highland from 'highland';
 
-    if (!config.endpoint) {
+export default function(adapterConfig) {
+    adapterConfig = adapterConfig || {};
+
+    if (!adapterConfig.endpoint) {
         throw new Error('rdf adapter: endpoint is required');
     }
 
@@ -44,14 +50,14 @@ export default function(config) {
 
         let internals = {};
         internals.store = [];
-        internals.sparqlClient = sparqlClient(config.endpoint, config);
+        internals.sparqlClient = sparqlClient(adapterConfig.endpoint, adapterConfig);
 
         return {
             name: 'rdf',
 
 
             beforeRegister(models) {
-                let graphUri = config.graphUri;
+                let graphUri = adapterConfig.graphUri;
                 let defaultClassRdfPrefix = `${graphUri}/classes`;
                 let defaultInstanceRdfPrefix = `${graphUri}/instances`;
                 let defaultPropertyRdfPrefix = `${graphUri}/properties`;
@@ -109,8 +115,10 @@ export default function(config) {
              *
              * @returns a promise
              */
-            clear() {
-                return this.execute(`CLEAR SILENT GRAPH <${config.graphUri}>`);
+            clear: function() {
+                // return this.execute(`CLEAR SILENT GRAPH <${adapterConfig.graphUri}>`);
+                let sparql = `CLEAR SILENT GRAPH <${adapterConfig.graphUri}>`;
+                return internals.sparqlClient.queryStream(sparql);
             },
 
             clearResource(modelType) {
@@ -122,7 +130,7 @@ export default function(config) {
                         type: 'update',
                         updates: [{
                             updateType: 'insertdelete',
-                            graph: config.graphUri,
+                            graph: adapterConfig.graphUri,
                             delete: [{
                                 type: 'bgp',
                                 triples: [{
@@ -158,6 +166,227 @@ export default function(config) {
                 });
             },
 
+            importJsonStream: function(arrayOrStreamOfPojos) {
+                let rdfUtils = rdfUtilities(db);
+                let streamWriter = new N3.StreamWriter({ format: 'N-Triples' });
+                // let streamWriter = new N3.StreamWriter({ format: 'application/trig' });
+
+                const through = highland.pipeline(
+                    highland.map(rdfUtils.pojo2N3triples),
+                    highland.flatten()
+                );
+
+                let dbWriterStream = internals.sparqlClient.n3WriterStream();
+
+                let stream;
+                if (arrayOrStreamOfPojos) {
+                    stream = highland(arrayOrStreamOfPojos)
+                        .pipe(through)
+                        .pipe(streamWriter)
+                        .pipe(dbWriterStream)
+                } else {
+                    stream = highland.pipeline(through, streamWriter, dbWriterStream)
+                }
+
+                return stream;
+            },
+
+            exportN3Stream: function(options) {
+                options = options || {};
+                options.format = options.format || 'N-Triples'; // 'application/trig'
+                let sparql = `select * from <${adapterConfig.graphUri}> where {?s ?p ?o .}`;
+                const n3streamWriter = new N3.StreamWriter({ format: options.format });
+
+                return highland(internals.sparqlClient.queryStream(sparql))
+                    .through(JSONStream.parse('results.bindings.*'))
+                    .map((o) => ({
+                        subject: o.s.value,
+                        predicate: o.p.value,
+                        object: o.o.type === 'literal' ?
+                            N3.Util.createLiteral(o.o.value, o.o.datatype): o.o.value,
+                        graph: adapterConfig.graphUri
+                    }))
+                    .pipe(n3streamWriter);
+            },
+
+            exportJsonStream: function() {
+                let that = this;
+
+                let sparql = `select distinct ?o from <${adapterConfig.graphUri}> where {?s a ?o .}`;
+
+                let queriesByModelName = {};
+                return internals.sparqlClient.queryStream(sparql)
+                    .through(JSONStream.parse('results.bindings.*'))
+                    .map((o) => db.rdfClasses2ModelNameMapping[o.o.value])
+                    .flatMap((modelName) => that.query(modelName));
+            },
+
+            _parseBlazegraphSaveResponse: function(response) {
+                return _.fromPairs(
+                    response.toString()
+                        .split('COMMIT:')[1]
+                        .split('</p')[0]
+                        .split(', ')
+                        .map((s) => s.split('='))
+                        .map(([key, value]) => [
+                            _.trim(key),
+                            parseFloat(value)
+                        ])
+                );
+            },
+
+            save: function(pojo) {
+                return new Promise((resolve, reject) => {
+                    const sparqlBuilder = sparqlUpdateBuilder(db, adapterConfig.graphUri);
+                    const parseBlazegraphSaveResponse = this._parseBlazegraphSaveResponse;
+                    let sparql = sparqlBuilder.saveQuery(pojo)
+                    return internals.sparqlClient.queryStream(sparql)
+                        .map(parseBlazegraphSaveResponse)
+                        .stopOnError((error) => reject(error))
+                        .toArray((results) => resolve(results[0]));
+                });
+            },
+
+            saveStream: function(arrayOrStreamOfPojos) {
+
+                const sparqlBuilder = sparqlUpdateBuilder(db, adapterConfig.graphUri);
+                const parseBlazegraphSaveResponse = this._parseBlazegraphSaveResponse;
+
+                const through = highland.pipeline(
+                    highland.map(sparqlBuilder.saveQuery),
+                    highland.flatMap(internals.sparqlClient.queryStream),
+                    highland.map(parseBlazegraphSaveResponse)
+                );
+
+                let stream;
+                if (arrayOrStreamOfPojos) {
+                    stream = highland(arrayOrStreamOfPojos).pipe(through);
+                } else {
+                    stream = highland.pipeline(through);
+                }
+                return stream;
+            },
+
+
+            update: function(modelName, query) {
+
+            },
+
+            delete: function(pojo) {
+                return new Promise((resolve, reject) => {
+                    const sparqlBuilder = sparqlUpdateBuilder(db, adapterConfig.graphUri);
+                    const parseBlazegraphSaveResponse = this._parseBlazegraphSaveResponse;
+                    let sparql = sparqlBuilder.deleteQuery(pojo)
+                    return internals.sparqlClient.queryStream(sparql)
+                        .map(parseBlazegraphSaveResponse)
+                        .stopOnError((error) => reject(error))
+                        .toArray((results) => resolve(results[0]));
+                });
+            },
+
+            deleteStream: function(arrayOrStreamOfPojos) {
+                const parseBlazegraphSaveResponse = this._parseBlazegraphSaveResponse;
+                const updateBuilder = sparqlUpdateBuilder(db, adapterConfig.graphUri);
+                const through = highland.pipeline(
+                    highland.map(updateBuilder.deleteQuery),
+                    highland.flatMap(internals.sparqlClient.queryStream),
+                    highland.map(parseBlazegraphSaveResponse)
+                );
+
+                let stream;
+                if (arrayOrStreamOfPojos) {
+                    stream = highland(arrayOrStreamOfPojos)
+                        .map(updateBuilder.deleteQuery)
+                        .flatMap(internals.sparqlClient.queryStream)
+                        .map(parseBlazegraphSaveResponse);
+                } else {
+                    stream = highland.pipeline(through);
+                }
+                return stream;
+            },
+
+            query(modelName, query, options) {
+                query = query || {};
+                let graphUri = adapterConfig.graphUri;
+                let queryBuilder = sparqlQueryBuilder(db, modelName, graphUri);
+
+                /** if the _type is not present, set it to the modelName **/
+                query.filter = query.filter && query.filter || {};
+                if (!_.has(query, 'filter._type')) {
+                    _.set(query, 'filter._type', modelName);
+                }
+
+
+                /*** if no field or aggregate are specified, we fill them
+                 * by every properties defined in the model
+                 */
+                if (_.isEmpty(query.field) && _.isEmpty(query.aggregate)) {
+                    let properties = db[modelName].schema.properties;
+                    let fieldPairs = _(properties)
+                        .filter((o) => !o.isArray())
+                        .map((o) => {
+                            if (o.isRelation()) {
+                                return [
+                                    [`${o.name}._id`, `${o.name}?._id`],
+                                    [`${o.name}._type`, `${o.name}?._type`]
+                                ];
+                            }
+                            return [[o.name, `${o.name}?`]];
+                        })
+                        .flatten()
+                        .value();
+
+                    let aggregationPairs = properties
+                        .filter((o) => o.isArray())
+                        .map((o) => {
+                            let aggregation;
+                            if (o.isRelation()) {
+                                aggregation = {
+                                    $aggregator: 'array',
+                                    $fields: {
+                                        _id: `${o.name}?._id`,
+                                        _type: `${o.name}?._type`
+                                    }
+                                };
+                            } else {
+                                aggregation = {$array: `${o.name}?`};
+                            }
+                            return [o.name, aggregation];
+                        });
+
+                    query = {
+                        field: _.fromPairs(fieldPairs),
+                        aggregate: _.fromPairs(aggregationPairs)
+                    };
+
+                    query.field._id = '_id';
+                    query.field._type = '_type';
+                }
+
+
+                let sparql = queryBuilder.build(query, options);
+
+                // console.log(sparql);
+
+                let converter = sparqlResultsConverter(db, modelName, query);
+
+                return internals.sparqlClient.queryStream(sparql)
+                    .through(JSONStream.parse('results.bindings.*'))
+                    .map((item) => converter.convert(item));
+
+                // return internals.sparqlClient.queryStream(sparql)
+                //     .pipe(JSONStream.parse('results.bindings.*'))
+                //     .pipe(es.map((item, callback) => {
+                //         let doc;
+                //         try {
+                //             doc = converter.convert(item);
+                //         } catch(err) {
+                //             return callback(err);
+                //         }
+                //         return callback(null, doc);
+                //     }));
+
+            },
 
             /**
              * Returns documents that match the query
@@ -198,7 +427,7 @@ export default function(config) {
                         queryType: 'SELECT',
                         variables: ['?s'],
                         from: {
-                            'default': [config.graphUri]
+                            'default': [adapterConfig.graphUri]
                         },
                         where: whereClause,
                         order: orderBy,
@@ -281,7 +510,7 @@ export default function(config) {
                     queryType: 'SELECT',
                     variables: ['?s'],
                     from: {
-                        'default': [config.graphUri]
+                        'default': [adapterConfig.graphUri]
                     },
                     where: whereClause,
                     order: orderBy,
@@ -360,7 +589,7 @@ export default function(config) {
                         type: 'query',
                         queryType: 'CONSTRUCT',
                         from: {
-                            'default': [config.graphUri]
+                            'default': [adapterConfig.graphUri]
                         },
                         template: templates,
                         where: whereClause
@@ -442,7 +671,7 @@ export default function(config) {
                         type: 'query',
                         queryType: 'CONSTRUCT',
                         from: {
-                            'default': [config.graphUri]
+                            'default': [adapterConfig.graphUri]
                         },
                         template: template,
                         where: whereTriples
@@ -520,7 +749,7 @@ export default function(config) {
                             variable: '?count'
                         }],
                         from: {
-                            'default': [config.graphUri]
+                            'default': [adapterConfig.graphUri]
                         },
                         where: whereClause,
                         limit: 50
@@ -537,60 +766,6 @@ export default function(config) {
                     return parseInt(data[0].count.value, 10);
                 });
             },
-
-            query(modelName, query, options) {
-                let graphUri = config.graphUri;
-                let queryBuilder = sparqlQueryBuilder(db, modelName, graphUri);
-
-                /** if the _type is not present, set it to the modelName **/
-                query.filter = query.filter && query.filter || {};
-                if (!_.has(query, 'filter._type')) {
-                    _.set(query, 'filter._type', modelName);
-                }
-
-                let sparql = queryBuilder.build(query, options);
-
-                // console.log(sparql);
-
-                let converter = sparqlResultsConverter(db, modelName, query);
-
-                let stream = internals.sparqlClient.queryStream(sparql);
-                stream.on('response', function(response) {
-                    if (response.statusCode !== 200) {
-                        if (response.statusCode === 400) {
-                            console.error(sparql);
-                            throw new Error('bad sparql query');
-                        } else {
-                            throw new Error(`database error: ${response.statusCode}`);
-                        }
-                    }
-                });
-
-
-                return stream
-                    .pipe(JSONStream.parse('results.bindings.*'))
-                    .pipe(es.map((item, callback) => {
-                        let doc;
-                        try {
-                            doc = converter.convert(item);
-                        } catch(err) {
-                            return callback(err);
-                        }
-                        return callback(null, doc);
-                    }));
-
-                // return this.execute(sparql).then((data) => {
-                //     let results = [];
-                //     for (let item of data) {
-                //         console.log(converter.convert(item));
-                //     }
-                //     // console.log(data);
-                // }).catch((error) => {
-                //     console.log('xxx', error);
-                //     console.log(error.stack);
-                // });
-            },
-
 
             /**
              * Aggregate the properties values that match the query
@@ -806,7 +981,7 @@ export default function(config) {
                         queryType: 'SELECT',
                         variables: variables,
                         from: {
-                            'default': [config.graphUri]
+                            'default': [adapterConfig.graphUri]
                         },
                         where: whereClause,
                         distinct: options.distinct,
@@ -999,7 +1174,7 @@ export default function(config) {
                             }
                         ]),
                         from: {
-                            'default': [config.graphUri]
+                            'default': [adapterConfig.graphUri]
                         },
                         where: whereClause,
                         group: variableNames.map((variable) => {
@@ -1103,7 +1278,7 @@ export default function(config) {
                                 delete: [
                                     {
                                         type: 'graph',
-                                        name: config.graphUri,
+                                        name: adapterConfig.graphUri,
                                         triples: deleteTriples
                                     }
                                 ]
@@ -1120,7 +1295,7 @@ export default function(config) {
                                 insert: [
                                     {
                                         type: 'graph',
-                                        name: config.graphUri,
+                                        name: adapterConfig.graphUri,
                                         triples: insertTriples
                                     }
                                 ]
@@ -1157,7 +1332,7 @@ export default function(config) {
                                 delete: [
                                     {
                                         type: 'graph',
-                                        name: config.graphUri,
+                                        name: adapterConfig.graphUri,
                                         triples: [
                                             {
                                                 subject: '?s',
@@ -1207,7 +1382,7 @@ export default function(config) {
                                 insert: [
                                     {
                                         type: 'graph',
-                                        name: config.graphUri,
+                                        name: adapterConfig.graphUri,
                                         triples: insertTriples
                                     }
                                 ]
@@ -1254,7 +1429,7 @@ export default function(config) {
                             delete: [
                                 {
                                     type: 'graph',
-                                    name: config.graphUri,
+                                    name: adapterConfig.graphUri,
                                     triples: deleteTriples
                                 }
                             ]
@@ -1292,7 +1467,7 @@ export default function(config) {
                     //             delete: [
                     //                 {
                     //                     type: 'graph',
-                    //                     name: config.graphUri,
+                    //                     name: adapterConfig.graphUri,
                     //                     triples: dwTriples
                     //                 }
                     //             ]
@@ -1307,7 +1482,7 @@ export default function(config) {
                             insert: [
                                 {
                                     type: 'graph',
-                                    name: config.graphUri,
+                                    name: adapterConfig.graphUri,
                                     triples: insertTriples
                                 }
                             ]
@@ -1352,7 +1527,7 @@ export default function(config) {
                                 delete: [
                                     {
                                         type: 'graph',
-                                        name: config.graphUri,
+                                        name: adapterConfig.graphUri,
                                         triples: deleteTriples
                                     }
                                 ],

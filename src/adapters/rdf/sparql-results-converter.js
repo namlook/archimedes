@@ -4,6 +4,10 @@ import _ from 'lodash';
 import rdfUtilities from './rdf-utils';
 
 module.exports = function(db, modelName, query) {
+
+    /** don't work directly on the query **/
+    query = _.cloneDeep(query);
+
     const rdfUtils = rdfUtilities(db);
     const internals = {};
 
@@ -178,7 +182,6 @@ module.exports = function(db, modelName, query) {
 
     return {
         convert(item) {
-
             const findFieldNameFromProperty = function(propertyName) {
                 let propInfo = _.find(internals.PROPERTIES, function(o) {
                     return o.propertyName === propertyName && !o.aggregator;
@@ -201,14 +204,21 @@ module.exports = function(db, modelName, query) {
                     }
 
                     if (fieldName === _typeFieldName) {
-                        return [_typeFieldName, modelName];  //db.rdfClasses2ModelNameMapping[item._type.value];
+                        let typeUri = item[_typeFieldName].value;
+                        let typeValue = db.rdfClasses2ModelNameMapping[typeUri];
+                        return [_typeFieldName, typeValue];
                     }
 
                     fieldName = fieldName.split(rdfUtils.RELATION_SEPARATOR).join('.');
                     let value = internals.buildValueFromRdf(fieldName, rdfInfo);
 
+                    if (value === '') {
+                        return;
+                    }
+
                     return [fieldName, value];
                 })
+                .compact()
                 .fromPairs()
                 .value();
 

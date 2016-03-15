@@ -357,7 +357,6 @@ module.exports = function(db, modelName, graphUri) {
     internals._buildAggregationProperties = function(query) {
         return _.toPairs(query.aggregate)
             .map(([fieldName, aggregation]) => {
-
                 let aggregator, aggregationInfos;
                 if (_.has(aggregation, '$aggregator')) {
                     aggregationInfos = aggregation;
@@ -515,27 +514,52 @@ module.exports = function(db, modelName, graphUri) {
         return _(properties)
             .filter((o) => !o.filter && o.propertyName !== '_id' && o.optional)
             .groupBy((o) => o.propertyRaw.split('?')[0]) // group by clauses
-            .map((props) => ({
-                type: 'optional',
-                patterns: _(props).map((prop) => {
+            .map((props) => {
+                return [{
 
-                    let triples = {
-                        subject: `?_${innerVariable(prop.parent || '_id')}`,
-                        predicate: buildPredicate(prop.propertyName),//, o.parent),
-                        object: `?_${innerVariable(prop.propertyName)}`
-                    }
+                    type: 'optional',
+                    patterns: _(props).map((prop) => {
+                        let triple;
+                        if (prop.inner) {
+                            return {
+                                subject: `?_${innerVariable(prop.parent || '_id')}`,
+                                predicate: buildPredicate(prop.propertyName),//, o.parent),
+                                object: `?_${innerVariable(prop.propertyName)}`
+                            }
+                        } else {
+                            return {
+                                subject: `?_${innerVariable(prop.parent || '_id')}`,
+                                predicate: buildPredicate(prop.propertyName),//, o.parent),
+                                object: `?_optional_${innerVariable(prop.propertyName)}`
+                            }
+                        }
+                        // let embedTriples = _.toPairs(prop.fields)
+                        //     .map(([embedFieldName, embedPropertyName]) => ({
+                        //         subject: `?_${innerVariable(prop.propertyName)}`,
+                        //         predicate: buildPredicate(embedPropertyName),//, o.parent),
+                        //         object: `?_${innerVariable(embedPropertyName)}`
+                        //     }));
+                        //
+                        // return [triples].concat(embedTriples);
 
-                    let embedTriples = _.toPairs(prop.fields)
-                        .map(([embedFieldName, embedPropertyName]) => ({
-                            subject: `?_${innerVariable(prop.propertyName)}`,
-                            predicate: buildPredicate(embedPropertyName),//, o.parent),
-                            object: `?_${innerVariable(embedPropertyName)}`
-                        }));
+                    }).flatten()
 
-                    return [triples].concat(embedTriples);
+                }].concat(
 
-                }).flatten()
-            }))
+                    props.filter((o) => !o.inner).map((prop) => ({
+                        type: 'bind',
+                        variable: `?_${innerVariable(prop.propertyName)}`,
+                        expression: {
+                            type: 'operation',
+                            operator: 'coalesce',
+                            args: [
+                                `?_optional_${innerVariable(prop.propertyName)}`,
+                                '""'
+                            ]
+                        }
+                    }))
+                );
+            })
             .value();
     };
 
@@ -706,14 +730,17 @@ module.exports = function(db, modelName, graphUri) {
             return { fieldName, order };
         });
 
-        let fieldProperties = internals._buildFieldProperties(query, sortedFields);
-        // console.log('FIELD_PROPERTIES>', fieldProperties);
+
         let filterProperties = internals._buildFilterProperties(query);
         // console.log('FILTER_PROPERTIES>', filterProperties);
+
         let aggregationProperties = internals._buildAggregationProperties(query);
-        // console.log('AGGREGATION_PROPERTIES>', aggregationProperties);
+        // console.log('AGGREGATION_PROPERTIES>', aggregationProperties);;
+
+        let fieldProperties = internals._buildFieldProperties(query, sortedFields);
+        // console.log('FIELD_PROPERTIES>', fieldProperties);
         let statementProperties = internals._buildStatementProperties(fieldProperties, aggregationProperties, sortedFields);
-        // console.log('WHERE_PROPERTIES>', statementProperties);
+        // console.log('WHERE_PROPERTIES>', statementProperties)
 
         let selectVariableSparson = internals._selectVariableSparson(statementProperties);
         let selectArraySparson = internals._selectArraySparson(statementProperties);
@@ -760,6 +787,7 @@ module.exports = function(db, modelName, graphUri) {
 
     return {
         build: function(query) {
+            query = _.cloneDeep(query);
             // internals.validateQuery(query);
             let sparson = internals.buildSparson(query);
             sparson.from = {
