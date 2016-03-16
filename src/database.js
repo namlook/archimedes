@@ -207,8 +207,18 @@ export default function(dbAdapter, config) {
             return this.adapter.clear();
         },
 
-        importJsonStream: function(arrayOrStreamOfPojos) {
-            return this.adapter.importJsonStream(arrayOrStreamOfPojos);
+        importStream: function(arrayOrStreamOfPojos) {
+            const that = this;
+
+            const through = highland.pipeline(
+                highland.map(_fp.omitBy(_.isNull)),
+                highland.flatMap((o) => highland(that.validatePojo(o))),
+                that.adapter.importStream()
+            );
+
+            return arrayOrStreamOfPojos
+                ? highland(arrayOrStreamOfPojos).pipe(through)
+                : highland.pipeline(through);
         },
 
         importCsvStream: function(options) {
@@ -241,15 +251,15 @@ export default function(dbAdapter, config) {
                         }
                         let property = modelSchema.getProperty(propertyName);
 
-                        const _convertValue = function(_value) {
-                            return property.isRelation()
-                                ? {_id: _value, _type: property.type}
-                                : _value;
-                        }
+                        // const _convertValue = function(_value) {
+                        //     return property.isRelation()
+                        //         ? {_id: _value, _type: property.type}
+                        //         : _value;
+                        // }
 
                         value = property.isArray()
-                            ? value.split(options.csv.arraySeparator).map(_convertValue)
-                            : _convertValue(value);
+                            ? value.split(options.csv.arraySeparator) //.map(_convertValue)
+                            : value //_convertValue(value);
 
                         return [propertyName, value];
                     })
@@ -272,7 +282,7 @@ export default function(dbAdapter, config) {
                 highland.map(_ensureTypeProperty),
                 highland.map(_normalizePojo),
                 highland.flatMap((o) => highland(that.validatePojo(o))),
-                that.adapter.importJsonStream()
+                that.adapter.importStream()
             )
         },
 
@@ -280,16 +290,29 @@ export default function(dbAdapter, config) {
             return this.adapter.exportN3Stream(config);
         },
 
-        exportJsonStream: function() {
-            return this.adapter.exportJsonStream();
+        exportStream: function() {
+            return this.adapter.exportStream();
         },
 
         save: function(pojo) {
-            return this.adapter.save(pojo);
+            return Promise.resolve().then(() => {
+                return this.validatePojo(pojo);
+            }).then((validatedPojo) => {
+                return this.adapter.save(validatedPojo);
+            });
         },
 
         saveStream: function(arrayOrStreamOfPojos) {
-            return this.adapter.saveStream(arrayOrStreamOfPojos);
+            const that = this;
+
+            const through = highland.pipeline(
+                highland.flatMap((o) => highland(that.validatePojo(o))),
+                that.adapter.saveStream()
+            );
+
+            return arrayOrStreamOfPojos
+                ? highland(arrayOrStreamOfPojos).pipe(through)
+                : highland.pipeline(through);
         },
 
         delete: function(pojo) {
@@ -300,22 +323,55 @@ export default function(dbAdapter, config) {
             return this.adapter.deleteStream(arrayOrStreamOfPojos);
         },
 
-        query: function(modelName, query, options) {
-            return this.adapter.query(modelName, query, options);
+        queryStream: function(modelName, query, options) {
+            return this.adapter.queryStream(modelName, query, options);
         },
 
         validatePojo: function(pojo) {
             const joiOptions = {};
             return new Promise((resolve, reject) => {
-                pojo = _.omitBy(pojo, _.isUndefined);
-                let modelSchema = this[pojo._type].schema;
-                let {error, value} = modelSchema.validate(pojo, joiOptions);
-                console.log(value, error);
-                if (error) {
-                    return reject(new ValidationError('Bad value', error));
+                let validationErrors = [];
+
+                if (!pojo._id) {
+                    validationErrors.push('"_id" is required');
                 }
-                value = _.omitBy(value, _.isUndefined);
-                return resolve(value);
+
+                let modelClass = this[pojo._type]
+
+                if (!pojo._type) {
+                    validationErrors.push('"_type" is required')
+                } else if (!modelClass) {
+                    validationErrors.push(
+                        '"_type": no model found in schema'
+                    );
+                }
+
+                if (validationErrors.length) {
+                    return reject(
+                        new ValidationError('malformed object', {
+                            validationErrors: validationErrors.map((o) => ({message: o})),
+                            object: pojo
+                        })
+                    );
+                }
+
+                pojo = _.omitBy(pojo, _.isUndefined);
+                pojo = _.omitBy(pojo, _.isNull);
+
+                let modelSchema = modelClass.schema;
+
+                modelSchema.validate(pojo, joiOptions, (error, value) => {
+                    if (error) {
+                        return reject(
+                            new ValidationError('Bad value', {
+                                validationErrors: error,
+                                object: pojo
+                            })
+                        );
+                    }
+                    value = _.omitBy(value, _.isUndefined);
+                    return resolve(value);
+                });
             });
         },
 

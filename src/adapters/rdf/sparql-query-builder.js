@@ -152,7 +152,6 @@ module.exports = function(db, modelName, graphUri) {
     //     {fieldName: 'sex', propertyName: 'credits.gender', subject: 'credits'}
     // ]
     internals._buildFieldProperties = function(query, sortedFields) {
-
         const convertPair2property = function([fieldName, fieldInfos]) {
             let isArray = _.isArray(fieldInfos);
             fieldInfos = isArray ? fieldInfos[0] : fieldInfos;
@@ -160,8 +159,8 @@ module.exports = function(db, modelName, graphUri) {
             if (_.isString(fieldInfos)) {
                 fieldInfos = {$property: fieldInfos};
             }
-
             let propertyName = fieldInfos.$property;
+            let propertyRaw = fieldInfos.$property;
 
             let optional = _.includes(propertyName, '?');
             if (optional) {
@@ -171,6 +170,7 @@ module.exports = function(db, modelName, graphUri) {
             return {
                 fieldName,
                 propertyName,
+                propertyRaw,
                 optional,
                 array: isArray,
                 inner: false,//isInner,
@@ -224,8 +224,8 @@ module.exports = function(db, modelName, graphUri) {
                 if (!o.propertyName) {
                     return o;
                 }
-                o.propertyRaw = o.propertyName;
-                let optional = o.propertyName.split('?').length > 1;
+                o.propertyRaw = o.propertyRaw || o.propertyName;
+                let optional = o.propertyRaw.split('?').length > 1;
                 if (optional) {
                     o.optional = true;
                     o.propertyName = o.propertyName.split('?').join('');
@@ -233,7 +233,8 @@ module.exports = function(db, modelName, graphUri) {
                 o.propertyName = stripEndingId(o.propertyName);
                 o.parent = o.propertyName.split('.').slice(0, -1).join('.');
                 return o;
-            }).map((o) => { // add sortBy info
+            })
+            .map((o) => { // add sortBy info
                 o.sortBy = sortedField(o.fieldName)
                 return o;
             })

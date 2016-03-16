@@ -36,7 +36,7 @@ module.exports = function(db, modelName, query) {
                 propertyName,
                 array: isArray,
                 fields: fieldInfos.$fields,
-                propertyRaw: fieldInfos.$property
+                propertyRaw: fieldInfos.$property.split('?').join('')
             };
         });
 
@@ -67,6 +67,11 @@ module.exports = function(db, modelName, query) {
             let propertyName = aggregationInfos.$property;
             let aggregator = aggregationInfos.$aggregator.toLowerCase();
 
+            let optional = _.includes(propertyName, '?');
+            if (optional) {
+                propertyName = propertyName.split('?').join('');
+            }
+
             if(_.endsWith(propertyName, '._id')) {
                 propertyName = propertyName.split('.').slice(0, -1).join('.');
             }
@@ -77,7 +82,7 @@ module.exports = function(db, modelName, query) {
                 aggregator,
                 array: aggregator === 'array',
                 fields: aggregationInfos.$fields,
-                propertyRaw: aggregationInfos.$property
+                propertyRaw: aggregationInfos.$property.split('?').join('')
             };
         });
 
@@ -138,6 +143,7 @@ module.exports = function(db, modelName, query) {
             }
 
             if (_.endsWith(propertyRaw, '._id')) {
+                propertyName = propertyName.split('?').join('');
                 const property = db[modelName].schema.getProperty(propertyName);
                 return rdfUtils.rdfURI2id(property.type, decodedValue);
             }
@@ -160,13 +166,17 @@ module.exports = function(db, modelName, query) {
                     );
                     value = _.compact(value);
 
-                    /*** sort if needed ***/
+                    /*** always sort the array ***/
+                    let property = db[modelName].schema.getProperty(propertyName);
+
+                    value = _.sortBy(value)
+                    if (property.isRelation() && _.isPlainObject(value) && value._id) {
+                        value = _.sortBy(value, '_id');
+                    }
+
                     let sortOrder = _.get(internals.SORTED_FIELDS, `${fieldName}.order`);
-                    if (sortOrder) {
-                        value = _.sortBy(value);
-                        if (sortOrder === 'desc') {
-                            value = _.reverse(value);
-                        }
+                    if (sortOrder === 'desc') {
+                        value = _.reverse(value);
                     }
                 }
 
@@ -246,7 +256,8 @@ module.exports = function(db, modelName, query) {
 
             const unflatten = (o) => _.zipObjectDeep(_.keys(o), _.values(o));
 
-            return unflatten(doc);
+            doc = unflatten(doc);
+            return _.omitBy(doc, (o) => _.isArray(o) && _.isEmpty(o));
 
         }
     };

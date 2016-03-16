@@ -204,10 +204,13 @@ export default class ModelSchemaProperty {
 
         var relationConstraints;
         if (this.isRelation()) {
-            relationConstraints = joi.object().keys({
-                _id: joi.string().required().label(`${propertyName}._id`),
-                _type: joi.string().required().label(`${propertyName}._type`)
-            });
+            relationConstraints = joi.alternatives(
+                joi.object().keys({
+                    _id: joi.string().required().label(`${propertyName}._id`),
+                    _type: joi.string().required().label(`${propertyName}._type`)
+                }),
+                joi.string()
+            );
         }
 
         constraints = constraints2joi(modelName, propertyName, this.validationConstraints);

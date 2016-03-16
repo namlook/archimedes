@@ -428,7 +428,7 @@ export default [
             sort: ['title']
         },
         results: [
-            { _id: 'blogpost6', _type: 'BlogPost', title: 'post 6', tags: [ 'tag"7', 'tag"6' ] },
+            { _id: 'blogpost6', _type: 'BlogPost', title: 'post 6', tags: [ 'tag"6', 'tag"7' ] },
             { _id: 'blogpost7', _type: 'BlogPost', title: 'post 7', tags: [ 'tag"7', 'tag"8', 'tag"9' ] }
         ]
     },

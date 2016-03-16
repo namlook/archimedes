@@ -24,7 +24,7 @@ export default [
                 _id: 'blogpost2', _type: 'BlogPost',
                 title: 'post 2', score: 2,
                 author: { _id: 'user2', _type: 'User' },
-                tags: [ 'tag"3', 'tag"2' ]
+                tags: [ 'tag"2', 'tag"3' ]
             },
             {
                 _id: 'blogpost3', _type: 'BlogPost',
@@ -42,7 +42,7 @@ export default [
                 _id: 'blogpost6', _type: 'BlogPost',
                 title: 'post 6', score: 0,
                 author: { _id: 'user1', _type: 'User' },
-                tags: [ 'tag"7', 'tag"6' ]
+                tags: [ 'tag"6', 'tag"7' ]
             },
             {
                 _id: 'blogpost7', _type: 'BlogPost',

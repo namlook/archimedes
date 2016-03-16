@@ -56,71 +56,47 @@ var processTest = function(db, testQuery) {
         query.filter = testQuery.filter;
         query.aggregate = testQuery.aggregate;
 
-        let stream = db.query(testQuery.model, query);
-        // stream.on('error', function(error) {
-        //     if (testQuery.error != null) {
-        //         try {
-        //             expect(error.message).to.equal(testQuery.error);
-        //             if (_.has(error, 'extra.0.message')) {
-        //                 expect(error.extra[0].message).to.equal(testQuery.errorExtraMessage);
-        //             }
-        //         } catch (e) {
-        //             console.log('------------------');
-        //             console.log('>>>', chalk.blue(inspect(testQuery, {depth: 10, colors: true})));
-        //             console.log('------------------');
-        //             console.log('>>>', chalk.red(inspect(e, {depth: 10, colors: true})));
-        //             console.log('------------------');
-        //             console.log(error.stack);
-        //             console.log('iii', e);
-        //             return reject(e);
-        //         }
-        //         return resolve();
-        //     } else {
-        //         console.log('xxx>', error);
-        //         return reject(error);
-        //     }
-        // });
-
-        stream.errors(function(error) {
-            console.log('errors>', error);
-            if (testQuery.error != null) {
-                try {
-                    expect(error.message).to.equal(testQuery.error);
-                    if (_.has(error, 'extra.0.message')) {
-                        expect(error.extra[0].message).to.equal(testQuery.errorExtraMessage);
+        db.queryStream(testQuery.model, query)
+            .errors(function(error) {
+                console.log('errors>', error);
+                if (testQuery.error != null) {
+                    try {
+                        expect(error.message).to.equal(testQuery.error);
+                        if (_.has(error, 'extra.0.message')) {
+                            expect(error.extra[0].message).to.equal(testQuery.errorExtraMessage);
+                        }
+                    } catch (e) {
+                        console.log('------------------');
+                        console.log('>>>', chalk.blue(inspect(testQuery, {depth: 10, colors: true})));
+                        console.log('------------------');
+                        console.log('>>>', chalk.red(inspect(e, {depth: 10, colors: true})));
+                        console.log('------------------');
+                        console.log(error.stack);
+                        console.log('iii', e);
+                        return reject(e);
                     }
-                } catch (e) {
+                    return resolve();
+                } else {
+                    console.log('xxx>', error);
+                    return reject(error);
+                }
+            })
+            .toArray(function(results) {
+                // console.log('===', results);
+                try {
+                    if (testQuery.results) {
+                        expect(results).to.deep.equal(testQuery.results);
+                    }
+                    return resolve();
+                } catch(e) {
                     console.log('------------------');
-                    console.log('>>>', chalk.blue(inspect(testQuery, {depth: 10, colors: true})));
+                    console.log('query>', chalk.grey(inspect(_.omit(testQuery, 'results'), {depth: 10, colors: true})));
+                    console.log('actual>', chalk.red(inspect(results, {depth: 10, colors: true})));
+                    console.log('expected>', chalk.blue(inspect(testQuery.results, {depth: 10, colors: true})));
                     console.log('------------------');
-                    console.log('>>>', chalk.red(inspect(e, {depth: 10, colors: true})));
-                    console.log('------------------');
-                    console.log(error.stack);
-                    console.log('iii', e);
                     return reject(e);
                 }
-                return resolve();
-            } else {
-                console.log('xxx>', error);
-                return reject(error);
-            }
-        })
-        .toArray(function(results) {
-            // console.log('===', results);
-            try {
-                if (testQuery.results) {
-                    expect(results).to.deep.equal(testQuery.results);
-                }
-                return resolve();
-            } catch(e) {
-                console.log('------------------');
-                console.log('query>', chalk.grey(inspect(_.omit(testQuery, 'results'), {depth: 10, colors: true})));
-                console.log('actual>', chalk.red(inspect(results, {depth: 10, colors: true})));
-                console.log('expected>', chalk.blue(inspect(testQuery.results, {depth: 10, colors: true})));
-                console.log('------------------');
-                return reject(e);
-            }
-        });
+            });
     });
 };
 
@@ -159,7 +135,11 @@ describe('#query()', function(){
                 if (testQuery.skip) {
                     testLauncher = it.skip;
                 }
-                testLauncher(`${testQuery.model}: ${testQuery.should}`, {parallel: false}, testFn(testQuery));
+                testLauncher(
+                    `${testQuery.model}: ${testQuery.should}`,
+                    {parallel: true},
+                    testFn(testQuery)
+                );
             }
         });
     }

@@ -38,6 +38,7 @@ import Promise from 'bluebird';
 
 import rdfUtilities from './rdf-utils';
 import highland from 'highland';
+import _fp from 'lodash/fp';
 
 export default function(adapterConfig) {
     adapterConfig = adapterConfig || {};
@@ -185,61 +186,24 @@ export default function(adapterConfig) {
                 });
             },
 
-            importJsonStream: function(arrayOrStreamOfPojos) {
+            importStream: function(arrayOrStreamOfPojos) {
                 let rdfUtils = rdfUtilities(db);
                 let streamWriter = new N3.StreamWriter({ format: 'N-Triples' });
                 // let streamWriter = new N3.StreamWriter({ format: 'application/trig' });
 
-                const through = highland.pipeline(
-                    highland.map(rdfUtils.pojo2N3triples),
-                    highland.flatten()
-                );
-
                 let dbWriterStream = internals.sparqlClient.n3WriterStream();
 
-                let stream;
-                if (arrayOrStreamOfPojos) {
-                    stream = highland(arrayOrStreamOfPojos)
-                        .pipe(through)
-                        .pipe(streamWriter)
-                        .pipe(dbWriterStream)
-                } else {
-                    stream = highland.pipeline(through, streamWriter, dbWriterStream)
-                }
+                const through = highland.pipeline(
+                    highland.map(rdfUtils.pojo2N3triples),
+                    highland.flatten(),
+                    streamWriter,
+                    dbWriterStream
+                );
 
-                return stream;
+                return arrayOrStreamOfPojos
+                    ? highland(arrayOrStreamOfPojos).pipe(through)
+                    : highland.pipeline(through);
             },
-
-            exportN3Stream: function(options) {
-                options = options || {};
-                options.format = options.format || 'N-Triples'; // 'application/trig'
-                let sparql = `select * from <${adapterConfig.graphUri}> where {?s ?p ?o .}`;
-                const n3streamWriter = new N3.StreamWriter({ format: options.format });
-
-                return highland(internals.sparqlClient.queryStream(sparql))
-                    .through(JSONStream.parse('results.bindings.*'))
-                    .map((o) => ({
-                        subject: o.s.value,
-                        predicate: o.p.value,
-                        object: o.o.type === 'literal' ?
-                            N3.Util.createLiteral(o.o.value, o.o.datatype): o.o.value,
-                        graph: adapterConfig.graphUri
-                    }))
-                    .pipe(n3streamWriter);
-            },
-
-            exportJsonStream: function() {
-                let that = this;
-
-                let sparql = `select distinct ?o from <${adapterConfig.graphUri}> where {?s a ?o .}`;
-
-                let queriesByModelName = {};
-                return internals.sparqlClient.queryStream(sparql)
-                    .through(JSONStream.parse('results.bindings.*'))
-                    .map((o) => db.rdfClasses2ModelNameMapping[o.o.value])
-                    .flatMap((modelName) => that.query(modelName));
-            },
-
 
 
             save: function(pojo) {
@@ -266,13 +230,9 @@ export default function(adapterConfig) {
                     highland.map(parseBlazegraphSaveResponse)
                 );
 
-                let stream;
-                if (arrayOrStreamOfPojos) {
-                    stream = highland(arrayOrStreamOfPojos).pipe(through);
-                } else {
-                    stream = highland.pipeline(through);
-                }
-                return stream;
+                return arrayOrStreamOfPojos
+                    ? highland(arrayOrStreamOfPojos).pipe(through)
+                    : highland.pipeline(through);
             },
 
 
@@ -302,16 +262,44 @@ export default function(adapterConfig) {
                     highland.map(parseBlazegraphSaveResponse)
                 );
 
-                let stream;
-                if (arrayOrStreamOfPojos) {
-                    stream = highland(arrayOrStreamOfPojos).pipe(through);
-                } else {
-                    stream = highland.pipeline(through);
-                }
-                return stream;
+                return arrayOrStreamOfPojos
+                    ? highland(arrayOrStreamOfPojos).pipe(through)
+                    : highland.pipeline(through);
             },
 
-            query(modelName, query, options) {
+            exportN3Stream: function(options) {
+                options = options || {};
+                options.format = options.format || 'N-Triples'; // 'application/trig'
+                let sparql = `select * from <${adapterConfig.graphUri}> where {?s ?p ?o .}`;
+                const n3streamWriter = new N3.StreamWriter({ format: options.format });
+
+                return highland(internals.sparqlClient.queryStream(sparql))
+                    .through(JSONStream.parse('results.bindings.*'))
+                    .map((o) => ({
+                        subject: o.s.value,
+                        predicate: o.p.value,
+                        object: o.o.type === 'literal'
+                            ? N3.Util.createLiteral(o.o.value, o.o.datatype)
+                            : o.o.value,
+                        graph: adapterConfig.graphUri
+                    }))
+                    .through(n3streamWriter);
+            },
+
+            exportStream: function() {
+                let that = this;
+
+                let sparql = `select distinct ?o from <${adapterConfig.graphUri}> where {?s a ?o .}`;
+
+                let queriesByModelName = {};
+                return internals.sparqlClient.queryStream(sparql)
+                    .through(JSONStream.parse('results.bindings.*'))
+                    .map((o) => db.rdfClasses2ModelNameMapping[o.o.value])
+                    .flatMap(that.queryStream);
+            },
+
+
+            queryStream: function(modelName, query, options) {
                 query = query || {};
                 let graphUri = adapterConfig.graphUri;
                 let queryBuilder = sparqlQueryBuilder(db, modelName, graphUri);
@@ -360,18 +348,16 @@ export default function(adapterConfig) {
                             return [o.name, aggregation];
                         });
 
-                    query = {
-                        field: _.fromPairs(fieldPairs),
-                        aggregate: _.fromPairs(aggregationPairs)
-                    };
-
+                    query.field = _.fromPairs(fieldPairs);
                     query.field._id = '_id';
                     query.field._type = '_type';
+                    query.aggregate = _.fromPairs(aggregationPairs);
                 }
 
 
                 let sparql = queryBuilder.build(query, options);
 
+                // console.dir(query, {depth: 10});
                 // console.log(sparql);
 
                 let converter = sparqlResultsConverter(db, modelName, query);

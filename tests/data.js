@@ -101,7 +101,9 @@ export default function loadDb() {
             ])
             .sequence()
             .done(() => {
-                resolve(db)
+                // csvFile.pipe(db.importCsvStream({csv: {arraySeparator: '|'}})).done(() => {
+                resolve(db);
+                // });
             });
         });
     });

@@ -100,7 +100,6 @@ export default function(db) {
         // }
 
         let rdfValue;
-        let isRelation = _.has(value, '_id') && _.has(value, '_type');
 
         if (propertyName === '_type') {
 
@@ -117,9 +116,10 @@ export default function(db) {
             let relationModelName = property.modelSchema.name;
             rdfValue = rdfExport.buildInstanceRdfUri(relationModelName, value);
 
-        } else if (isRelation) {
-
-            rdfValue = rdfExport.buildInstanceRdfUri(value._type, value._id);
+        } else if (modelClass.schema.getProperty(propertyName).isRelation()) {
+            const _id = _.isPlainObject(value) ? value._id : value;
+            const _type = _.isPlainObject(value) ? value._type : property.type;
+            rdfValue = rdfExport.buildInstanceRdfUri(_type, _id);
 
         } else {
 
