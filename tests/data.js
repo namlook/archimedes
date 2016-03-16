@@ -94,23 +94,14 @@ export default function loadDb() {
 
         store().then((db) => {
             highland([
-                db.clear(),
+                highland(db.clear()),
                 db.saveStream(blogposts),
                 db.saveStream(comments),
                 db.saveStream(users)
             ])
             .sequence()
             .done(() => {
-                // db.exportJsonStream()
-                    // .map((o) => {console.log(o); return o;})
-                //     .stopOnError((error) => {
-                //         console.log(error.stack);
-                //     })
-                //     .map(JSON.stringify)
-                //     .through(process.stdout)
-                    // .done(() => {
-                        resolve(db);
-                    // });
+                resolve(db)
             });
         });
     });

@@ -46,6 +46,20 @@ export default function(adapterConfig) {
         throw new Error('rdf adapter: endpoint is required');
     }
 
+    const parseBlazegraphSaveResponse = function(response) {
+        return _.fromPairs(
+            response.toString()
+                .split('COMMIT:')[1]
+                .split('</p')[0]
+                .split(', ')
+                .map((s) => s.split('='))
+                .map(([key, value]) => [
+                    _.trim(key),
+                    parseFloat(value)
+                ])
+        );
+    };
+
     return function(db) {
 
         let internals = {};
@@ -117,8 +131,13 @@ export default function(adapterConfig) {
              */
             clear: function() {
                 // return this.execute(`CLEAR SILENT GRAPH <${adapterConfig.graphUri}>`);
-                let sparql = `CLEAR SILENT GRAPH <${adapterConfig.graphUri}>`;
-                return internals.sparqlClient.queryStream(sparql);
+                return new Promise((resolve, reject) => {
+                    let sparql = `CLEAR SILENT GRAPH <${adapterConfig.graphUri}>`;
+                    return internals.sparqlClient.queryStream(sparql)
+                        .map(parseBlazegraphSaveResponse)
+                        .stopOnError((error) => reject(error))
+                        .toArray((results) => resolve(results[0]));
+                });
             },
 
             clearResource(modelType) {
@@ -221,24 +240,11 @@ export default function(adapterConfig) {
                     .flatMap((modelName) => that.query(modelName));
             },
 
-            _parseBlazegraphSaveResponse: function(response) {
-                return _.fromPairs(
-                    response.toString()
-                        .split('COMMIT:')[1]
-                        .split('</p')[0]
-                        .split(', ')
-                        .map((s) => s.split('='))
-                        .map(([key, value]) => [
-                            _.trim(key),
-                            parseFloat(value)
-                        ])
-                );
-            },
+
 
             save: function(pojo) {
                 return new Promise((resolve, reject) => {
                     const sparqlBuilder = sparqlUpdateBuilder(db, adapterConfig.graphUri);
-                    const parseBlazegraphSaveResponse = this._parseBlazegraphSaveResponse;
                     let sparql = sparqlBuilder.saveQuery(pojo)
                     return internals.sparqlClient.queryStream(sparql)
                         .map(parseBlazegraphSaveResponse)
@@ -250,11 +256,13 @@ export default function(adapterConfig) {
             saveStream: function(arrayOrStreamOfPojos) {
 
                 const sparqlBuilder = sparqlUpdateBuilder(db, adapterConfig.graphUri);
-                const parseBlazegraphSaveResponse = this._parseBlazegraphSaveResponse;
 
                 const through = highland.pipeline(
                     highland.map(sparqlBuilder.saveQuery),
-                    highland.flatMap(internals.sparqlClient.queryStream),
+                    highland.batch(20),
+                    highland.map((o) => o.join(';\n\n')),
+                    highland.map(internals.sparqlClient.queryStream),
+                    highland.mergeWithLimit(10),
                     highland.map(parseBlazegraphSaveResponse)
                 );
 
@@ -275,7 +283,6 @@ export default function(adapterConfig) {
             delete: function(pojo) {
                 return new Promise((resolve, reject) => {
                     const sparqlBuilder = sparqlUpdateBuilder(db, adapterConfig.graphUri);
-                    const parseBlazegraphSaveResponse = this._parseBlazegraphSaveResponse;
                     let sparql = sparqlBuilder.deleteQuery(pojo)
                     return internals.sparqlClient.queryStream(sparql)
                         .map(parseBlazegraphSaveResponse)
@@ -285,20 +292,19 @@ export default function(adapterConfig) {
             },
 
             deleteStream: function(arrayOrStreamOfPojos) {
-                const parseBlazegraphSaveResponse = this._parseBlazegraphSaveResponse;
                 const updateBuilder = sparqlUpdateBuilder(db, adapterConfig.graphUri);
                 const through = highland.pipeline(
                     highland.map(updateBuilder.deleteQuery),
-                    highland.flatMap(internals.sparqlClient.queryStream),
+                    highland.batch(100),
+                    highland.map((o) => o.join(';\n\n')),
+                    highland.map(internals.sparqlClient.queryStream),
+                    highland.mergeWithLimit(10),
                     highland.map(parseBlazegraphSaveResponse)
                 );
 
                 let stream;
                 if (arrayOrStreamOfPojos) {
-                    stream = highland(arrayOrStreamOfPojos)
-                        .map(updateBuilder.deleteQuery)
-                        .flatMap(internals.sparqlClient.queryStream)
-                        .map(parseBlazegraphSaveResponse);
+                    stream = highland(arrayOrStreamOfPojos).pipe(through);
                 } else {
                     stream = highland.pipeline(through);
                 }
