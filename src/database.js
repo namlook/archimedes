@@ -29,6 +29,9 @@ import Promise from 'bluebird';
 import csvStream from 'csv-stream';
 import es from 'event-stream';
 
+import highland from 'highland';
+import _fp from 'lodash/fp';
+
 export default function(dbAdapter, config) {
 
     if (!dbAdapter) {
@@ -208,6 +211,71 @@ export default function(dbAdapter, config) {
             return this.adapter.importJsonStream(arrayOrStreamOfPojos);
         },
 
+        importCsvStream: function(options) {
+
+            options = _.defaultsDeep(options, {
+                modelName: undefined,
+                csv: {
+                    delimiter: ',',
+                    escapeChar: '"',
+                    enclosedChar: '"',
+                    arraySeparator: ','
+                }
+            });
+
+            const that = this;
+
+            const _normalizePojo = function(item) {
+                const modelName = item._type;
+                const modelClass = that[modelName];
+                if (!modelClass) {
+                    throw new Error(`unknown model "${modelName}" in property _type`);
+                }
+                const modelSchema = modelClass.schema
+
+                return _(item)
+                    .toPairs()
+                    .map(([propertyName, value]) => {
+                        if (_.includes(['_id', '_type'], propertyName)) {
+                            return [propertyName, value];
+                        }
+                        let property = modelSchema.getProperty(propertyName);
+
+                        const _convertValue = function(_value) {
+                            return property.isRelation()
+                                ? {_id: _value, _type: property.type}
+                                : _value;
+                        }
+
+                        value = property.isArray()
+                            ? value.split(options.csv.arraySeparator).map(_convertValue)
+                            : _convertValue(value);
+
+                        return [propertyName, value];
+                    })
+                    .fromPairs()
+                    .value();
+            };
+
+            const _ensureTypeProperty = function(item) {
+                item._type = item._type || options.modelName;
+                if (!item._type) {
+                    throw new Error('unknown _type');
+                }
+                return item;
+            };
+
+            return highland.pipeline(
+                csvStream.createStream(options.csv),
+                highland.filter(_fp.get('_id')),
+                highland.map(_fp.omitBy(highland.not)),
+                highland.map(_ensureTypeProperty),
+                highland.map(_normalizePojo),
+                highland.flatMap((o) => highland(that.validatePojo(o))),
+                that.adapter.importJsonStream()
+            )
+        },
+
         exportN3Stream: function(config) {
             return this.adapter.exportN3Stream(config);
         },
@@ -236,6 +304,21 @@ export default function(dbAdapter, config) {
             return this.adapter.query(modelName, query, options);
         },
 
+        validatePojo: function(pojo) {
+            const joiOptions = {};
+            return new Promise((resolve, reject) => {
+                pojo = _.omitBy(pojo, _.isUndefined);
+                let modelSchema = this[pojo._type].schema;
+                let {error, value} = modelSchema.validate(pojo, joiOptions);
+                console.log(value, error);
+                if (error) {
+                    return reject(new ValidationError('Bad value', error));
+                }
+                value = _.omitBy(value, _.isUndefined);
+                return resolve(value);
+            });
+        },
+
 
 
         /**
@@ -257,7 +340,7 @@ export default function(dbAdapter, config) {
 
 
 
-                pojo = _.omit(pojo, _.isUndefined);
+                pojo = _.omitBy(pojo, _.isUndefined);
 
                 let modelSchema = this[modelType].schema;
                 let {error, value} = modelSchema.validate(pojo, options);
