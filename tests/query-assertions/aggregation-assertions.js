@@ -473,15 +473,15 @@ export default [
         },
         options: {sort: ['title']},
         results: [
-            { title: 'post 0', creditedAuthors: []},
+            { title: 'post 0'},
             { title: 'post 1', creditedAuthors: [ 'user0' ] },
             { title: 'post 2', creditedAuthors: [ 'user0', 'user1' ] },
             { title: 'post 3', creditedAuthors: [ 'user0', 'user1', 'user2' ] },
-            { title: 'post 4', creditedAuthors: []},
+            { title: 'post 4'},
             { title: 'post 5', creditedAuthors: [ 'user0' ] },
             { title: 'post 6', creditedAuthors: [ 'user0', 'user1' ] },
             { title: 'post 7', creditedAuthors: [ 'user0', 'user1', 'user2' ] },
-            { title: 'post 8', creditedAuthors: []},
+            { title: 'post 8'},
             { title: 'post 9', creditedAuthors: [ 'user0' ] }
         ]
     },
@@ -630,15 +630,15 @@ export default [
         },
         options: {sort: ['title']},
         results: [
-            { title: 'post 0', creditedAuthors: [] },
+            { title: 'post 0' },
             { title: 'post 1', creditedAuthors: [ { name: 'user 0', sex: 'male' } ] },
             { title: 'post 2', creditedAuthors: [ { name: 'user 0', sex: 'male' }, { name: 'user 1', sex: 'female' } ] },
             { title: 'post 3', creditedAuthors: [ { name: 'user 0', sex: 'male' }, { name: 'user 1', sex: 'female' }, { name: 'user 2', sex: 'male' } ] },
-            { title: 'post 4', creditedAuthors: [] },
+            { title: 'post 4' },
             { title: 'post 5', creditedAuthors: [ { name: 'user 0', sex: 'male' } ] },
             { title: 'post 6', creditedAuthors: [ { name: 'user 0', sex: 'male' }, { name: 'user 1', sex: 'female' } ] },
             { title: 'post 7', creditedAuthors: [ { name: 'user 0', sex: 'male' }, { name: 'user 1', sex: 'female' }, { name: 'user 2', sex: 'male' } ] },
-            { title: 'post 8', creditedAuthors: [] },
+            { title: 'post 8' },
             { title: 'post 9', creditedAuthors: [ { name: 'user 0', sex: 'male' } ] }
         ]
     }
