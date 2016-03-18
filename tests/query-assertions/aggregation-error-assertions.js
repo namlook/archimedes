@@ -1,47 +1,102 @@
 
 export default [
     {
+        should: 'throw an error if aggregate is malformed',
+        model: 'BlogPost',
+        field: {_id: '_id'},
+        aggregate: 42,
+        error: {
+            name: 'ValidationError',
+            message: 'Bad query',
+            validationErrors: [
+                { message: '"aggregate" must be an object', path: 'aggregate' }
+            ]
+        }
+    },
+    {
         should: 'throw an error if the aggregator is unknown',
         model: 'BlogPost',
         field: {
-            gender: 'author.gender',
+            gender: 'author.gender'
+        },
+        aggregate: {
             ratting: {
                 $aggregator: 'unknownAggregator',
                 $property: 'ratting'
             }
         },
-        error: 'aggregate: unknown operator "unknownAggregator"'
+        error: {
+            name: 'ValidationError',
+            message: 'Bad query',
+            validationErrors: [
+                {
+                    message: 'unknown aggregator "unknownAggregator" in field "ratting"',
+                    path: 'aggregate.ratting'
+                }
+            ]
+        }
+    },
+    {
+        should: 'throw an error if the aggregator is unknown (2)',
+        model: 'BlogPost',
+        field: {
+            gender: 'author.gender'
+        },
+        aggregate: {
+            ratting: {$unknownAggregator: 'ratting'}
+        },
+        error: {
+            name: 'ValidationError',
+            message: 'Bad query',
+            validationErrors: [
+                {
+                    message: 'unknown aggregator "unknownAggregator" in field "ratting"',
+                    path: 'aggregate.ratting'
+                }
+            ]
+        }
     },
     {
         should: 'throw an error if the field property is unknown',
         model: 'BlogPost',
         field: {
             gender: 'author.gender',
+        },
+        aggregate: {
             ratting: {
                 $aggregator: 'avg',
                 $property: 'unknownProperty'
             }
         },
-        error: 'aggregate: unknown property "unknownProperty" for model "BlogPost"'
+        error: {
+            name: 'ValidationError',
+            message: 'Bad query',
+            validationErrors: [
+                {
+                    message: 'unknown property "unknownProperty" in field "ratting"',
+                    path: 'aggregate.ratting'
+                }
+            ]
+        }
     },
     {
-        should: 'throw an error if the filter property is unknown',
+        should: 'throw an error if the field property is unknown (2)',
         model: 'BlogPost',
         field: {
             gender: 'author.gender',
         },
-        filter: {
-            unknownProperty: false
+        aggregate: {
+            ratting: {$avg: 'unknownProperty'}
         },
-        error: 'aggregate: unknown property "unknownProperty" for model "BlogPost"'
-    },
-    {
-        should: 'throw an error when sorting with an unknown variable',
-        model: 'BlogPost',
-        field: {
-            gender: 'author.gender'
-        },
-        options: {sort: ['unknownVariable']},
-        error: 'aggregate: unknown sorting constraint "unknownVariable"'
+        error: {
+            name: 'ValidationError',
+            message: 'Bad query',
+            validationErrors: [
+                {
+                    message: 'unknown property "unknownProperty" in field "ratting"',
+                    path: 'aggregate.ratting'
+                }
+            ]
+        }
     }
 ]

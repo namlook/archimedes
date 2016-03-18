@@ -469,7 +469,9 @@ export default [
         model: 'BlogPost',
         field: {
             title: 'title',
-            'creditedAuthors': ['credits?._id']
+        },
+        aggregate: {
+            creditedAuthors: {$array: 'credits?._id'}
         },
         options: {sort: ['title']},
         results: [

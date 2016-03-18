@@ -58,13 +58,16 @@ var processTest = function(db, testQuery) {
 
         db.queryStream(testQuery.model, query)
             .errors(function(error) {
-                console.log('errors>', error);
-                if (testQuery.error != null) {
+                if (testQuery.error) {
                     try {
-                        expect(error.message).to.equal(testQuery.error);
-                        if (_.has(error, 'extra.0.message')) {
-                            expect(error.extra[0].message).to.equal(testQuery.errorExtraMessage);
-                        }
+                        expect(error.name).to.equal(testQuery.error.name);
+                        expect(error.message).to.equal(testQuery.error.message);
+                        expect(error.extra.validationErrors).to.deep.equal(testQuery.error.validationErrors);
+                        expect(error.extra.object).to.deep.equal(query);
+                        // expect(error.message).to.equal(testQuery.error);
+                        // if (_.has(error, 'extra.0.message')) {
+                            // expect(error.extra[0].message).to.equal(testQuery.errorExtraMessage);
+                        // }
                     } catch (e) {
                         console.log('------------------');
                         console.log('>>>', chalk.blue(inspect(testQuery, {depth: 10, colors: true})));
@@ -119,7 +122,8 @@ describe('#query()', function(){
             processTest(db, testQuery).then(() => {
                 done();
             }).catch((error) => {
-                console.log('testFn>', error);
+                console.log('vvvvv == testFn == vvvvvv');
+                console.dir(error, {depth: 10});
                 console.log(error.stack);
             });
         };

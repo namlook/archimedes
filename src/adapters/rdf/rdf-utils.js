@@ -102,19 +102,22 @@ export default function(db) {
         let rdfValue;
 
         if (propertyName === '_type') {
-
             rdfValue = rdfExport.buildClassRdfUri(modelName);
 
         } else if (propertyName === '_id') {
-
             rdfValue = rdfExport.buildInstanceRdfUri(modelName, value);
 
         } else if (_.endsWith(propertyName, '._id')) {
-
             propertyName = propertyName.split('.').slice(0, -1).join('.');
             let property = modelClass.schema.getProperty(propertyName);
             let relationModelName = property.modelSchema.name;
             rdfValue = rdfExport.buildInstanceRdfUri(relationModelName, value);
+
+        } else if (_.endsWith(propertyName, '._type')) {
+            propertyName = propertyName.split('.').slice(0, -1).join('.');
+            let property = modelClass.schema.getProperty(propertyName);
+            let relationModelName = property.type;
+            rdfValue = rdfExport.buildClassRdfUri(relationModelName);
 
         } else if (modelClass.schema.getProperty(propertyName).isRelation()) {
             const _id = _.isPlainObject(value) ? value._id : value;
@@ -122,7 +125,6 @@ export default function(db) {
             rdfValue = rdfExport.buildInstanceRdfUri(_type, _id);
 
         } else {
-
             let propertyType = modelClass.schema.getProperty(propertyName).type;
             if (_(['date', 'datetime']).includes(propertyType)) {
                 value = moment(value).toISOString();

@@ -10,7 +10,9 @@ export default [
             score: 'ratting',
             'author._id': 'author._id',
             'author._type': 'author._type',
-            tags: ['tags']
+        },
+        aggregate: {
+            tags: {$array: 'tags'}
         },
         options: {sort: ['title']},
         results: [

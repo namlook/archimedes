@@ -32,6 +32,8 @@ import es from 'event-stream';
 import highland from 'highland';
 import _fp from 'lodash/fp';
 
+import queryValidation from './validators/query';
+
 export default function(dbAdapter, config) {
 
     if (!dbAdapter) {
@@ -324,7 +326,11 @@ export default function(dbAdapter, config) {
         },
 
         queryStream: function(modelName, query, options) {
-            return this.adapter.queryStream(modelName, query, options);
+            const that = this;
+            return highland(queryValidation(that, modelName).validate(query))
+                .flatMap((validatedQuery) => {
+                    return that.adapter.queryStream(modelName, validatedQuery);
+                });
         },
 
         validatePojo: function(pojo) {

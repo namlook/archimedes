@@ -1,5 +1,21 @@
 
 export default [
+
+    {
+        should: 'throw an error if filter is malformed',
+        model: 'BlogPost',
+        field: {
+            _id: '_id'
+        },
+        filter: 42,
+        error: {
+            name: 'ValidationError',
+            message: 'Bad query',
+            validationErrors:  [
+                { message: '"filter" must be an object', path: 'filter' }
+            ]
+        }
+    },
     {
         should: 'throw an error if operator is unknown',
         model: 'BlogPost',
@@ -9,9 +25,15 @@ export default [
         filter: {
             ratting: {$unknownOperator: 3}
         },
-        error: 'unknown filter operator "$unknownOperator" on property "ratting"'
+        error: {
+            name: 'ValidationError',
+            message: 'Bad query',
+            validationErrors:  [{
+                message: 'unknown operator "$unknownOperator" on property "ratting"',
+                path: 'filter.ratting'
+            }]
+        }
     },
-
     {
         should: 'throw an error if the relation property is unknown',
         model: 'BlogPost',
@@ -19,8 +41,14 @@ export default [
             title: 'title',
         },
         filter: {
-            'unknownPropery.name': 'user 0'
+            'unknownProperty.name': 'user 0'
         },
-        error: 'unknown filter property "unknownProperty" for model "BlogPost"'
+        error: {
+            name: 'ValidationError',
+            message: 'Bad query',
+            validationErrors:  [
+                { message: 'unknown property "unknownProperty.name" for model "BlogPost"', path: 'filter' }
+            ]
+        }
     }
 ];

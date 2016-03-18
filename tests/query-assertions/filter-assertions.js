@@ -880,7 +880,7 @@ export default [
         should: 'filter on relation _id ($eq) (2)',
         model: 'BlogPost',
         field: {_id: '_id'},
-        filter: {'author': {_id: 'user1', _type: 'User'}},
+        filter: {'author._id': 'user1', 'author._type': 'User'},
         options: {sort: ['_id']},
         results: [
             {_id: 'blogpost1'},
@@ -898,6 +898,17 @@ export default [
             {_id: 'blogpost3'},
             {_id: 'blogpost6'},
             {_id: 'blogpost8'}
+        ]
+    },
+    {
+        should: 'filter on relation ($eq) (2)',
+        model: 'BlogPost',
+        field: {_id: '_id'},
+        filter: {'author.gender': 'female', 'author.name': 'user 1'},
+        options: {sort: ['_id']},
+        results: [
+            {_id: 'blogpost1'},
+            {_id: 'blogpost6'}
         ]
     },
     {

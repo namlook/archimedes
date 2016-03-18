@@ -304,15 +304,6 @@ module.exports = function(db, modelName, graphUri) {
                     filterInfos = {$eq: filterInfos};
                 }
 
-                if (filterInfos._id && filterInfos._type) {
-                    let rdfValue = rdfUtils.buildRdfValue(filterInfos._type, '_id', filterInfos._id);
-                    return [{
-                        propertyName,
-                        operator: '$eq',
-                        rdfValue
-                    }];
-                }
-
                 return _(filterInfos)
                     .toPairs(filterInfos)
                     .map(([operator, value]) => {
