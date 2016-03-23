@@ -188,16 +188,14 @@ export default function(adapterConfig) {
 
             importStream: function(arrayOrStreamOfPojos) {
                 let rdfUtils = rdfUtilities(db);
-                let streamWriter = new N3.StreamWriter({ format: 'N-Triples' });
-                // let streamWriter = new N3.StreamWriter({ format: 'application/trig' });
-
-                let dbWriterStream = internals.sparqlClient.n3WriterStream();
+                // let streamWriter = new N3.StreamWriter({ format: 'N-Triples' });
+                let streamWriter = new N3.StreamWriter();
 
                 const through = highland.pipeline(
                     highland.map(rdfUtils.pojo2N3triples),
                     highland.flatten(),
                     streamWriter,
-                    dbWriterStream
+                    internals.sparqlClient.n3WriterStream()
                 );
 
                 return arrayOrStreamOfPojos

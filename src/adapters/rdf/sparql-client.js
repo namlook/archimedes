@@ -36,6 +36,8 @@ let sparqlClient = function(endpoint, config) {
         // console.log(sparql);
         // console.log('<<<<<<<<<<sparql');
 
+        // console.log('........', body);
+
         let options = {
             headers: {
                 'content-type': 'application/x-www-form-urlencoded',
@@ -139,6 +141,7 @@ let sparqlClient = function(endpoint, config) {
 
         queryStream: function(sparql) {
             let conf = internals.getConfig(sparql);
+            // console.log('***', conf);
             let stream = request.post(conf.endpoint, conf.options);
             stream.on('response', function(response) {
                 if (response.statusCode !== 200) {
@@ -156,7 +159,8 @@ let sparqlClient = function(endpoint, config) {
         n3WriterStream: function(sparql) {
             let config = {
                 headers: {
-                    'content-type': 'text/x-nquads'
+                    // 'content-type': 'text/x-nquads'
+                    'content-type': 'application/x-trig'
                 }
             };
             let stream = request.post(endpoint, config);

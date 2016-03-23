@@ -170,7 +170,7 @@ module.exports = function(db, modelName, query) {
                     let property = db[modelName].schema.getProperty(propertyName);
 
                     value = _.sortBy(value)
-                    if (property.isRelation() && _.isPlainObject(value) && value._id) {
+                    if (property.isRelation() && value.length && value[0]._id) {
                         value = _.sortBy(value, '_id');
                     }
 

@@ -120,6 +120,7 @@ export default function(db) {
             rdfValue = rdfExport.buildClassRdfUri(relationModelName);
 
         } else if (modelClass.schema.getProperty(propertyName).isRelation()) {
+            let property = modelClass.schema.getProperty(propertyName);
             const _id = _.isPlainObject(value) ? value._id : value;
             const _type = _.isPlainObject(value) ? value._type : property.type;
             rdfValue = rdfExport.buildInstanceRdfUri(_type, _id);

@@ -213,7 +213,7 @@ export default function(db, modelName) {
 
                     errors = errors.length
                         ? errors
-                        : _.concat(
+                        : [].concat(
                             fn.validateProperties(query),
                             fn.validateOperators(query),
                             fn.validateAggregators(query)

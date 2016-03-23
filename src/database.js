@@ -216,6 +216,7 @@ export default function(dbAdapter, config) {
                 highland.map(_fp.omitBy(_.isNull)),
                 highland.flatMap((o) => highland(that.validatePojo(o))),
                 that.adapter.importStream()
+                // highland.map((o) => {console.log(o); return o;})
             );
 
             return arrayOrStreamOfPojos
@@ -286,6 +287,17 @@ export default function(dbAdapter, config) {
                 highland.flatMap((o) => highland(that.validatePojo(o))),
                 that.adapter.importStream()
             )
+        },
+
+        csv2pojoStream: function(csvOptions) {
+            csvOptions = _.defaultsDeep(csvOptions, {
+                delimiter: ',',
+                escapeChar: '"',
+                enclosedChar: '"',
+                arraySeparator: ','
+            });
+
+            return highland.pipeline(csvStream.createStream(csvOptions));
         },
 
         exportN3Stream: function(config) {
