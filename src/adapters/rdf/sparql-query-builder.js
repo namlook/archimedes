@@ -35,15 +35,15 @@ module.exports = function(db, modelName, graphUri) {
         // }
         property = modelSchema.getProperty(propertyName);
 
-        // if (property.isInverseRelationship()) { // only for filter
-        //     return {
-        //         type: 'path',
-        //         pathType: '^',
-        //         items: [property.meta.rdfUri]
-        //     };
-        // } else {
+        if (property.isInverseRelationship()) {
+            return {
+                type: 'path',
+                pathType: '^',
+                items: [property.getPropertyFromInverseRelationship().meta.rdfUri]
+            };
+        } else {
             return property.meta.rdfUri;
-        // }
+        }
     };
 
     /**
@@ -349,6 +349,7 @@ module.exports = function(db, modelName, graphUri) {
     internals._buildAggregationProperties = function(query) {
         return _.toPairs(query.aggregate)
             .map(([fieldName, aggregation]) => {
+
                 let aggregator, aggregationInfos;
                 if (_.has(aggregation, '$aggregator')) {
                     aggregationInfos = aggregation;
@@ -357,11 +358,18 @@ module.exports = function(db, modelName, graphUri) {
                         aggregationInfos.$property = '_id';
                     }
                 } else {
-                    [aggregator, aggregationInfos] = _.toPairs(aggregation)[0];
-                    aggregator = aggregator.slice(1);
-                    if (aggregationInfos === true) {
-                        aggregationInfos = {$property: '_id'};
+                    let distinct = aggregation.distinct;
+                    aggregation = _.omit(aggregation, 'distinct');
+                    let [_aggregator, propertyName] = _.toPairs(aggregation)[0];
+                    aggregator = _aggregator.slice(1);
+                    if (propertyName === true) {
+                        propertyName = '_id';
                     }
+                    aggregationInfos = {
+                        $aggregator: aggregator,
+                        $property: propertyName,
+                        distinct
+                    };
                 }
 
                 if (!_.isPlainObject(aggregationInfos)) {
@@ -370,12 +378,17 @@ module.exports = function(db, modelName, graphUri) {
 
                 aggregator = aggregator.toLowerCase();
 
+                let distinct = aggregationInfos.distinct;
+                distinct = aggregator === 'array' && distinct == null
+                    ? true
+                    : distinct;
+
                 return {
                     fieldName,
                     aggregator,
                     array: aggregator === 'array',
                     propertyName: aggregationInfos.$property,
-                    distinct: aggregationInfos.distinct,
+                    distinct: distinct,
                     fields: aggregationInfos.$fields,
                     inner: true
                 };
@@ -785,6 +798,7 @@ module.exports = function(db, modelName, graphUri) {
             sparson.from = {
                 'default': [graphUri]
             };
+            // console.dir(sparson, {depth: 10});
             return new SparqlGenerator().stringify(sparson);
         }
     };

@@ -55,7 +55,7 @@ export default function(db, modelName) {
             $fields: joi.object().pattern(/.+/, joi.string()).optional(),
             distinct: joi.boolean().default(false)
         }),
-        joi.object().pattern(/^\$.+/, joi.alternatives().try(
+        joi.object().pattern(/(^\$.+)|(distinct)/, joi.alternatives().try(
             joi.string(),
             joi.boolean()
         ))
@@ -169,11 +169,16 @@ export default function(db, modelName) {
     };
 
     fn.normalizeAggregation = function(aggregation) {
-        return aggregation.$aggregator
-            ? [aggregation]
-            : _.toPairs(aggregation).map(([aggregator, propertyName]) => ({
+        if (aggregation.$aggregator) {
+            return [aggregation];
+        }
+
+        let distinct = aggregation.distinct
+        aggregation = _fp.omit('distinct', aggregation);
+        return _.toPairs(aggregation).map(([aggregator, propertyName]) => ({
                 $aggregator: aggregator.slice(1),
-                $property: propertyName
+                $property: propertyName,
+                distinct
             }));
     }
 
@@ -184,7 +189,7 @@ export default function(db, modelName) {
             .toPairs()
             .flatMap(([fieldName, aggregation]) => {
                 return fn.normalizeAggregation(aggregation)
-                    .map((o) => _.assign(o, {fieldName: fieldName}));
+                    .map((o) => Object.assign({}, o, {fieldName: fieldName}));
             })
             .filter((o) => !isValidAggregator(o.$aggregator))
             .map((o) => ({

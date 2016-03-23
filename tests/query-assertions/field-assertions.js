@@ -231,6 +231,29 @@ export default [
             { title: 'post 8', author: { name: 'user 3', sex: 'female' } },
             { title: 'post 9', author: { name: 'user 4', sex: 'male' } }
         ]
-    }
+    },
+
+    {
+        should: 'frame inverse relationships',
+        model: 'User',
+        field: {
+            name: 'name',
+            posts: 'blogPosts.title',
+            postAuthor: 'blogPosts.author'
+        },
+        options: {sort: ['name', 'posts']},
+        results: [
+            { name: 'user 0', posts: 'post 0', postAuthor: 'user0' },
+            { name: 'user 0', posts: 'post 5', postAuthor: 'user0' },
+            { name: 'user 1', posts: 'post 1', postAuthor: 'user1' },
+            { name: 'user 1', posts: 'post 6', postAuthor: 'user1' },
+            { name: 'user 2', posts: 'post 2', postAuthor: 'user2' },
+            { name: 'user 2', posts: 'post 7', postAuthor: 'user2' },
+            { name: 'user 3', posts: 'post 3', postAuthor: 'user3' },
+            { name: 'user 3', posts: 'post 8', postAuthor: 'user3' },
+            { name: 'user 4', posts: 'post 4', postAuthor: 'user4' },
+            { name: 'user 4', posts: 'post 9', postAuthor: 'user4' }
+        ]
+    },
 
 ];

@@ -92,6 +92,9 @@ let verbose = false;
 export default function loadDb() {
     return new Promise((resolve, reject) => {
 
+        // console.dir(users.map((o) => [o.name, o.gender]), {depth: 10})
+        // console.dir(blogposts.map((o) => ({post: o.title, author: o.author, credits: o.credits})), {depth: 10})
+
         store().then((db) => {
             highland([
                 highland(db.clear()),

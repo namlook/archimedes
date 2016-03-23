@@ -365,7 +365,7 @@ export default [
             _type: '_type'
         },
         aggregate: {
-            authorId: {$array: 'author._id'}
+            authorId: {$array: 'author._id', distinct: false}
         },
         options: {sort: ['authorId']},
         results: [
@@ -393,11 +393,7 @@ export default [
             _type: '_type'
         },
         aggregate: {
-            authorId: {
-                $aggregator: 'array',
-                $property: 'author._id',
-                distinct: true
-            }
+            authorId: {$array: 'author._id'}
         },
         options: {sort: ['authorId']},
         results: [
@@ -643,8 +639,84 @@ export default [
             { title: 'post 8' },
             { title: 'post 9', creditedAuthors: [ { name: 'user 0', sex: 'male' } ] }
         ]
-    }
+    },
 
+    {
+        should: 'aggregate inverse relationships into an array',
+        model: 'User',
+        field: {
+            name: 'name'
+        },
+        aggregate: {
+            posts: {$array: 'blogPosts.title'}
+        },
+        options: {sort: ['name', 'posts']},
+        results: [
+            { name: 'user 0', posts: [ 'post 0', 'post 5' ] },
+            { name: 'user 1', posts: [ 'post 1', 'post 6' ] },
+            { name: 'user 2', posts: [ 'post 2', 'post 7' ] },
+            { name: 'user 3', posts: [ 'post 3', 'post 8' ] },
+            { name: 'user 4', posts: [ 'post 4', 'post 9' ] }
+        ]
+    },
+
+
+    {
+        should: 'aggregate inverse relationships into multiple arrays',
+        model: 'User',
+        field: {
+            name: 'name'
+        },
+        aggregate: {
+            posts: {$array: 'blogPosts.title'},
+            creditedAuthors: {$array: 'blogPosts.credits.name'}
+        },
+        options: {sort: ['name', 'posts']},
+        results: [
+            { name: 'user 0', posts: [ 'post 5' ], creditedAuthors: [ 'user 0' ] },
+            { name: 'user 1', posts: [ 'post 1', 'post 6' ], creditedAuthors: [ 'user 0', 'user 1' ] },
+            { name: 'user 2', posts: [ 'post 2', 'post 7' ], creditedAuthors: [ 'user 0', 'user 1', 'user 2' ] },
+            { name: 'user 3', posts: [ 'post 3' ], creditedAuthors: [ 'user 0', 'user 1', 'user 2' ] },
+            { name: 'user 4', posts: [ 'post 9' ], creditedAuthors: [ 'user 0' ] }
+        ]
+    },
+
+    {
+        should: 'aggregate inverse relationships into multiple arrays with a query',
+        model: 'User',
+        field: {
+            name: 'name',
+            gender: 'gender'
+        },
+        filter: {
+            gender: 'male'
+        },
+        aggregate: {
+            posts: {$array: 'blogPosts.title'},
+            creditedAuthors: {$array: 'blogPosts.credits.name'}
+        },
+        options: {sort: ['name', 'posts']},
+        results: [
+            { name: 'user 0', gender: 'male', posts: [ 'post 5' ], creditedAuthors: [ 'user 0' ] },
+            { name: 'user 2', gender: 'male', posts: [ 'post 2', 'post 7' ], creditedAuthors: [ 'user 0', 'user 1', 'user 2' ] },
+            { name: 'user 4', gender: 'male', posts: [ 'post 9' ], creditedAuthors: [ 'user 0' ] }
+        ]
+    },
+
+    {
+        should: 'answer: are males more credited than females',
+        model: 'BlogPost',
+        field: {
+            gender: 'credits.gender'
+        },
+        aggregate: {
+            total: {$count: 'credits.gender'}
+        },
+        results: [
+            { gender: 'male', total: 9 },
+            { gender: 'female', total: 4 }
+        ]
+    },
 
     // {
     //     should: 'aggregate values into array of object with aggregation',
