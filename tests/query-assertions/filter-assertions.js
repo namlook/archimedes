@@ -1044,6 +1044,60 @@ export default [
             {_id: 'comment57'},
             {_id: 'comment67'}
         ]
-    }
+    },
+
+    /**** Bool algebra ****/
+    {
+        should: 'allow a $and expression',
+        model: 'BlogPost',
+        field: {_id: '_id'},
+        filter: {
+            tags: { $and: [
+                {$eq: 'tag"3'},
+                {$eq: 'tag"4'}
+            ]}
+        },
+        options: {sort: ['_id']},
+        results: [{_id: 'blogpost3'}]
+    },
+    {
+        should: 'allow a $not expression',
+        model: 'BlogPost',
+        field: {_id: '_id'},
+        filter: {
+            tags: {
+                $not: {
+                    $and: [ {$eq: 'tag\"3'}, {$eq: 'tag\"4'} ]
+                }
+            }
+        },
+        options: {sort: ['_id']},
+        results: [
+            {_id: 'blogpost0'},
+            {_id: 'blogpost1'},
+            {_id: 'blogpost4'},
+            {_id: 'blogpost5'},
+            {_id: 'blogpost6'},
+            {_id: 'blogpost7'},
+            {_id: 'blogpost8'},
+            {_id: 'blogpost9'}
+        ]
+    },
+    {
+        should: 'allow a $or expression',
+        model: 'BlogPost',
+        field: {_id: '_id'},
+        filter: {
+            tags: {$or: [
+                {$eq: 'tag\"3'},
+                {$eq: 'tag\"4'}
+            ]}
+        },
+        options: {sort: ['_id']},
+        results: [
+            {_id: 'blogpost2'},
+            {_id: 'blogpost3'}
+        ]
+    },
 
 ];

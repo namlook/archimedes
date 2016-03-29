@@ -1,5 +1,6 @@
 
 import _ from 'lodash';
+import _fp from 'lodash/fp';
 import rdfUtilities from './rdf-utils';
 import {Generator as SparqlGenerator} from 'sparqljs';
 
@@ -304,33 +305,52 @@ module.exports = function(db, modelName, graphUri) {
                     filterInfos = {$eq: filterInfos};
                 }
 
-                return _(filterInfos)
-                    .toPairs(filterInfos)
-                    .map(([operator, value]) => {
-                        let rdfValue;
-                        if (operator === '$exists') {
-                            if (value === false) {
-                                operator = '$nexists';
-                                value = true;
+                const filterInfos2FilterProperties = (_filterInfos) => {
+                    return _(_filterInfos)
+                        .toPairs(_filterInfos)
+                        .map(([operator, value]) => {
+                            let rdfValue;
+                            if (operator === '$exists') {
+                                if (value === false) {
+                                    operator = '$nexists';
+                                    value = true;
+                                }
                             }
-                        }
-                        if (_.isArray(value)) {
-                            rdfValue = value.map(
-                                (v) => rdfUtils.buildRdfValue(
-                                    modelName, propertyName, v
-                                )
-                            );
-                        } else {
-                            rdfValue = rdfUtils.buildRdfValue(
-                                modelName,
-                                propertyName,
-                                value
-                            );
-                        }
-                        return {propertyName, operator, rdfValue};
-                    })
-                    .flatten()
-                    .value();
+
+                            if (_.isArray(value)) {
+                                if (['$and', '$or'].indexOf(operator) > -1) {
+                                    return {
+                                        propertyName,
+                                        operator,
+                                        rdfValue: value.map(filterInfos2FilterProperties)
+                                    };
+                                } else {
+                                    rdfValue = value.map(
+                                        (v) => rdfUtils.buildRdfValue(
+                                            modelName, propertyName, v
+                                        )
+                                    );
+                                }
+                            } else if (operator === '$not') {
+                                return {
+                                    propertyName,
+                                    operator,
+                                    rdfValue: filterInfos2FilterProperties(value)
+                                };
+                            } else {
+                                rdfValue = rdfUtils.buildRdfValue(
+                                    modelName,
+                                    propertyName,
+                                    value
+                                );
+                            }
+                            return {propertyName, operator, rdfValue};
+                        })
+                        .flatten()
+                        .value();
+                }
+
+                return filterInfos2FilterProperties(filterInfos);
             })
             .flatten()
             .value();
@@ -568,94 +588,115 @@ module.exports = function(db, modelName, graphUri) {
             .value();
     };
 
-    internals._filterWhereSparson = function(filterProperties) {
+    internals.__filterPropertySparson = function(filterProperty, filterExistance) {
         const innerVariable = internals.buildInnerVariableName;
         const buildPathPredicate = internals.buildPathPredicate;
-        return filterProperties.map((o) => {
-            if (o.propertyName === '_id') {
 
-                return {
-                    type: 'filter',
-                    expression: {
-                        type: 'operation',
-                        operator: rdfUtils.operatorMapping[o.operator],
-                        args: [`?__id`, o.rdfValue]
-                    }
-                };
+        let {operator, rdfValue, propertyName} = filterProperty;
+        if (propertyName === '_id') {
+            return {
+                type: 'filter',
+                expression: {
+                    type: 'operation',
+                    operator: rdfUtils.operatorMapping[operator],
+                    args: [`?__id`, rdfValue]
+                }
+            };
+        };
+
+        let filters = [];
+
+        let patternTriples = [{
+            subject: '?__id',
+            predicate: buildPathPredicate(propertyName),
+            object: `?_filter_${innerVariable(propertyName)}`
+        }];
+
+        if (operator === '$not') {
+            let childFilterProperties = rdfValue.map((cfp) => {
+                return Object.assign({}, cfp, {
+                    operator: rdfUtils.inverseOperatorMapping[cfp.operator]
+                });
+            })
+            return internals._filterWhereSparson(childFilterProperties);
+
+        }
+
+
+        if (_(['$exists', '$nexists']).includes(operator)) {
+
+            filterExistance = rdfUtils.operatorMapping[operator];
+
+        } else {
+
+            if (filterExistance == null) {
+                filterExistance = rdfUtils.filterExistanceOperatorMapping[operator];
+                if (filterExistance === 'notexists') {
+                    operator = rdfUtils.inverseOperatorMapping[operator];
+                }
+            }
+            
+            if (operator === '$all') {
+                patternTriples = rdfValue.map((value) => {
+                    return {
+                        subject: '?__id',
+                        predicate: buildPathPredicate(propertyName),
+                        object: value
+                    };
+                });
+
+            } else if (['$and', '$or'].indexOf(operator) > -1) {
+
+                return rdfValue.map((prop) => {
+                    return prop.map((p) =>
+                        internals.__filterPropertySparson(p, filterExistance)
+                    );
+                });
 
             } else {
+                let args = [
+                    `?_filter_${innerVariable(propertyName)}`,
+                    rdfValue
+                ];
 
-                let filterExistance;
-                let operator = o.operator;
-                let filters = [];
-                let patternTriples = [{
-                    subject: '?__id',
-                    predicate: buildPathPredicate(o.propertyName),
-                    object: `?_filter_${innerVariable(o.propertyName)}`
-                }];
-
-                if (_(['$exists', '$nexists']).includes(operator)) {
-
-                    filterExistance = rdfUtils.operatorMapping[operator];
-
-                } else {
-
-                    filterExistance = rdfUtils.filterExistanceOperatorMapping[operator];
-                    if (filterExistance === 'notexists') {
-                        operator = rdfUtils.inverseOperatorMapping[operator];
-                    }
-
-
-                    if (operator === '$all') {
-                        patternTriples = o.rdfValue.map((value) => {
-                            return {
-                                subject: '?__id',
-                                predicate: buildPathPredicate(o.propertyName),
-                                object: value
-                            };
-                        });
-                    } else {
-
-                        let args = [
-                            `?_filter_${innerVariable(o.propertyName)}`,
-                            o.rdfValue
-                        ];
-
-                        if (operator === '$iregex') {
-                            args = [...args, '"i"'];
-                        }
-
-                        filters = [
-                            ...filters,
-                            {
-                                type: 'filter',
-                                expression: {
-                                    type: 'operation',
-                                    operator: rdfUtils.operatorMapping[operator],
-                                    args: args
-                                }
-                            }
-                        ];
-                    }
-
+                if (operator === '$iregex') {
+                    args = [...args, '"i"'];
                 }
 
-                return {
-                    type: 'filter',
-                    expression: {
-                        type: 'operation',
-                        operator: filterExistance,
-                        args: [{
-                            type: 'group',
-                            patterns: [{
-                                type: 'bgp',
-                                triples: patternTriples
-                            }].concat(filters)
-                        }]
+                filters = [
+                    ...filters,
+                    {
+                        type: 'filter',
+                        expression: {
+                            type: 'operation',
+                            operator: rdfUtils.operatorMapping[operator],
+                            args: args
+                        }
                     }
-                };
+                ];
             }
-        });
+
+        }
+
+        return {
+            type: 'filter',
+            expression: {
+                type: 'operation',
+                operator: filterExistance,
+                args: [{
+                    type: 'group',
+                    patterns: [{
+                        type: 'bgp',
+                        triples: patternTriples
+                    }].concat(filters)
+                }]
+            }
+        };
+    };
+
+
+    internals._filterWhereSparson = function(filterProperties, filterExistance) {
+        return filterProperties.map((o) => internals.__filterPropertySparson(o, null));
     };
 
     internals._bindingsSparson = function(properties) {
@@ -753,7 +794,7 @@ module.exports = function(db, modelName, graphUri) {
 
 
         let filterProperties = internals._buildFilterProperties(query);
-        // console.log('FILTER_PROPERTIES>', filterProperties);
+        // console.log('FILTER_PROPERTIES>', JSON.stringify(filterProperties, null, 2));
 
         let aggregationProperties = internals._buildAggregationProperties(query);
         // console.log('AGGREGATION_PROPERTIES>', aggregationProperties);;
@@ -814,7 +855,7 @@ module.exports = function(db, modelName, graphUri) {
             sparson.from = {
                 'default': [graphUri]
             };
-            // console.dir(sparson, {depth: 20});
+            console.dir(sparson, {depth: 20});
             return new SparqlGenerator().stringify(sparson);
         }
     };
