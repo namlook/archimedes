@@ -141,7 +141,7 @@ describe('#query()', function(){
                 }
                 testLauncher(
                     `${testQuery.model}: ${testQuery.should}`,
-                    {parallel: true},
+                    {parallel: false},
                     testFn(testQuery)
                 );
             }

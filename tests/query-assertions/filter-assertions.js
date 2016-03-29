@@ -631,6 +631,32 @@ export default [
         ]
     },
     {
+        should: 'filter a string ($all)',
+        model: 'BlogPost',
+        field: {_id: '_id'},
+        filter: {tags: {$all: ['tag\"3', 'tag\"4']}},
+        options: {sort: ['_id']},
+        results: [{_id: 'blogpost3'}]
+    },
+    {
+        should: 'filter a string ($nall)',
+        model: 'BlogPost',
+        field: {_id: '_id'},
+        filter: {tags: {$nall: ['tag\"3', 'tag\"4']}},
+        options: {sort: ['_id']},
+        results: [
+            {_id: 'blogpost0'},
+            {_id: 'blogpost1'},
+            {_id: 'blogpost2'},
+            {_id: 'blogpost4'},
+            {_id: 'blogpost5'},
+            {_id: 'blogpost6'},
+            {_id: 'blogpost7'},
+            {_id: 'blogpost8'},
+            {_id: 'blogpost9'}
+        ]
+    },
+    {
         should: 'filter a string ($regex)',
         model: 'BlogPost',
         field: {_id: '_id'},

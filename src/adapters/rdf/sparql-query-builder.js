@@ -588,6 +588,11 @@ module.exports = function(db, modelName, graphUri) {
                 let filterExistance;
                 let operator = o.operator;
                 let filters = [];
+                let patternTriples = [{
+                    subject: '?__id',
+                    predicate: buildPathPredicate(o.propertyName),
+                    object: `?_filter_${innerVariable(o.propertyName)}`
+                }];
 
                 if (_(['$exists', '$nexists']).includes(operator)) {
 
@@ -600,23 +605,38 @@ module.exports = function(db, modelName, graphUri) {
                         operator = rdfUtils.inverseOperatorMapping[operator];
                     }
 
-                    const args = [
-                        `?_filter_${innerVariable(o.propertyName)}`,
-                        o.rdfValue
-                    ];
 
-                    if (operator === '$iregex') {
-                        args.push('"i"');
-                    }
+                    if (operator === '$all') {
+                        patternTriples = o.rdfValue.map((value) => {
+                            return {
+                                subject: '?__id',
+                                predicate: buildPathPredicate(o.propertyName),
+                                object: value
+                            };
+                        });
+                    } else {
 
-                    filters.push({
-                        type: 'filter',
-                        expression: {
-                            type: 'operation',
-                            operator: rdfUtils.operatorMapping[operator],
-                            args: args
+                        let args = [
+                            `?_filter_${innerVariable(o.propertyName)}`,
+                            o.rdfValue
+                        ];
+
+                        if (operator === '$iregex') {
+                            args = [...args, '"i"'];
                         }
-                    });
+
+                        filters = [
+                            ...filters,
+                            {
+                                type: 'filter',
+                                expression: {
+                                    type: 'operation',
+                                    operator: rdfUtils.operatorMapping[operator],
+                                    args: args
+                                }
+                            }
+                        ];
+                    }
 
                 }
 
@@ -629,11 +649,7 @@ module.exports = function(db, modelName, graphUri) {
                             type: 'group',
                             patterns: [{
                                 type: 'bgp',
-                                triples: [{
-                                    subject: '?__id',
-                                    predicate: buildPathPredicate(o.propertyName),
-                                    object: `?_filter_${innerVariable(o.propertyName)}`
-                                }]
+                                triples: patternTriples
                             }].concat(filters)
                         }]
                     }
@@ -798,7 +814,7 @@ module.exports = function(db, modelName, graphUri) {
             sparson.from = {
                 'default': [graphUri]
             };
-            // console.dir(sparson, {depth: 10});
+            // console.dir(sparson, {depth: 20});
             return new SparqlGenerator().stringify(sparson);
         }
     };

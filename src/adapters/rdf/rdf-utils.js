@@ -45,6 +45,8 @@ export default function(db) {
         $ne: '$eq',
         $in: '$nin',
         $nin: '$in',
+        $all: '$nall',
+        $nall: '$all',
         $exists: 'nexists',
         $nexists: '$exists'
     };
@@ -56,12 +58,14 @@ export default function(db) {
         $lte: 'exists',
         $eq: 'exists',
         $in: 'exists',
+        $all: 'exists',
         $regex: 'exists',
         $iregex: 'exists',
         $exists: 'exists',
         $strlen: 'exists',
         $ne: 'notexists',
         $nin: 'notexists',
+        $nall: 'notexists',
         $nexists: 'notexists'
     };
 

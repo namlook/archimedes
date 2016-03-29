@@ -20,6 +20,8 @@ export default function(db, modelName) {
         '$ne',
         '$in',
         '$nin',
+        '$all',
+        '$nall',
         '$regex',
         '$iregex',
         '$exists',
