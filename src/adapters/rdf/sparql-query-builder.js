@@ -635,7 +635,7 @@ module.exports = function(db, modelName, graphUri) {
                     operator = rdfUtils.inverseOperatorMapping[operator];
                 }
             }
-            
+
             if (operator === '$all') {
                 patternTriples = rdfValue.map((value) => {
                     return {
@@ -645,13 +645,20 @@ module.exports = function(db, modelName, graphUri) {
                     };
                 });
 
-            } else if (['$and', '$or'].indexOf(operator) > -1) {
+            } else if (operator === '$and') {
 
                 return rdfValue.map((prop) => {
                     return prop.map((p) =>
                         internals.__filterPropertySparson(p, filterExistance)
                     );
                 });
+
+            } else if (operator === '$or') {
+
+                return {
+                    type: 'union',
+                    patterns: rdfValue.map(internals._filterWhereSparson)
+                };
 
             } else {
                 let args = [
@@ -855,7 +862,7 @@ module.exports = function(db, modelName, graphUri) {
             sparson.from = {
                 'default': [graphUri]
             };
-            console.dir(sparson, {depth: 20});
+            // console.dir(sparson, {depth: 20});
             return new SparqlGenerator().stringify(sparson);
         }
     };

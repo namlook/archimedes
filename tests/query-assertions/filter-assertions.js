@@ -1084,6 +1084,21 @@ export default [
         ]
     },
     {
+        should: 'allow a $and expression with $not',
+        model: 'BlogPost',
+        field: {_id: '_id'},
+        filter: {
+            tags: {$and: [
+                {$iregex: '3$'},
+                {$not: {$eq: 'tag\"4'}}
+            ]}
+        },
+        options: {sort: ['_id']},
+        results: [
+            {_id: 'blogpost2'}
+        ]
+    },
+    {
         should: 'allow a $or expression',
         model: 'BlogPost',
         field: {_id: '_id'},
@@ -1096,8 +1111,27 @@ export default [
         options: {sort: ['_id']},
         results: [
             {_id: 'blogpost2'},
+            {_id: 'blogpost3'},
             {_id: 'blogpost3'}
         ]
     },
+    {
+        should: 'allow a $or expression with $iregex',
+        model: 'BlogPost',
+        field: {_id: '_id'},
+        filter: {
+            tags: {$or: [
+                {$iregex: '3$'},
+                {$eq: 'tag\"4'}
+            ]}
+        },
+        options: {sort: ['_id']},
+        results: [
+            {_id: 'blogpost2'},
+            {_id: 'blogpost3'},
+            {_id: 'blogpost3'}
+        ]
+    },
+
 
 ];
