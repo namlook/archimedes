@@ -49,7 +49,7 @@ export default [
         model: 'BlogPost',
         field: {_id: '_id', ratting: 'ratting'},
         filter: {},
-        options: {sort: ['ratting']},
+        options: {sort: ['ratting', '_id']},
         results: [
             { _id: 'blogpost0', ratting: 0 },
             { _id: 'blogpost6', ratting: 0 },
@@ -57,8 +57,8 @@ export default [
             { _id: 'blogpost7', ratting: 1 },
             { _id: 'blogpost2', ratting: 2 },
             { _id: 'blogpost8', ratting: 2 },
-            { _id: 'blogpost9', ratting: 3 },
             { _id: 'blogpost3', ratting: 3 },
+            { _id: 'blogpost9', ratting: 3 },
             { _id: 'blogpost4', ratting: 4 },
             { _id: 'blogpost5', ratting: 5 }
         ]
@@ -68,12 +68,12 @@ export default [
         model: 'BlogPost',
         field: {_id: '_id', ratting: 'ratting'},
         filter: {},
-        options: {sort: ['-ratting']},
+        options: {sort: ['-ratting', '_id']},
         results: [
             { _id: 'blogpost5', ratting: 5 },
             { _id: 'blogpost4', ratting: 4 },
-            { _id: 'blogpost9', ratting: 3 },
             { _id: 'blogpost3', ratting: 3 },
+            { _id: 'blogpost9', ratting: 3 },
             { _id: 'blogpost2', ratting: 2 },
             { _id: 'blogpost8', ratting: 2 },
             { _id: 'blogpost1', ratting: 1 },

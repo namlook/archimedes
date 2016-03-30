@@ -45,6 +45,9 @@ export default [
             '_type': 'BlogPost',
             'author.gender': 'female'
         },
+        options: {
+            sort: ['_id']
+        },
         results: [
             { _id: 'blogpost1', _type: 'BlogPost', title: 'post 1', score: 1 },
             { _id: 'blogpost3', _type: 'BlogPost', title: 'post 3', score: 3 },
@@ -85,6 +88,9 @@ export default [
         filter: {
             'author.gender': {$in: ['female']}
         },
+        options: {
+            sort: ['_id']
+        },
         results: [
             { _id: 'blogpost1', _type: 'BlogPost', title: 'post 1' },
             { _id: 'blogpost3', _type: 'BlogPost', title: 'post 3' },
@@ -104,16 +110,19 @@ export default [
         filter: {
             title: {$ne: 'post 0'}
         },
+        options: {
+            sort: ['_id']
+        },
         results: [
             { _id: 'blogpost1', _type: 'BlogPost', score: 1 },
-            { _id: 'blogpost9', _type: 'BlogPost', score: 3 },
             { _id: 'blogpost2', _type: 'BlogPost', score: 2 },
             { _id: 'blogpost3', _type: 'BlogPost', score: 3 },
             { _id: 'blogpost4', _type: 'BlogPost', score: 4 },
             { _id: 'blogpost5', _type: 'BlogPost', score: 5 },
-            { _id: 'blogpost7', _type: 'BlogPost', score: 1 },
             { _id: 'blogpost6', _type: 'BlogPost', score: 0 },
-            { _id: 'blogpost8', _type: 'BlogPost', score: 2 }
+            { _id: 'blogpost7', _type: 'BlogPost', score: 1 },
+            { _id: 'blogpost8', _type: 'BlogPost', score: 2 },
+            { _id: 'blogpost9', _type: 'BlogPost', score: 3 }
         ]
     },
 
@@ -127,6 +136,9 @@ export default [
         },
         filter: {
             title: {$in: ['post 4', 'post 5']}
+        },
+        options: {
+            sort: ['_id']
         },
         results: [
             { _id: 'blogpost4', _type: 'BlogPost', score: 4 },
@@ -146,13 +158,16 @@ export default [
         filter: {
             title: {$nin: ['post 0', 'post 1', 'post 4', 'post 5']}
         },
+        options: {
+            sort: ['_id']
+        },
         results: [
-            { _id: 'blogpost9', _type: 'BlogPost', title: 'post 9', score: 3 },
             { _id: 'blogpost2', _type: 'BlogPost', title: 'post 2', score: 2 },
             { _id: 'blogpost3', _type: 'BlogPost', title: 'post 3', score: 3 },
-            { _id: 'blogpost7', _type: 'BlogPost', title: 'post 7', score: 1 },
             { _id: 'blogpost6', _type: 'BlogPost', title: 'post 6', score: 0 },
-            { _id: 'blogpost8', _type: 'BlogPost', title: 'post 8', score: 2 }
+            { _id: 'blogpost7', _type: 'BlogPost', title: 'post 7', score: 1 },
+            { _id: 'blogpost8', _type: 'BlogPost', title: 'post 8', score: 2 },
+            { _id: 'blogpost9', _type: 'BlogPost', title: 'post 9', score: 3 }
         ]
     },
 
@@ -399,11 +414,11 @@ export default [
             tags: 'tag"7'
         },
         options: {
-            sort: ['title']
+            sort: ['title', 'tags']
         },
         results: [
-            { _id: 'blogpost6', _type: 'BlogPost', title: 'post 6', tags: 'tag"7' },
             { _id: 'blogpost6', _type: 'BlogPost', title: 'post 6', tags: 'tag"6' },
+            { _id: 'blogpost6', _type: 'BlogPost', title: 'post 6', tags: 'tag"7' },
             { _id: 'blogpost7', _type: 'BlogPost', title: 'post 7', tags: 'tag"7' },
             { _id: 'blogpost7', _type: 'BlogPost', title: 'post 7', tags: 'tag"8' },
             { _id: 'blogpost7', _type: 'BlogPost', title: 'post 7', tags: 'tag"9' }
@@ -1045,6 +1060,47 @@ export default [
             {_id: 'comment67'}
         ]
     },
+
+    /**** search *****/
+    {
+        should: 'allow to search on a field',
+        model: 'BlogPost',
+        field: {_id: '_id'},
+        filter: {
+            title: {$search: 'post 3'}
+        },
+        options: {sort: ['_id']},
+        results: [ { _id: 'blogpost3' } ]
+    },
+    {
+        should: 'allow to search on a field (2)',
+        model: 'BlogPost',
+        field: {_id: '_id'},
+        filter: {
+            title: {$search: 'pos'}
+        },
+        options: {sort: ['_id']},
+        results: [
+            { _id: 'blogpost0' },
+            { _id: 'blogpost1' },
+            { _id: 'blogpost2' },
+            { _id: 'blogpost3' },
+            { _id: 'blogpost4' },
+            { _id: 'blogpost5' },
+            { _id: 'blogpost6' },
+            { _id: 'blogpost7' },
+            { _id: 'blogpost8' },
+            { _id: 'blogpost9' }
+        ]
+    },
+    // {
+    //     should: 'allow to search on all fields',
+    //     model: 'BlogPost',
+    //     field: {_id: '_id'},
+    //     search: 'tag"3',
+    //     options: {sort: ['_id']},
+    //     results: ['bof']
+    // },
 
     /**** Bool algebra ****/
     {

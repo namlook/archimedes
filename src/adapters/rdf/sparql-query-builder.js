@@ -337,6 +337,10 @@ module.exports = function(db, modelName, graphUri) {
                                     operator,
                                     rdfValue: filterInfos2FilterProperties(value)
                                 };
+                            } else if (operator === '$search'){
+
+                                rdfValue = `"${value}*"`;
+
                             } else {
                                 rdfValue = rdfUtils.buildRdfValue(
                                     modelName,
@@ -658,6 +662,30 @@ module.exports = function(db, modelName, graphUri) {
                 return {
                     type: 'union',
                     patterns: rdfValue.map(internals._filterWhereSparson)
+                };
+
+            } else if (operator === '$search') {
+                const subjectVariable = `?_filter_${innerVariable(propertyName)}`;
+                patternTriples = [
+                    ...patternTriples,
+                    {
+                        subject: subjectVariable,
+                        predicate: 'http://www.bigdata.com/rdf/search#search',
+                        object: rdfValue
+                    },
+                    {
+                        subject: subjectVariable,
+                        predicate: 'http://www.bigdata.com/rdf/search#matchAllTerms',
+                        object: '"true"'
+                    }
+                ];
+
+                return {
+                    type: 'group',
+                    patterns: [{
+                        type: 'bgp',
+                        triples: patternTriples
+                    }]
                 };
 
             } else {

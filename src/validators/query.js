@@ -29,6 +29,7 @@ export default function(db, modelName) {
         '$nall',
         '$regex',
         '$iregex',
+        '$search',
         '$exists',
         '$strlen',
         /** TODO **/

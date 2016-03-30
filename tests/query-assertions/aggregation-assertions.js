@@ -11,14 +11,14 @@ export default [
         aggregate: {
             'publishedCount.total': {$count: true}
         },
-        options: {sort: ['-creditedAuthor']},
+        options: {sort: ['-creditedAuthor', 'publishedCount.isPublished']},
         results: [
             {creditedAuthor: 'user2', publishedCount: {isPublished: false, total: 1}},
             {creditedAuthor: 'user2', publishedCount: {isPublished: true, total: 1}},
-            {creditedAuthor: 'user1', publishedCount: {isPublished: true, total: 2}},
             {creditedAuthor: 'user1', publishedCount: {isPublished: false, total: 2}},
-            {creditedAuthor: 'user0', publishedCount: {isPublished: true, total: 4}},
-            {creditedAuthor: 'user0', publishedCount: {isPublished: false, total: 3}}
+            {creditedAuthor: 'user1', publishedCount: {isPublished: true, total: 2}},
+            {creditedAuthor: 'user0', publishedCount: {isPublished: false, total: 3}},
+            {creditedAuthor: 'user0', publishedCount: {isPublished: true, total: 4}}
         ]
     },
 
@@ -143,7 +143,7 @@ export default [
         aggregate: {
             totalRatting: {$sum: 'ratting'}
         },
-        options: {sort: ['-totalRatting']},
+        options: {sort: ['-totalRatting', 'author']},
         results: [
             { author: 'user4', totalRatting: 7 },
             { author: 'user0', totalRatting: 5 },

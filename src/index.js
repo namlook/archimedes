@@ -17,7 +17,7 @@ export var triplestore = function(config) {
         baseUri = `http://${config.host}:${config.port}`;
     }
 
-    let endpoint;
+    let endpoint, databaseName;
     switch (config.engine) {
 
         case 'virtuoso':
@@ -25,7 +25,9 @@ export var triplestore = function(config) {
             break;
 
         case 'blazegraph':
-            endpoint = `${baseUri}/blazegraph/sparql`;
+            // endpoint = `${baseUri}/blazegraph/sparql`;
+            databaseName = _.words(url.parse(config.graphUri).host).join('');
+            endpoint = `${baseUri}/blazegraph/namespace/${databaseName}/sparql`;
             break;
 
         case 'stardog':
