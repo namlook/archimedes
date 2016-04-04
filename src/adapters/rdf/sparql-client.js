@@ -144,12 +144,15 @@ let sparqlClient = function(endpoint, config) {
             // console.log('***', conf);
             let stream = request.post(conf.endpoint, conf.options);
             stream.on('response', function(response) {
-                if (response.statusCode !== 200) {
-                    if (response.statusCode === 400) {
+                const { statusCode } = response;
+                if (statusCode !== 200) {
+                    if (statusCode === 400) {
                         console.error(sparql);
                         throw new Error('bad sparql query');
+                    } else if (statusCode === 404){
+                        throw new Error(`unknown endpoint: ${conf.endpoint}`);
                     } else {
-                        throw new Error(`database error: ${response.statusCode}`);
+                        throw new Error(`database error: ${statusCode}`);
                     }
                 }
             });

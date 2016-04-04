@@ -207,7 +207,7 @@ export default function(adapterConfig) {
             save: function(pojo) {
                 return new Promise((resolve, reject) => {
                     const sparqlBuilder = sparqlUpdateBuilder(db, adapterConfig.graphUri);
-                    let sparql = sparqlBuilder.saveQuery(pojo)
+                    const sparql = sparqlBuilder.saveQuery(pojo);
                     return internals.sparqlClient.queryStream(sparql)
                         .map(parseBlazegraphSaveResponse)
                         .stopOnError((error) => reject(error))
@@ -241,7 +241,7 @@ export default function(adapterConfig) {
             delete: function(pojo) {
                 return new Promise((resolve, reject) => {
                     const sparqlBuilder = sparqlUpdateBuilder(db, adapterConfig.graphUri);
-                    let sparql = sparqlBuilder.deleteQuery(pojo)
+                    const sparql = sparqlBuilder.deleteQuery(pojo);
                     return internals.sparqlClient.queryStream(sparql)
                         .map(parseBlazegraphSaveResponse)
                         .stopOnError((error) => reject(error))

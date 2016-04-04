@@ -31,7 +31,7 @@ export default function(db, modelName) {
         '$iregex',
         '$search',
         '$exists',
-        '$strlen',
+        '$strlen'
         /** TODO **/
         // '$all',
         // '$nall'
@@ -91,7 +91,7 @@ export default function(db, modelName) {
             propertyName = propertyName.split('.').slice(0, -1).join('.');
         }
         return propertyName;
-    }
+    };
 
     fn.getProperty = (property) => db[modelName].schema.getProperty(property);
 
@@ -100,7 +100,7 @@ export default function(db, modelName) {
             return false;
         }
         return !fn.getProperty(fn.normalizePropertyName(property));
-    }
+    };
 
     fn.validateProperties = function(query) {
 
@@ -157,23 +157,35 @@ export default function(db, modelName) {
     };
 
     fn.validateOperators = function(query) {
-
-        const isValidOperator = _fp.includes(_fp, schemas.validOperators);
-
-        return _(query.filter || {})
+        const filterOperations = _(query.filter || {})
             .toPairs()
             .flatMap(([propertyName, operation]) => {
                 return !_.isPlainObject(operation)
                     ? {propertyName, operator: '$eq'}
                     : _.toPairs(operation)
-                        .map(([operator, value]) => ({ propertyName, operator }));
-            })
+                        .map(([operator, value]) => ( { propertyName, operator, value } ));
+            });
+
+        const arrayValues = filterOperations.filter((o) =>
+                (['$in', '$all'].indexOf(o.operator) > -1) && !_.isArray(o.value)
+            ).map((o) => ({
+                message: `the "${o.operator}" operator requires an array as value`,
+                path: `filter.${o.propertyName}`
+            }))
+            .value();
+
+
+        const isValidOperator = _fp.includes(_fp, schemas.validOperators);
+
+        const unknownOperators = filterOperations
             .filter((o) => !isValidOperator(o.operator))
             .map((o) => ({
                 message: `unknown operator "${o.operator}" on property "${o.propertyName}"`,
                 path: `filter.${o.propertyName}`
             }))
             .value();
+
+        return [].concat(arrayValues, unknownOperators);
     };
 
     fn.normalizeAggregation = function(aggregation) {
@@ -181,14 +193,14 @@ export default function(db, modelName) {
             return [aggregation];
         }
 
-        let distinct = aggregation.distinct
+        let distinct = aggregation.distinct;
         aggregation = _fp.omit('distinct', aggregation);
         return _.toPairs(aggregation).map(([aggregator, propertyName]) => ({
                 $aggregator: aggregator.slice(1),
                 $property: propertyName,
                 distinct
             }));
-    }
+    };
 
     fn.validateAggregators = function(query) {
         const isValidAggregator = _fp.includes(_fp, schemas.validAggregators);
@@ -212,7 +224,6 @@ export default function(db, modelName) {
             return new Promise((resolve, reject) => {
                 const options = {};
                 joi.validate(query, schemas.querySchema, options, (error, validatedQuery) => {
-
                     let errors = [];
 
                     if (error) {
@@ -242,9 +253,9 @@ export default function(db, modelName) {
                         );
                     }
 
-                    return resolve(query)
+                    return resolve(query);
                 });
             });
         }
     };
-};
+}

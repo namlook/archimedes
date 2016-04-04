@@ -1,6 +1,5 @@
 
 import _ from 'lodash';
-import _fp from 'lodash/fp';
 import rdfUtilities from './rdf-utils';
 import {Generator as SparqlGenerator} from 'sparqljs';
 
@@ -14,7 +13,7 @@ module.exports = function(db, modelName, graphUri) {
      * Note that if the parent is specified, the predicate used will be
      * build against the parent schema.
      */
-    internals.buildPredicate = function(propertyName, parent) {
+    internals.buildPredicate = function(propertyName) {
         const modelClass = db[modelName];
         let modelSchema = modelClass.schema;
         let property;
@@ -59,13 +58,13 @@ module.exports = function(db, modelName, graphUri) {
             propertyName = propertyName.split('.').slice(0, -1).join('.');
         }
 
-        let items = propertyName.split('.').map((propertyName) => {
+        let items = propertyName.split('.').map((innerPropertyName) => {
 
-            if (propertyName === '_type') {
+            if (innerPropertyName === '_type') {
                 return 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
             }
 
-            let property = modelSchema.getProperty(propertyName);
+            let property = modelSchema.getProperty(innerPropertyName);
 
             if (property.isRelation()) {
                 modelSchema = db[property.type].schema;
@@ -113,7 +112,7 @@ module.exports = function(db, modelName, graphUri) {
     internals.validateQuery = function(query) {
 
         /** validate order by **/
-        let sortedVariables = query['sort'] || [];
+        let sortedVariables = query.sort || [];
 
         if (!_.isArray(sortedVariables)) {
             throw new Error('sortedVariable must be an array');
@@ -152,7 +151,7 @@ module.exports = function(db, modelName, graphUri) {
     //     {fieldName: 'name', propertyName: 'credits.name', subject: 'credits'},
     //     {fieldName: 'sex', propertyName: 'credits.gender', subject: 'credits'}
     // ]
-    internals._buildFieldProperties = function(query, sortedFields) {
+    internals._buildFieldProperties = function(query) {
         const convertPair2property = function([fieldName, fieldInfos]) {
             let isArray = _.isArray(fieldInfos);
             fieldInfos = isArray ? fieldInfos[0] : fieldInfos;
@@ -179,7 +178,7 @@ module.exports = function(db, modelName, graphUri) {
             };
         };
 
-        return  _.toPairs(query.field).map(convertPair2property);
+        return _.toPairs(query.field).map(convertPair2property);
     };
 
     internals._buildStatementProperties = function(fieldProperties, aggregationProperties, sortedFields) {
@@ -198,9 +197,9 @@ module.exports = function(db, modelName, graphUri) {
         };
 
         const stripEndingId = (propertyName) => {
-            return  _.endsWith(propertyName, '._id') ?
+            return _.endsWith(propertyName, '._id') ?
                 propertyName.split('.').slice(0, -1).join('.') : propertyName;
-        }
+        };
 
 
         let properties = _(fieldProperties)
@@ -236,7 +235,7 @@ module.exports = function(db, modelName, graphUri) {
                 return o;
             })
             .map((o) => { // add sortBy info
-                o.sortBy = sortedField(o.fieldName)
+                o.sortBy = sortedField(o.fieldName);
                 return o;
             })
             .value();
@@ -352,7 +351,7 @@ module.exports = function(db, modelName, graphUri) {
                         })
                         .flatten()
                         .value();
-                }
+                };
 
                 return filterInfos2FilterProperties(filterInfos);
             })
@@ -488,7 +487,7 @@ module.exports = function(db, modelName, graphUri) {
                             ]
                         },
                         variable: `?${finalVariable(o.fieldName)}`
-                    }
+                    };
                 } else {
                     return {
                         expression: {
@@ -529,7 +528,7 @@ module.exports = function(db, modelName, graphUri) {
                             object: `?_${innerVariable(embedPropertyName)}`
                         }));
 
-                    return _triples.concat(embedTriples)
+                    return _triples.concat(embedTriples);
                 })
         );
 
@@ -548,19 +547,18 @@ module.exports = function(db, modelName, graphUri) {
 
                     type: 'optional',
                     patterns: _(props).map((prop) => {
-                        let triple;
                         if (prop.inner) {
                             return {
                                 subject: `?_${innerVariable(prop.parent || '_id')}`,
                                 predicate: buildPredicate(prop.propertyName),//, o.parent),
                                 object: `?_${innerVariable(prop.propertyName)}`
-                            }
+                            };
                         } else {
                             return {
                                 subject: `?_${innerVariable(prop.parent || '_id')}`,
                                 predicate: buildPredicate(prop.propertyName),//, o.parent),
                                 object: `?_optional_${innerVariable(prop.propertyName)}`
-                            }
+                            };
                         }
                         // let embedTriples = _.toPairs(prop.fields)
                         //     .map(([embedFieldName, embedPropertyName]) => ({
@@ -606,7 +604,7 @@ module.exports = function(db, modelName, graphUri) {
                     args: [`?__id`, rdfValue]
                 }
             };
-        };
+        }
 
         let filters = [];
 
@@ -621,7 +619,7 @@ module.exports = function(db, modelName, graphUri) {
                 return Object.assign({}, cfp, {
                     operator: rdfUtils.inverseOperatorMapping[cfp.operator]
                 });
-            })
+            });
             return internals._filterWhereSparson(childFilterProperties);
 
         }
@@ -730,7 +728,7 @@ module.exports = function(db, modelName, graphUri) {
     };
 
 
-    internals._filterWhereSparson = function(filterProperties, filterExistance) {
+    internals._filterWhereSparson = function(filterProperties) {
         return filterProperties.map((o) => internals.__filterPropertySparson(o, null));
     };
 
@@ -796,7 +794,7 @@ module.exports = function(db, modelName, graphUri) {
 
     internals._groupBySparson = function(properties) {
         const innerVariable = internals.buildInnerVariableName;
-        const shouldGroupBy = _.find(properties, (o) => o.aggregator || o.array)
+        const shouldGroupBy = _.find(properties, (o) => o.aggregator || o.array);
 
         if (!shouldGroupBy) {
             return null;
@@ -829,7 +827,7 @@ module.exports = function(db, modelName, graphUri) {
 
 
         let filterProperties = internals._buildFilterProperties(query);
-        // console.log('FILTER_PROPERTIES>', JSON.stringify(filterProperties, null, 2));
+        console.log('FILTER_PROPERTIES>', JSON.stringify(filterProperties, null, 2));
 
         let aggregationProperties = internals._buildAggregationProperties(query);
         // console.log('AGGREGATION_PROPERTIES>', aggregationProperties);;
@@ -874,7 +872,7 @@ module.exports = function(db, modelName, graphUri) {
             variables: selectSparson,
             where: whereSparson,//[requiredTriples].concat(optionalTriples).concat(filters).concat(bindings),
             group: groupBySparson,
-            order: orderBySparson.length ? orderBySparson: null,
+            order: orderBySparson.length ? orderBySparson : null,
             distinct: query.distinct,
             limit: query.limit,
             offset: query.offset

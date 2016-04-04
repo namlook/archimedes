@@ -5,7 +5,10 @@ import memoryAdapter from './adapters/memory';
 import url from 'url';
 import _ from 'lodash';
 
-export var triplestore = function(config) {
+import queryValidator from './validators/query';
+export { queryValidator };
+
+export const triplestore = function(config) {
     if (!config.engine) {
         throw new Error('archimedes: engine not found');
     }
@@ -31,7 +34,7 @@ export var triplestore = function(config) {
             break;
 
         case 'stardog':
-            let databaseName = url.parse(config.graphUri).host;
+            databaseName = url.parse(config.graphUri).host;
             databaseName = _.words(databaseName).join('');
             endpoint = `${baseUri}/annex/${databaseName}/sparql/query`;
             break;

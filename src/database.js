@@ -26,8 +26,10 @@ const validAggregationOperators = [
 ];
 
 import Promise from 'bluebird';
-import csvStream from 'csv-stream';
+// import csvStream from 'csv-stream';
+import csv from 'csv';
 import es from 'event-stream';
+import csvtojson from 'csvtojson';
 
 import highland from 'highland';
 import _fp from 'lodash/fp';
@@ -79,7 +81,7 @@ export default function(dbAdapter, config) {
                             }
                         } else if (!_.includes(validPropertyTypes, propConfig.type)) {
                             if (!models[propConfig.type]) {
-                                return reject(new StructureError(`${modelName} invalid type for property "${propName}"`));
+                                return reject(new StructureError(`Invalid type for property "${modelName}.${propName}"`));
                             }
                         }
 
@@ -244,7 +246,7 @@ export default function(dbAdapter, config) {
                 if (!modelClass) {
                     throw new Error(`unknown model "${modelName}" in property _type`);
                 }
-                const modelSchema = modelClass.schema
+                const modelSchema = modelClass.schema;
 
                 return _(item)
                     .toPairs()
@@ -262,7 +264,7 @@ export default function(dbAdapter, config) {
 
                         value = property.isArray()
                             ? value.split(options.csv.arraySeparator) //.map(_convertValue)
-                            : value //_convertValue(value);
+                            : value; //_convertValue(value);
 
                         return [propertyName, value];
                     })
@@ -286,22 +288,46 @@ export default function(dbAdapter, config) {
                 highland.map(_normalizePojo),
                 highland.flatMap((o) => highland(that.validatePojo(o))),
                 that.adapter.importStream()
-            )
+            );
         },
 
         csv2pojoStream: function(csvOptions) {
+            // csvOptions = _.defaultsDeep(csvOptions, {
+            //     delimiter: ',',
+            //     escapeChar: '"',
+            //     enclosedChar: '"',
+            //     arraySeparator: ','
+            // });
+            // return highland.pipeline(csvStream.createStream(csvOptions));
+
+            // csvOptions = _.defaultsDeep(csvOptions, {
+            //     delimiter: ',',
+            //     escape: '"',
+            //     quote: '"'
+            //     // arraySeparator: ','
+            // });
+            //
+            // return highland.pipeline(
+            //     csv.parse(),
+            //     csv.transform((record) => {
+            //         console.log('...', record);
+            //         return record;
+            //     })
+            // );
             csvOptions = _.defaultsDeep(csvOptions, {
+                constructResult: false,
                 delimiter: ',',
-                escapeChar: '"',
-                enclosedChar: '"',
-                arraySeparator: ','
+                quote: '"'
             });
 
-            return highland.pipeline(csvStream.createStream(csvOptions));
+            return highland.pipeline(
+                new csvtojson.Converter(csvOptions),
+                highland.map(JSON.parse)
+            );
         },
 
-        exportN3Stream: function(config) {
-            return this.adapter.exportN3Stream(config);
+        exportN3Stream: function(n3config) {
+            return this.adapter.exportN3Stream(n3config);
         },
 
         exportStream: function() {
@@ -330,14 +356,14 @@ export default function(dbAdapter, config) {
         },
 
         delete: function(pojo) {
-            return this.adapter['delete'](pojo);
+            return this.adapter.delete(pojo);
         },
 
         deleteStream: function(arrayOrStreamOfPojos) {
             return this.adapter.deleteStream(arrayOrStreamOfPojos);
         },
 
-        queryStream: function(modelName, query, options) {
+        queryStream: function(modelName, query) {
             const that = this;
             return highland(queryValidation(that, modelName).validate(query))
                 .flatMap((validatedQuery) => {
@@ -354,10 +380,10 @@ export default function(dbAdapter, config) {
                     validationErrors.push('"_id" is required');
                 }
 
-                let modelClass = this[pojo._type]
+                let modelClass = this[pojo._type];
 
                 if (!pojo._type) {
-                    validationErrors.push('"_type" is required')
+                    validationErrors.push('"_type" is required');
                 } else if (!modelClass) {
                     validationErrors.push(
                         '"_type": no model found in schema'
@@ -1095,31 +1121,31 @@ export default function(dbAdapter, config) {
             });
         },
 
-        /**
-         * Remove a record from the database
-         *
-         * @params {string} modelType - the model type
-         * @params {string} modelId - the model id
-         * @returns a promise
-         */
-        delete(modelType, modelId) {
-            return Promise.resolve().then(() => {
-                if (typeof modelType !== 'string') {
-                    throw new Error('delete: modelType should be a string');
-                }
-
-
-                if (!this[modelType]) {
-                    throw new Error(`delete: Unknown modelType: "${modelType}"`);
-                }
-
-                if (typeof modelId !== 'string') {
-                    throw new Error('delete: id should be a string');
-                }
-
-                return this.adapter.delete(modelType, modelId);
-            });
-        },
+        // /**
+        //  * Remove a record from the database
+        //  *
+        //  * @params {string} modelType - the model type
+        //  * @params {string} modelId - the model id
+        //  * @returns a promise
+        //  */
+        // delete(modelType, modelId) {
+        //     return Promise.resolve().then(() => {
+        //         if (typeof modelType !== 'string') {
+        //             throw new Error('delete: modelType should be a string');
+        //         }
+        //
+        //
+        //         if (!this[modelType]) {
+        //             throw new Error(`delete: Unknown modelType: "${modelType}"`);
+        //         }
+        //
+        //         if (typeof modelId !== 'string') {
+        //             throw new Error('delete: id should be a string');
+        //         }
+        //
+        //         return this.adapter.delete(modelType, modelId);
+        //     });
+        // },
 
         clearResource(modelType) {
             return Promise.resolve().then(() => {

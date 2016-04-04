@@ -10,15 +10,15 @@ export default function(db, graphUri) {
 
     internals._insertSparsonClauses = function(pojo) {
         let modelName = pojo._type;
-        let subject = rdfUtils.buildInstanceRdfUri(modelName, pojo._id);
-        let rdfType = rdfUtils.buildClassRdfUri(modelName)
+        const subject = rdfUtils.buildInstanceRdfUri(modelName, pojo._id);
+        const rdfType = rdfUtils.buildClassRdfUri(modelName);
 
         return _(pojo)
             .toPairs()
-            .filter(([propertyName, value]) => !_.includes(['_id', '_type'], propertyName))
+            .filter((pair) => !_.includes(['_id', '_type'], pair[0]))
             .map(([propertyName, values]) => {
 
-                let predicate = rdfUtils.buildRdfPredicate(modelName, propertyName);
+                const predicate = rdfUtils.buildRdfPredicate(modelName, propertyName);
 
                 if (!_.isArray(values)) {
                     values = [values];
@@ -38,7 +38,7 @@ export default function(db, graphUri) {
             .concat([{
                 subject: subject,
                 predicate: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type',
-                object: rdfType,
+                object: rdfType
             }]);
     };
 
@@ -50,7 +50,7 @@ export default function(db, graphUri) {
             predicate: '?p',
             object: '?o'
         }];
-    }
+    };
 
 
     internals.buildSaveSparson = function(pojo) {
@@ -65,7 +65,7 @@ export default function(db, graphUri) {
                         type: 'graph',
                         triples: deleteWhereClause,
                         name: graphUri
-                    }],
+                    }]
                 },
                 {
                     updateType: 'insert',
