@@ -3,6 +3,8 @@ import _ from 'lodash';
 import rdfUtilities from './rdf-utils';
 import {Generator as SparqlGenerator} from 'sparqljs';
 
+const RDF_TYPE_URL = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
+
 module.exports = function(db, modelName, graphUri) {
 
     const rdfUtils = rdfUtilities(db);
@@ -144,28 +146,25 @@ module.exports = function(db, modelName, graphUri) {
     // }
     // [
     //     {fieldName: 'title', propertyName: 'title', sorted: 'asc', subject: '_id'},
-    //     {fieldName: 'authorName', propertyName: 'author.name', subject: 'author', optional: true},
+//     {fieldName: 'authorName', propertyName: 'author.name', subject: 'author', optional: true},
     //     {fieldName: 'tags', propertyName: 'tags', array: true, subject: '_id'},
-    //     {fieldName: 'creditedAuthor', propertyName: 'credits', array: true, subject: '_id', inner: true},
+// {fieldName: 'creditedAuthor', propertyName: 'credits', array: true, subject: '_id', inner: true},
     //     {fieldName: null, propertyName: 'author', optional: true, inner: true},
     //     {fieldName: 'name', propertyName: 'credits.name', subject: 'credits'},
     //     {fieldName: 'sex', propertyName: 'credits.gender', subject: 'credits'}
     // ]
-    internals._buildFieldProperties = function(query) {
-        const convertPair2property = function([fieldName, fieldInfos]) {
-            let isArray = _.isArray(fieldInfos);
-            fieldInfos = isArray ? fieldInfos[0] : fieldInfos;
+    internals._buildFieldProperties = function _buildFieldProperties(query) {
+        const convertPair2property = ([fieldName, _fieldInfos]) => {
+            const isArray = _.isArray(_fieldInfos);
+            let fieldInfos = isArray ? _fieldInfos[0] : _fieldInfos;
 
-            if (_.isString(fieldInfos)) {
-                fieldInfos = {$property: fieldInfos};
-            }
+            fieldInfos = _.isString(fieldInfos) ? { $property: fieldInfos } : fieldInfos;
+
             let propertyName = fieldInfos.$property;
-            let propertyRaw = fieldInfos.$property;
+            const propertyRaw = fieldInfos.$property;
 
-            let optional = _.includes(propertyName, '?');
-            if (optional) {
-                propertyName = propertyName.split('?').join('');
-            }
+            const optional = _.includes(propertyName, '?');
+            propertyName = optional ? propertyName.split('?').join('') : propertyName;
 
             return {
                 fieldName,
@@ -173,7 +172,7 @@ module.exports = function(db, modelName, graphUri) {
                 propertyRaw,
                 optional,
                 array: isArray,
-                inner: false,//isInner,
+                inner: false, // isInner,
                 fields: fieldInfos.$fields,
             };
         };
@@ -181,28 +180,31 @@ module.exports = function(db, modelName, graphUri) {
         return _.toPairs(query.field).map(convertPair2property);
     };
 
-    internals._buildStatementProperties = function(fieldProperties, aggregationProperties, sortedFields) {
+    internals._buildStatementProperties = function(
+        fieldProperties,
+        aggregationProperties,
+        sortedFields
+    ) {
+        const sortedField = (fieldName) => _.get(_.find(sortedFields, { fieldName }), 'order');
 
-        const sortedField = (fieldName) => _.get(
-            _.find(sortedFields, {fieldName: fieldName}),
-            'order'
+        const findParents = (propertyName) => {
+            const splitedPropertyName = propertyName.split('.');
+            let value;
+            if (splitedPropertyName.length > 1) {
+                const x = splitedPropertyName.slice(0, -1).join('.');
+                value = _.flatten(_.compact([x, findParents(x)]));
+            }
+            return value;
+        };
+
+        const stripEndingId = (propertyName) => (
+            _.endsWith(propertyName, '._id')
+                ? propertyName.split('.').slice(0, -1).join('.')
+                : propertyName
         );
 
-        const findParents = function(propertyName) {
-            let splitedPropertyName = propertyName.split('.');
-            if (splitedPropertyName.length > 1) {
-                let x = splitedPropertyName.slice(0, -1).join('.');
-                return _.flatten(_.compact([x, findParents(x)]));
-            }
-        };
 
-        const stripEndingId = (propertyName) => {
-            return _.endsWith(propertyName, '._id') ?
-                propertyName.split('.').slice(0, -1).join('.') : propertyName;
-        };
-
-
-        let properties = _(fieldProperties)
+        const properties = _(fieldProperties)
             .concat(aggregationProperties)
             .map((o) => {
                 if (o.aggregator === 'array' && o.fields) {
@@ -212,7 +214,7 @@ module.exports = function(db, modelName, graphUri) {
                             fieldName: embedFieldName,
                             propertyName: embedPropertyName,
                             inObject: o.fieldName,
-                            inner: true
+                            inner: true,
                         }))
                         .concat([o])
                         .value();
@@ -241,31 +243,36 @@ module.exports = function(db, modelName, graphUri) {
             .value();
 
 
-
-        let innerProperties = _(properties)
+        const innerProperties = _(properties)
             .filter((o) => o.parent)
             .map((o) => o.propertyRaw)
             .flatMap(findParents)
             .uniq()
             .map((propertyName) => {
-                let optional = propertyName.split('?').length > 1;
-                let propertyRaw = propertyName;
+                const optional = propertyName.split('?').length > 1;
+                const propertyRaw = propertyName;
                 if (optional) {
                     propertyName = propertyName.split('?').join('');
                 }
-                let parent = propertyName.split('.').slice(0, -1).join('.');
+                const parent = propertyName.split('.').slice(0, -1).join('.');
                 return {
                     propertyName,
                     optional,
                     parent,
                     inner: true,
-                    propertyRaw
+                    propertyRaw,
                 };
             })
             .value();
 
 
-        let statementProperties = innerProperties.concat(properties);
+        const statementProperties = [].concat(innerProperties, properties).map((o) => {
+            const property = db[modelName].schema.getProperty(o.propertyName);
+            const isInverseRelationship = property && property.isInverseRelationship();
+            return isInverseRelationship
+                ? Object.assign({}, o, { inverseRelationship: property.type })
+                : o;
+        });
 
         /** if there is only _id in field and no aggregation,
          * add a statement so we can retrieve the _id
@@ -275,12 +282,11 @@ module.exports = function(db, modelName, graphUri) {
                 propertyName: '_type',
                 fieldName: '_type',
                 propertyRaw: '_type',
-                inner: true
+                inner: true,
             });
         }
 
         return statementProperties;
-
     };
 
     // query.filter = {
@@ -299,11 +305,11 @@ module.exports = function(db, modelName, graphUri) {
     internals._buildFilterProperties = function(query) {
         return _(query.filter)
             .toPairs()
+            .map(([propertyName, filterInfos]) => ([
+                propertyName,
+                _.isPlainObject(filterInfos) ? filterInfos : { $eq: filterInfos },
+            ]))
             .map(([propertyName, filterInfos]) => {
-                if (!_.isPlainObject(filterInfos)) {
-                    filterInfos = {$eq: filterInfos};
-                }
-
                 const filterInfos2FilterProperties = (_filterInfos) => {
                     return _(_filterInfos)
                         .toPairs(_filterInfos)
@@ -347,7 +353,7 @@ module.exports = function(db, modelName, graphUri) {
                                     value
                                 );
                             }
-                            return {propertyName, operator, rdfValue};
+                            return { propertyName, operator, rdfValue };
                         })
                         .flatten()
                         .value();
@@ -521,6 +527,14 @@ module.exports = function(db, modelName, graphUri) {
                         object: `?_${innerVariable(o.propertyName)}`
                     }];
 
+                    if (o.inverseRelationship) {
+                        _triples = [..._triples, {
+                            subject: `?_${innerVariable(o.propertyName)}`,
+                            predicate: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type',
+                            object: rdfUtils.buildRdfValue(o.inverseRelationship, '_type'),
+                        }];
+                    }
+
                     let embedTriples = _.toPairs(o.fields)
                         .map(([embedFieldName, embedPropertyName]) => ({
                             subject: `?_${innerVariable(o.propertyName)}`,
@@ -590,29 +604,96 @@ module.exports = function(db, modelName, graphUri) {
             .value();
     };
 
+    internals.__buildFilterTriplesSparson = (propertyName) => {
+        const innerVariable = internals.buildInnerVariableName;
+        const buildPredicate = internals.buildPredicate;
+
+        const stripEndingId = (propertyName) => (
+            _.endsWith(propertyName, '._id')
+                ? propertyName.split('.').slice(0, -1).join('.')
+                : propertyName
+        );
+
+        const findInnerProperties = (_propertyName) => {
+            const stripedPropertyName = stripEndingId(_propertyName);
+            const variable = `?_filter_${innerVariable(stripedPropertyName)}`;
+            const splitedPropertyName = stripedPropertyName.split('.');
+            let value;
+            if (splitedPropertyName.length > 1) {
+                const parentName = splitedPropertyName.slice(0, -1).join('.');
+                const parentVariable = `?_filter_${innerVariable(parentName)}`;
+                value = _.flatten(_.compact([
+                    { parentVariable, name: stripedPropertyName, parentName, variable },
+                    findInnerProperties(parentName),
+                ]));
+            } else {
+                value = [{
+                    variable,
+                    name: stripedPropertyName,
+                    parentName: '_id',
+                    parentVariable: '?__id',
+                }];
+            }
+            return value;
+        };
+
+
+        return _(_.reverse(findInnerProperties(propertyName)))
+            .map((o) => {
+                const property = db[modelName].schema.getProperty(o.name);
+                const inverseRelationship = property && property.isInverseRelationship()
+                    ? property.type
+                    : null;
+                return Object.assign({}, o, { inverseRelationship });
+            })
+            .flatMap((o) => {
+                let triples = [{
+                    subject: o.parentVariable,
+                    predicate: buildPredicate(o.name),
+                    object: o.variable,
+                }];
+
+                if (o.inverseRelationship) {
+                    triples = [...triples, {
+                        subject: o.variable,
+                        predicate: RDF_TYPE_URL,
+                        object: rdfUtils.buildRdfValue(o.inverseRelationship, '_type'),
+                    }];
+                }
+
+                return triples;
+            })
+            .value();
+    };
+
+
     internals.__filterPropertySparson = function(filterProperty, filterExistance) {
         const innerVariable = internals.buildInnerVariableName;
         const buildPathPredicate = internals.buildPathPredicate;
 
-        let {operator, rdfValue, propertyName} = filterProperty;
+        let { operator, rdfValue, propertyName } = filterProperty;
+
         if (propertyName === '_id') {
             return {
                 type: 'filter',
                 expression: {
                     type: 'operation',
                     operator: rdfUtils.operatorMapping[operator],
-                    args: [`?__id`, rdfValue]
-                }
+                    args: ['?__id', rdfValue],
+                },
             };
         }
 
         let filters = [];
 
-        let patternTriples = [{
-            subject: '?__id',
-            predicate: buildPathPredicate(propertyName),
-            object: `?_filter_${innerVariable(propertyName)}`
-        }];
+        let patternTriples = internals.__buildFilterTriplesSparson(propertyName);
+
+        //
+        // let patternTriples = [{
+        //     subject: '?__id',
+        //     predicate: buildPathPredicate(propertyName),
+        //     object: `?_filter_${innerVariable(propertyName)}`,
+        // }];
 
         if (operator === '$not') {
             let childFilterProperties = rdfValue.map((cfp) => {
@@ -701,14 +782,13 @@ module.exports = function(db, modelName, graphUri) {
                     {
                         type: 'filter',
                         expression: {
+                            args,
                             type: 'operation',
                             operator: rdfUtils.operatorMapping[operator],
-                            args: args
-                        }
-                    }
+                        },
+                    },
                 ];
             }
-
         }
 
         return {
@@ -720,10 +800,10 @@ module.exports = function(db, modelName, graphUri) {
                     type: 'group',
                     patterns: [{
                         type: 'bgp',
-                        triples: patternTriples
-                    }].concat(filters)
-                }]
-            }
+                        triples: patternTriples,
+                    }].concat(filters),
+                }],
+            },
         };
     };
 
@@ -827,7 +907,7 @@ module.exports = function(db, modelName, graphUri) {
 
 
         let filterProperties = internals._buildFilterProperties(query);
-        console.log('FILTER_PROPERTIES>', JSON.stringify(filterProperties, null, 2));
+        // console.log('FILTER_PROPERTIES>', JSON.stringify(filterProperties, null, 2));
 
         let aggregationProperties = internals._buildAggregationProperties(query);
         // console.log('AGGREGATION_PROPERTIES>', aggregationProperties);;

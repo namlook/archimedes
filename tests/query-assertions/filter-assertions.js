@@ -1,3 +1,4 @@
+/*eslint-disable comma-dangle, object-curly-spacing, array-bracket-spacing, spaced-comment, max-len */
 
 export default [
     {
@@ -42,7 +43,7 @@ export default [
             score: 'ratting'
         },
         filter: {
-            '_type': 'BlogPost',
+            _type: 'BlogPost',
             'author.gender': 'female'
         },
         options: {
@@ -649,7 +650,7 @@ export default [
         should: 'filter a string ($all)',
         model: 'BlogPost',
         field: {_id: '_id'},
-        filter: {tags: {$all: ['tag\"3', 'tag\"4']}},
+        filter: {tags: {$all: ['tag"3', 'tag"4']}},
         options: {sort: ['_id']},
         results: [{_id: 'blogpost3'}]
     },
@@ -991,15 +992,50 @@ export default [
             {_id: 'blogpost7'}
         ]
     },
+    {
+        should: 'filter on a relation ($all)',
+        model: 'BlogPost',
+        field: {_id: '_id'},
+        filter: {credits: {$all: ['user1', 'user2']}},
+        options: {sort: ['_id']},
+        results: [{_id: 'blogpost3'}, {_id: 'blogpost7'}]
+    },
+    {
+        should: 'filter on a relation string ($all)',
+        model: 'BlogPost',
+        field: {_id: '_id'},
+        filter: {'credits.name': {$all: ['user 1', 'user 2']}},
+        options: {sort: ['_id']},
+        results: [{_id: 'blogpost3'}, {_id: 'blogpost7'}]
+    },
 
     /*** relations inverse ***/
     {
         should: 'filter on relation inverse ($eq)',
         model: 'User',
-        field: {_id: '_id'},
-        filter: {'blogPosts.ratting': 2},
-        options: {sort: ['_id']},
-        results: [{_id: 'user2'}, {_id: 'user3'}]
+        field: { _id: '_id' },
+        filter: { 'blogPosts.ratting': 2 },
+        options: { sort: ['_id'] },
+        results: [{ _id: 'user2' }, { _id: 'user3' }]
+    },
+    {
+        should: 'filter on relation inverse (includes the relation)',
+        model: 'User',
+        field: {
+            _id: '_id',
+            postTitle: 'blogPosts.title',
+            postRatting: 'blogPosts.ratting'
+        },
+        filter: { // filter the **users** whose blogPosts have been ratted at 2
+            'blogPosts.ratting': 2,
+        },
+        options: { sort: ['_id'] },
+        results: [
+            { _id: 'user2', postTitle: 'post 7', postRatting: 1 },
+            { _id: 'user2', postTitle: 'post 2', postRatting: 2 },
+            { _id: 'user3', postTitle: 'post 3', postRatting: 3 },
+            { _id: 'user3', postTitle: 'post 8', postRatting: 2 }
+        ]
     },
     {
         should: 'filter on relation inverse _id ($eq)',
@@ -1044,6 +1080,85 @@ export default [
             {_id: 'user4'}
         ]
     },
+    {
+        should: 'filter on a relation inverse ($all)',
+        model: 'User',
+        field: {
+            _id: '_id',
+            blogPostId: 'blogPosts._id',
+            credits: 'blogPosts.credits?',
+            author: 'blogPosts.author'
+        },
+        filter: {
+            'blogPosts.credits': { $all: ['user1', 'user2'] }
+        },
+        options: { sort: ['blogPostId', 'credits'] },
+        results: [
+            { _id: 'user2', blogPostId: 'blogpost2', credits: 'user0', author: 'user2' },
+            { _id: 'user2', blogPostId: 'blogpost2', credits: 'user1', author: 'user2' },
+            { _id: 'user3', blogPostId: 'blogpost3', credits: 'user0', author: 'user3' },
+            { _id: 'user3', blogPostId: 'blogpost3', credits: 'user1', author: 'user3' },
+            { _id: 'user3', blogPostId: 'blogpost3', credits: 'user2', author: 'user3' },
+            { _id: 'user2', blogPostId: 'blogpost7', credits: 'user0', author: 'user2' },
+            { _id: 'user2', blogPostId: 'blogpost7', credits: 'user1', author: 'user2' },
+            { _id: 'user2', blogPostId: 'blogpost7', credits: 'user2', author: 'user2' },
+            { _id: 'user3', blogPostId: 'blogpost8', author: 'user3' },
+        ]
+    },
+    {
+        // all blogposts written by a user who have credited user1 and user2
+        should: 'filter on a relation inverse ($all) (2)',
+        model: 'BlogPost',
+        field: { _id: '_id' },
+        filter: {
+            'author.blogPosts.credits': { $all: ['user1', 'user2'] }
+        },
+        options: { sort: ['_id'] },
+        results: [
+            { _id: 'blogpost2' },
+            { _id: 'blogpost3' },
+            { _id: 'blogpost7' },
+            { _id: 'blogpost8' },
+        ]
+    },
+    {
+        // all blogposts written by a user who have credited user1 and user2
+        should: 'filter on deep relation inverse',
+        model: 'User',
+        field: { _id: '_id'},
+        filter: {
+            'blogPosts.ratting': 3
+        },
+        options: { sort: ['_id'] },
+        results: [
+            { _id: 'user3' },
+            { _id: 'user4' },
+        ]
+    },
+    // {
+    //     should: 'filter on multiple relation inverse (union)',
+    //     model: 'User',
+    //     field: {_id: '_id'},
+    //     filter: {
+    //         'blogPosts.ratting': 3,
+    //         'blogPosts.credits': 'user2'
+    //     },
+    //     options: {sort: ['_id']},
+    //     results: [{_id: 'user3'}, {_id: 'user4'}]
+    // },
+    // {
+    //     should: 'filter on multiple relation inverse (intersection)',
+    //     model: 'User',
+    //     field: {_id: '_id'},
+    //     filter: {
+    //         blogPosts: {
+    //             ratting: 3,
+    //             credits: 'user2'
+    //         }
+    //     },
+    //     options: {sort: ['_id']},
+    //     results: [{_id: 'user3'}, {_id: 'user4'}]
+    // },
     {
         should: '???',
         model: 'Comment',
