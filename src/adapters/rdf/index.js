@@ -265,10 +265,10 @@ export default function(adapterConfig) {
                     : highland.pipeline(through);
             },
 
-            exportN3Stream: function(options) {
-                options = options || {};
+            exportN3Stream(_options) {
+                const options = _options || {};
                 options.format = options.format || 'N-Triples'; // 'application/trig'
-                let sparql = `select * from <${adapterConfig.graphUri}> where {?s ?p ?o .}`;
+                const sparql = `select * from <${adapterConfig.graphUri}> where {?s ?p ?o .}`;
                 const n3streamWriter = new N3.StreamWriter({ format: options.format });
 
                 return highland(internals.sparqlClient.queryStream(sparql))
@@ -279,28 +279,28 @@ export default function(adapterConfig) {
                         object: o.o.type === 'literal'
                             ? N3.Util.createLiteral(o.o.value, o.o.datatype)
                             : o.o.value,
-                        graph: adapterConfig.graphUri
+                        graph: adapterConfig.graphUri,
                     }))
                     .through(n3streamWriter);
             },
 
-            exportStream: function() {
-                let that = this;
+            exportStream() {
+                const sparql = `select distinct ?o from <${adapterConfig.graphUri}> where {
+                    ?s a ?o .
+                }`;
 
-                let sparql = `select distinct ?o from <${adapterConfig.graphUri}> where {?s a ?o .}`;
-
-                let queriesByModelName = {};
+                const { queryStream } = this;
                 return internals.sparqlClient.queryStream(sparql)
                     .through(JSONStream.parse('results.bindings.*'))
                     .map((o) => db.rdfClasses2ModelNameMapping[o.o.value])
-                    .flatMap(that.queryStream);
+                    .flatMap(queryStream);
             },
 
 
-            queryStream: function(modelName, query, options) {
-                query = query || {};
-                let graphUri = adapterConfig.graphUri;
-                let queryBuilder = sparqlQueryBuilder(db, modelName, graphUri);
+            queryStream(modelName, _query, options) {
+                const query = _query || {};
+                const { graphUri } = adapterConfig;
+                const queryBuilder = sparqlQueryBuilder(db, modelName, graphUri);
 
                 /** if the _type is not present, set it to the modelName **/
                 query.filter = query.filter && query.filter || {};
@@ -308,19 +308,18 @@ export default function(adapterConfig) {
                     _.set(query, 'filter._type', modelName);
                 }
 
-
-                /*** if no field or aggregate are specified, we fill them
+                /* if no field or aggregate are specified, we fill them
                  * by every properties defined in the model
                  */
                 if (_.isEmpty(query.field) && _.isEmpty(query.aggregate)) {
-                    let properties = db[modelName].schema.properties;
-                    let fieldPairs = _(properties)
+                    const properties = db[modelName].schema.properties;
+                    const fieldPairs = _(properties)
                         .filter((o) => !o.isArray())
                         .map((o) => {
                             if (o.isRelation()) {
                                 return [
                                     [`${o.name}._id`, `${o.name}?._id`],
-                                    [`${o.name}._type`, `${o.name}?._type`]
+                                    [`${o.name}._type`, `${o.name}?._type`],
                                 ];
                             }
                             return [[o.name, `${o.name}?`]];
@@ -328,7 +327,7 @@ export default function(adapterConfig) {
                         .flatten()
                         .value();
 
-                    let aggregationPairs = properties
+                    const aggregationPairs = properties
                         .filter((o) => o.isArray())
                         .map((o) => {
                             let aggregation;
@@ -337,11 +336,11 @@ export default function(adapterConfig) {
                                     $aggregator: 'array',
                                     $fields: {
                                         _id: `${o.name}?._id`,
-                                        _type: `${o.name}?._type`
-                                    }
+                                        _type: `${o.name}?._type`,
+                                    },
                                 };
                             } else {
-                                aggregation = {$array: `${o.name}?`};
+                                aggregation = { $array: `${o.name}?` };
                             }
                             return [o.name, aggregation];
                         });
@@ -353,12 +352,12 @@ export default function(adapterConfig) {
                 }
 
 
-                let sparql = queryBuilder.build(query, options);
+                const sparql = queryBuilder.build(query, options);
 
                 // console.dir(query, {depth: 10});
                 // console.log(sparql);
 
-                let converter = sparqlResultsConverter(db, modelName, query);
+                const converter = sparqlResultsConverter(db, modelName, query);
 
                 return internals.sparqlClient.queryStream(sparql)
                     .through(JSONStream.parse('results.bindings.*'))
@@ -375,7 +374,6 @@ export default function(adapterConfig) {
                 //         }
                 //         return callback(null, doc);
                 //     }));
-
             },
 
             /**

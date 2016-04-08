@@ -1,3 +1,4 @@
+/*eslint-disable comma-dangle, object-curly-spacing, array-bracket-spacing, spaced-comment, max-len */
 
 export default [
     {
