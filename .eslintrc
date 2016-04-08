@@ -1,17 +1,6 @@
 {
-  "parser": "babel-eslint",
-  "ecmaFeatures": { modules: true },
-  "env": {
-    // I write for browser
-    // "browser": true,
-    // in CommonJS
-    "node": true
-  },
-  "rules": {
-    "strict": 0,
-    "quotes": [2, "single", "avoid-escape"],
-    "eol-last": [0],
-    "no-mixed-requires": [0],
-    "no-underscore-dangle": [0],
-  }
+    "extends": "airbnb",
+    "rules": {
+        "indent": ["error", 4]
+    }
 }
