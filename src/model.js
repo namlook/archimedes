@@ -170,8 +170,8 @@ var modelFactory = function(db, name, modelClassSchema) {
         },
 
         create(pojo) {
-            pojo = _.omit(pojo, _.isUndefined);
-            return _.assign({}, modelInstance(db, this, pojo), methods);
+            const cleanPojo = _.omitBy(pojo, _.isUndefined);
+            return _.assign({}, modelInstance(db, this, cleanPojo), methods);
         },
 
 
