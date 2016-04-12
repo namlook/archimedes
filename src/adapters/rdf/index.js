@@ -63,7 +63,7 @@ export default function(adapterConfig) {
 
     return function(db) {
 
-        let internals = {};
+        const internals = {};
         internals.store = [];
         internals.sparqlClient = sparqlClient(adapterConfig.endpoint, adapterConfig);
 
@@ -72,15 +72,19 @@ export default function(adapterConfig) {
 
 
             beforeRegister(models) {
-                let graphUri = adapterConfig.graphUri;
-                let defaultClassRdfPrefix = `${graphUri}/classes`;
-                let defaultInstanceRdfPrefix = `${graphUri}/instances`;
-                let defaultPropertyRdfPrefix = `${graphUri}/properties`;
+                const graphUri = adapterConfig.graphUri;
+                const defaultClassRdfPrefix = `${graphUri}/classes`;
+                const defaultInstanceRdfPrefix = `${graphUri}/instances`;
+                const defaultPropertyRdfPrefix = `${graphUri}/properties`;
 
 
                 _.forOwn(models, (modelConfig, modelName) => {
                     if (!_.get(modelConfig, 'meta.classRdfUri')) {
-                        _.set(modelConfig, 'meta.classRdfUri', `${defaultClassRdfPrefix}/${modelName}`);
+                        _.set(
+                            modelConfig,
+                            'meta.classRdfUri',
+                            `${defaultClassRdfPrefix}/${modelName}`
+                        );
                     }
 
                     if (!_.get(modelConfig, 'meta.instanceRdfPrefix')) {
@@ -92,8 +96,23 @@ export default function(adapterConfig) {
                     }
 
                     _.forOwn(modelConfig.properties, (propConfig, propertyName) => {
+                        if (propertyName === '_type') {
+                            _.set(
+                                propConfig,
+                                'meta.rdfUri',
+                                'http://www.w3.org/1999/02/22-rdf-syntax-ns#type'
+                            );
+                        } else if (propertyName === '_id') {
+                            if (!propConfig.meta) {
+                                propConfig.meta = {};
+                            }
+                        }
                         if (!_.get(propConfig, 'meta.rdfUri')) {
-                            _.set(propConfig, 'meta.rdfUri', `${defaultPropertyRdfPrefix}/${propertyName}`);
+                            _.set(
+                                propConfig,
+                                'meta.rdfUri',
+                                `${defaultPropertyRdfPrefix}/${propertyName}`
+                            );
                         }
                     });
                 });

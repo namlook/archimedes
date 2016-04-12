@@ -69,7 +69,7 @@ export default function(dbAdapter, config) {
                     /** if the property config is a string, convert it into a valid config **/
                     _.forOwn(modelConfig.properties, (propConfig, propName) => {
                         if (typeof propConfig === 'string') {
-                            propConfig = {type: propConfig};
+                            propConfig = { type: propConfig };
                         }
                         if (propConfig.type === 'array') {
                             if (!propConfig.items) {
@@ -77,7 +77,7 @@ export default function(dbAdapter, config) {
                             }
 
                             if (typeof propConfig.items === 'string') {
-                                propConfig.items = {type: propConfig.items};
+                                propConfig.items = { type: propConfig.items };
                             }
                         } else if (!_.includes(validPropertyTypes, propConfig.type)) {
                             if (!models[propConfig.type]) {
@@ -100,8 +100,16 @@ export default function(dbAdapter, config) {
                         }
                         modelConfig.properties[propName] = propConfig;
                     });
-                });
 
+                    /** if there is no special types (_id, _type), add them **/
+                    if (!_.get(modelConfig, 'properties._id')) {
+                        _.set(modelConfig, 'properties._id', { type: 'string' });
+                    }
+
+                    if (!_.get(modelConfig, 'properties._type')) {
+                        _.set(modelConfig, 'properties._type', { type: 'string' });
+                    }
+                });
 
                 return resolve(this.adapter.beforeRegister(models));
             });

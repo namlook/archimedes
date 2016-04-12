@@ -99,15 +99,14 @@ describe('Model Instance validation', function() {
         });
     });
 
-    describe('[relations]', function() {
-
-        it('should return an error if the type is not another model instance', (done) => {
-            let blogPost = db.BlogPost.create({author: 'me'});
-            blogPost.validate().catch((error) => {
-                expect(error.name).to.equal('ValidationError');
-                expect(error.message).to.equal('Bad value');
-                expect(error.extra).to.equal('"author" must be an object');
+    describe('[relations]', () => {
+        it('should allow a string as a relation reference', (done) => {
+            const blogPost = db.BlogPost.create({ author: 'me' });
+            blogPost.validate().then((value) => {
+                expect(value).to.be.an.object();
                 done();
+            }).catch((error) => {
+                console.log(error);
             });
         });
 

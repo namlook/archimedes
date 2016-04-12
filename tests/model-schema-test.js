@@ -30,14 +30,16 @@ describe('ModelSchema', function() {
 
     it('should return all model property infos', (done) => {
         let properties = db.BlogPost.schema.properties;
-        expect(properties.length).to.equal(12);
+        expect(properties.length).to.equal(14);
         done();
     });
 
     it('should aggregate properties', (done) => {
-        let blogPostPropertyNames = db.BlogPost.schema.properties.map((o) => o.name);
+        const blogPostPropertyNames = db.BlogPost.schema.properties.map((o) => o.name);
 
         expect(blogPostPropertyNames).to.only.include([
+            '_id',
+            '_type',
             'ratting',
             'author',
             'body',
@@ -49,15 +51,15 @@ describe('ModelSchema', function() {
             'backlinks',
             'updatedDate',
             'publishedDate',
-            'isPublished'
+            'isPublished',
         ]);
 
-        let bookPropertyNames = db.Book.schema.properties.map((o) => o.name);
+        const bookPropertyNames = db.Book.schema.properties.map((o) => o.name);
         expect(bookPropertyNames).to.include([
             'author',
             'body',
             'createdDate',
-            'isbn'
+            'isbn',
         ]);
 
         done();
@@ -256,4 +258,3 @@ describe('ModelSchema', function() {
         });
     });
 });
-
