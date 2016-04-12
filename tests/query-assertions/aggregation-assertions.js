@@ -1,3 +1,4 @@
+/*eslint-disable comma-dangle, object-curly-spacing, array-bracket-spacing, spaced-comment, max-len */
 
 export default [
 
@@ -72,7 +73,7 @@ export default [
             _id: '_id'
         },
         aggregate: {
-            tags: { '$array': 'tags?' },
+            tags: { $array: 'tags?' },
             credits: {
                 $aggregator: 'array',
                 $fields: {
@@ -80,7 +81,7 @@ export default [
                     _type: 'credits?._type'
                 }
             },
-            backlinks: { '$array': 'backlinks?' }
+            backlinks: { $array: 'backlinks?' }
         },
         options: {sort: ['ratting']},
         results: ['bof']
@@ -264,7 +265,7 @@ export default [
         should: 'aggregate the _type',
         model: 'User',
         field: {type: '_type'},
-        aggregate: {'occ': {$count: '_type'}},
+        aggregate: { occ: {$count: '_type'} },
         results: [
             { type: 'User', occ: 5 }
         ]
@@ -400,11 +401,11 @@ export default [
             {
                 _type: 'BlogPost',
                 authorId: [
-                   'user0',
-                   'user1',
-                   'user2',
-                   'user3',
-                   'user4'
+                    'user0',
+                    'user1',
+                    'user2',
+                    'user3',
+                    'user4'
                 ]
             }
         ]
@@ -459,7 +460,6 @@ export default [
     },
 
 
-
     {
         should: 'aggregate relations into an array (optional)',
         model: 'BlogPost',
@@ -483,7 +483,6 @@ export default [
             { title: 'post 9', creditedAuthors: [ 'user0' ] }
         ]
     },
-
 
 
     {
@@ -755,7 +754,6 @@ export default [
 // }
 //
 //
-
 
 
     // TODO to be implemented

@@ -108,7 +108,7 @@ export default [
     {
         should: 'frame the relation _id',
         model: 'BlogPost',
-        field: {title: 'title', 'userId': 'author._id'},
+        field: {title: 'title', userId: 'author._id'},
         options: {sort: ['title']},
         results: [
             { title: 'post 0', userId: 'user0' },

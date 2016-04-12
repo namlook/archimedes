@@ -5,8 +5,7 @@ import {Generator as SparqlGenerator} from 'sparqljs';
 
 const RDF_TYPE_URL = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
 
-module.exports = function(db, modelName, graphUri) {
-
+module.exports = function main(db, modelName, graphUri) {
     const rdfUtils = rdfUtilities(db);
     const internals = {};
 
@@ -15,10 +14,9 @@ module.exports = function(db, modelName, graphUri) {
      * Note that if the parent is specified, the predicate used will be
      * build against the parent schema.
      */
-    internals.buildPredicate = function(propertyName) {
+    internals.buildPredicate = function buildPredicate(propertyName) {
         const modelClass = db[modelName];
-        let modelSchema = modelClass.schema;
-        let property;
+        const modelSchema = modelClass.schema;
 
         // if (propertyName === '_type') {
         //     return 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
@@ -35,17 +33,16 @@ module.exports = function(db, modelName, graphUri) {
         // } else {
         //     property = modelSchema.getProperty(propertyName);
         // }
-        property = modelSchema.getProperty(propertyName);
+        const property = modelSchema.getProperty(propertyName);
 
         if (property.isInverseRelationship()) {
             return {
                 type: 'path',
                 pathType: '^',
-                items: [property.getPropertyFromInverseRelationship().meta.rdfUri]
+                items: [property.getPropertyFromInverseRelationship().meta.rdfUri],
             };
-        } else {
-            return property.meta.rdfUri;
         }
+        return property.meta.rdfUri;
     };
 
     /**
@@ -808,11 +805,11 @@ module.exports = function(db, modelName, graphUri) {
     };
 
 
-    internals._filterWhereSparson = function(filterProperties) {
+    internals._filterWhereSparson = function _filterWhereSparson(filterProperties) {
         return filterProperties.map((o) => internals.__filterPropertySparson(o, null));
     };
 
-    internals._bindingsSparson = function(properties) {
+    internals._bindingsSparson = function _bindingsSparson(properties) {
         const innerVariable = internals.buildInnerVariableName;
         /* encode_for_uri the value for object */
         const embedObjects = _(properties)
@@ -864,15 +861,15 @@ module.exports = function(db, modelName, graphUri) {
                     args: [{
                         type: 'operation',
                         operator: 'str',
-                        args: [`?_${innerVariable(o.propertyName)}`]
-                    }]
-                }
+                        args: [`?_${innerVariable(o.propertyName)}`],
+                    }],
+                },
             }));
 
         return objectBindings.concat(arrayBindings);
     };
 
-    internals._groupBySparson = function(properties) {
+    internals._groupBySparson = function _groupBySparson(properties) {
         const innerVariable = internals.buildInnerVariableName;
         const shouldGroupBy = _.find(properties, (o) => o.aggregator || o.array);
 
@@ -882,94 +879,97 @@ module.exports = function(db, modelName, graphUri) {
 
         return properties
             .filter((o) => !o.aggregator && !o.array && !o.inner)
-            .map((o) => ({expression: `?_${innerVariable(o.propertyName)}`}));
+            .map((o) => ({ expression: `?_${innerVariable(o.propertyName)}` }));
     };
 
 
-    internals._orderBySparson = function(sortedFields) {
+    internals._orderBySparson = function _orderBySparson(sortedFields) {
         const innerVariable = internals.buildInnerVariableName;
         return sortedFields.map((o) => ({
             expression: `?${innerVariable(o.fieldName)}`,
-            descending: o.order === 'desc'
+            descending: o.order === 'desc',
         }));
     };
 
 
-    internals.buildSparson = function(query) {
-
+    internals.buildSparson = function buildSparson(query) {
         let sortedFields = query.sort || [];
-        sortedFields = sortedFields.map((fieldName) => {
-            let descOrder = _.startsWith(fieldName, '-');
-            fieldName = descOrder ? fieldName.slice(1) : fieldName;
-            let order = descOrder ? 'desc' : 'asc';
+        sortedFields = sortedFields.map((_fieldName) => {
+            const descOrder = _.startsWith(_fieldName, '-');
+            const fieldName = descOrder ? _fieldName.slice(1) : _fieldName;
+            const order = descOrder ? 'desc' : 'asc';
             return { fieldName, order };
         });
 
 
-        let filterProperties = internals._buildFilterProperties(query);
+        const filterProperties = internals._buildFilterProperties(query);
         // console.log('FILTER_PROPERTIES>', JSON.stringify(filterProperties, null, 2));
 
-        let aggregationProperties = internals._buildAggregationProperties(query);
+        const aggregationProperties = internals._buildAggregationProperties(query);
         // console.log('AGGREGATION_PROPERTIES>', aggregationProperties);;
 
-        let fieldProperties = internals._buildFieldProperties(query, sortedFields);
+        const fieldProperties = internals._buildFieldProperties(query, sortedFields);
         // console.log('FIELD_PROPERTIES>', fieldProperties);
-        let statementProperties = internals._buildStatementProperties(fieldProperties, aggregationProperties, sortedFields);
+        const statementProperties = internals._buildStatementProperties(
+            fieldProperties,
+            aggregationProperties,
+            sortedFields
+        );
         // console.log('WHERE_PROPERTIES>', statementProperties)
 
-        let selectVariableSparson = internals._selectVariableSparson(statementProperties);
-        let selectArraySparson = internals._selectArraySparson(statementProperties);
-        let selectAggregationSparson = internals._selectAggregationSparson(aggregationProperties);//internals._selectAggregationSparson(aggregationProperties);
+        const selectVariableSparson = internals._selectVariableSparson(statementProperties);
+        const selectArraySparson = internals._selectArraySparson(statementProperties);
+        const selectAggregationSparson = internals._selectAggregationSparson(aggregationProperties);
 
-        let selectSparson = selectVariableSparson
+        const selectSparson = selectVariableSparson
             .concat(selectArraySparson)
             .concat(selectAggregationSparson);
 
 
-        /*** build where statement ***/
-        let requiredWhereSparson = internals._requiredWhereSparson(statementProperties);
-        let optionalWhereSparson = internals._optionalWhereSparson(statementProperties);
+        /* build where statement ***/
+        const requiredWhereSparson = internals._requiredWhereSparson(statementProperties);
+        const optionalWhereSparson = internals._optionalWhereSparson(statementProperties);
         /* build bindings where statement */
-        let bindingSparson = internals._bindingsSparson(statementProperties);
+        const bindingSparson = internals._bindingsSparson(statementProperties);
         /* build filter where statement */
-        let filterWhereSparson = internals._filterWhereSparson(filterProperties);
+        const filterWhereSparson = internals._filterWhereSparson(filterProperties);
 
-        let whereSparson = requiredWhereSparson
+        const whereSparson = requiredWhereSparson
             .concat(filterWhereSparson)
             .concat(optionalWhereSparson)
             .concat(bindingSparson);
 
 
-        /*** build group by variables ***/
-        let groupBySparson = internals._groupBySparson(statementProperties);
+        /* build group by variables ***/
+        const groupBySparson = internals._groupBySparson(statementProperties);
 
-        /*** build order by variables ****/
-        let orderBySparson = internals._orderBySparson(sortedFields);
+        /* build order by variables ****/
+        const orderBySparson = internals._orderBySparson(sortedFields);
 
         return {
             type: 'query',
             queryType: 'SELECT',
             variables: selectSparson,
-            where: whereSparson,//[requiredTriples].concat(optionalTriples).concat(filters).concat(bindings),
+            where: whereSparson,
             group: groupBySparson,
             order: orderBySparson.length ? orderBySparson : null,
             distinct: query.distinct,
             limit: query.limit,
-            offset: query.offset
+            offset: query.offset,
         };
     };
 
 
     return {
-        build: function(query) {
-            query = _.cloneDeep(query);
+        build(_query) {
+            const query = _.cloneDeep(_query);
             // internals.validateQuery(query);
-            let sparson = internals.buildSparson(query);
+            const sparson = internals.buildSparson(query);
             sparson.from = {
-                'default': [graphUri]
+                default: [graphUri],
             };
             // console.dir(sparson, {depth: 20});
             return new SparqlGenerator().stringify(sparson);
-        }
+        },
     };
 };
