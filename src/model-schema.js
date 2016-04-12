@@ -48,10 +48,9 @@ export default class ModelSchema {
 
         /** if the property name is a relation **/
         if (_.includes(propertyName, '.')) {
-
-            let relationName = propertyName.split('.')[0];
-            let relation = this.getProperty(relationName);
-            let relationPropertyName = propertyName.split('.').slice(1).join('.');
+            const relationName = propertyName.split('.')[0];
+            const relation = this.getProperty(relationName);
+            const relationPropertyName = propertyName.split('.').slice(1).join('.');
 
             // if (_.isArray(relation) && relation.length) {
             //     relation = relation[0];
