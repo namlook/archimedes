@@ -442,7 +442,7 @@ export default [
         should: 'aggregate relations into an array',
         model: 'BlogPost',
         field: {
-            title: 'title'
+            title: 'title',
         },
         aggregate: {
             creditedAuthors: {$array: 'credits._id'}
@@ -458,8 +458,26 @@ export default [
             {title: 'post 9', creditedAuthors: ['user0']}
         ]
     },
-
-
+    {
+        should: 'aggregate relations into an array (2)',
+        model: 'BlogPost',
+        field: {
+            title: 'title'
+        },
+        aggregate: {
+            creditedAuthors: {$array: 'credits'}
+        },
+        options: {sort: ['title']},
+        results: [
+            {title: 'post 1', creditedAuthors: ['user0']},
+            {title: 'post 2', creditedAuthors: ['user0', 'user1']},
+            {title: 'post 3', creditedAuthors: ['user0', 'user1', 'user2']},
+            {title: 'post 5', creditedAuthors: ['user0']},
+            {title: 'post 6', creditedAuthors: ['user0', 'user1']},
+            {title: 'post 7', creditedAuthors: ['user0', 'user1', 'user2']},
+            {title: 'post 9', creditedAuthors: ['user0']}
+        ]
+    },
     {
         should: 'aggregate relations into an array (optional)',
         model: 'BlogPost',

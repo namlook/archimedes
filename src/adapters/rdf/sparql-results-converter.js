@@ -162,9 +162,16 @@ module.exports = function main(db, modelName, _query) {
                     );
                     value = _.compact(value);
 
-                    /** always sort the array **/
                     const property = db[modelName].schema.getProperty(propertyName);
 
+                    /** if the field is a relation, convert the rdf iri into the _id **/
+                    value = property.isRelation()
+                        ? value.map((val) => (
+                            _.isString(val) ? rdfUtils.rdfURI2id(property.type, val) : val
+                        ))
+                        : value;
+
+                    /** always sort the array **/
                     value = _.sortBy(value);
                     if (property.isRelation() && value.length && value[0]._id) {
                         value = _.sortBy(value, '_id');
